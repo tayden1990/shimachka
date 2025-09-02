@@ -10,8 +10,8 @@ compatibility_date = "2024-09-02"
 
 [[kv_namespaces]]
 binding = "LEITNER_DB"
-preview_id = "63f744fcdfea42faaa40435604feeecb"
-id = "63f744fcdfea42faaa40435604feeecb"
+preview_id = "60580ee076484bd284f092cb5c6c1f79"
+id = "60580ee076484bd284f092cb5c6c1f79"
 
 [triggers]
 crons = ["0 8,14,20 * * *"]  # Daily reminders at 8 AM, 2 PM, and 8 PM
@@ -21,7 +21,7 @@ crons = ["0 8,14,20 * * *"]  # Daily reminders at 8 AM, 2 PM, and 8 PM
 name = "leitner-telegram-bot-staging"
 [[env.staging.kv_namespaces]]
 binding = "LEITNER_DB"
-id = "63f744fcdfea42faaa40435604feeecb"
+id = "60580ee076484bd284f092cb5c6c1f79"
 
 [env.staging.triggers]
 crons = ["0 9,15,21 * * *"]  # Staging reminders at different times
