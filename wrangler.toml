@@ -10,7 +10,7 @@ compatibility_date = "2024-09-02"
 
 [[kv_namespaces]]
 binding = "LEITNER_DB"
-preview_id = "60580ee076484bd284f092cb5c6c1f79"
+preview_id = "8bcbcc5cfc054f27ad9e384b10adfa56"
 id = "60580ee076484bd284f092cb5c6c1f79"
 
 [triggers]
