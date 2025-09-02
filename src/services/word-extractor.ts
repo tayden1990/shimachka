@@ -9,7 +9,7 @@ export class WordExtractor {
   }
 
   async extractWords(request: WordExtractionRequest): Promise<ExtractedWord[]> {
-    const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const sourceLanguageName = LANGUAGES[request.sourceLanguage as LanguageCode] || request.sourceLanguage;
     const targetLanguageName = LANGUAGES[request.targetLanguage as LanguageCode] || request.targetLanguage;
@@ -80,7 +80,7 @@ Return only the JSON array, no additional text.
   }
 
   async translateWord(word: string, sourceLanguage: string, targetLanguage: string): Promise<ExtractedWord> {
-    const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const sourceLanguageName = LANGUAGES[sourceLanguage as LanguageCode] || sourceLanguage;
     const targetLanguageName = LANGUAGES[targetLanguage as LanguageCode] || targetLanguage;
@@ -132,7 +132,7 @@ Return only the JSON object, no additional text.
   }
 
   async generateDefinition(word: string, language: string): Promise<string> {
-    const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const languageName = LANGUAGES[language as LanguageCode] || language;
 
@@ -154,7 +154,7 @@ Return only the definition text, no additional formatting or explanations.
   }
 
   async detectLanguage(text: string): Promise<string> {
-    const model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
 Detect the language of this text: "${text}"
