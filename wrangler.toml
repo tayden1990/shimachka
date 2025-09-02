@@ -4,7 +4,7 @@ compatibility_date = "2024-09-02"
 
 [vars]
 # Environment variables - set these in your Cloudflare dashboard
-# TELEGRAM_BOT_TOKEN = "8202936854:AAGJgytDWy-3NuALTFUG2o6U_jfgvuW_cks"
+# TELEGRAM_BOT_TOKEN = "your_telegram_bot_token"
 # GEMINI_API_KEY = "your_gemini_api_key"
 # WEBHOOK_SECRET = "your_webhook_secret"
 
