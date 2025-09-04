@@ -9,8 +9,8 @@ export class WordExtractor {
   }
 
   async extractWords(request: WordExtractionRequest): Promise<ExtractedWord[]> {
-  // Use the latest stable Gemini 2.5 Flash model for best price-performance
-  const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  // Use the stable Gemini 1.5 Flash model
+  const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const sourceLanguageName = LANGUAGES[request.sourceLanguage as LanguageCode] || request.sourceLanguage;
     const targetLanguageName = LANGUAGES[request.targetLanguage as LanguageCode] || request.targetLanguage;
@@ -94,7 +94,7 @@ Return only the JSON array, with no extra text or explanation.
   }
 
   async translateWord(word: string, sourceLanguage: string, targetLanguage: string): Promise<ExtractedWord> {
-  const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const sourceLanguageName = LANGUAGES[sourceLanguage as LanguageCode] || sourceLanguage;
     const targetLanguageName = LANGUAGES[targetLanguage as LanguageCode] || targetLanguage;
@@ -146,7 +146,7 @@ Return only the JSON object, no additional text.
   }
 
   async generateDefinition(word: string, language: string): Promise<string> {
-  const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const languageName = LANGUAGES[language as LanguageCode] || language;
 

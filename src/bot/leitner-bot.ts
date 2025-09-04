@@ -893,7 +893,8 @@ Use language codes when setting your preferences.`;
               `✅ Successfully added ${createdCount} vocabulary words for "${addTopic.topic}"!\n\nUse /study to start reviewing them.`
             );
           } catch (error) {
-            await this.sendMessage(chatId, 'Sorry, there was an error extracting vocabulary. Please try again later.');
+            console.error('Error extracting vocabulary:', error);
+            await this.sendMessage(chatId, `Sorry, there was an error extracting vocabulary: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again later.`);
           }
           await this.conversationStateManager.clearState(userId);
         } else if (text.toLowerCase() === 'cancel') {
