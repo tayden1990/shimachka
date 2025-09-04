@@ -62,14 +62,29 @@ export class LeitnerBot {
   }
   // --- Telegram sendMessage wrapper ---
   private async sendMessage(chatId: number, text: string, extra?: any): Promise<void> {
-    // Replace with your actual Telegram API call logic
-    // For example, using fetch or axios to call the Telegram Bot API
-    // This is a placeholder implementation
-    // await fetch(`https://api.telegram.org/bot${this.token}/sendMessage`, { ... })
-    // In Cloudflare Workers, use the appropriate fetch method
-    // For now, just log for debugging
-    // Remove this and implement your actual sending logic
-    console.log('sendMessage:', { chatId, text, extra });
+    const url = `${this.baseUrl}/sendMessage`;
+    const payload = {
+      chat_id: chatId,
+      text: text,
+      ...extra
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Telegram API error:', response.status, errorText);
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
   }
   private baseUrl: string;
   private conversationStateManager: ConversationStateManager;
@@ -149,9 +164,27 @@ export class LeitnerBot {
   }
 
   private async answerCallbackQuery(callbackQueryId: string): Promise<void> {
-    // Stub for answering callback queries
-    // In production, call Telegram API to answer callback
-    console.log('answerCallbackQuery:', callbackQueryId);
+    const url = `${this.baseUrl}/answerCallbackQuery`;
+    const payload = {
+      callback_query_id: callbackQueryId
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Telegram answerCallbackQuery error:', response.status, errorText);
+      }
+    } catch (error) {
+      console.error('Failed to answer callback query:', error);
+    }
   }
 
 
@@ -211,6 +244,21 @@ export class LeitnerBot {
   // Command handler method (moved switch/case block here)
   private async handleCommand(command: string, chatId: number, userId: number, args: string[]): Promise<void> {
     switch (command) {
+      case '/start':
+        await this.sendWelcomeMessage(chatId);
+        break;
+      case '/help':
+        await this.sendHelpMessage(chatId);
+        break;
+      case '/menu':
+        await this.sendMainMenu(chatId);
+        break;
+      case '/mywords':
+        await this.sendUserWords(chatId, userId);
+        break;
+      case '/mytopics':
+        await this.sendUserTopics(chatId, userId);
+        break;
       case '/study':
         await this.startStudySession(chatId, userId);
         break;
