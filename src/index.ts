@@ -2,6 +2,8 @@ import { LeitnerBot } from './bot/leitner-bot';
 import { UserManager } from './services/user-manager';
 import { WordExtractor } from './services/word-extractor';
 import { ScheduleManager } from './services/schedule-manager';
+import { AdminService } from './services/admin-service';
+import { AdminAPI } from './api/admin-api';
 
 export interface Env {
   TELEGRAM_BOT_TOKEN: string;
@@ -54,12 +56,56 @@ export default {
       const userManager = new UserManager(env.LEITNER_DB);
       const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
       const scheduleManager = new ScheduleManager(env.LEITNER_DB);
+      const adminService = new AdminService(env.LEITNER_DB);
+      const adminAPI = new AdminAPI(adminService, userManager);
       const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB as any);
 
       let response: Response;
 
+      // Handle admin panel routes
+      if (url.pathname.startsWith('/admin')) {
+        if (url.pathname === '/admin' || url.pathname === '/admin/') {
+          // Serve admin panel HTML - in production, serve from static files
+          const adminHTML = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body>
+    <div class="min-h-screen flex items-center justify-center bg-gray-50">
+        <div class="text-center">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">🎯 Leitner Bot Admin Panel</h1>
+            <p class="text-gray-600 mb-8">Admin interface is under construction</p>
+            <div class="space-y-4">
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h2 class="text-xl font-semibold mb-2">Available Admin Endpoints:</h2>
+                    <ul class="text-left space-y-2">
+                        <li><code class="bg-gray-100 px-2 py-1 rounded">POST /admin/login</code> - Admin login</li>
+                        <li><code class="bg-gray-100 px-2 py-1 rounded">GET /admin/dashboard</code> - Dashboard stats</li>
+                        <li><code class="bg-gray-100 px-2 py-1 rounded">GET /admin/users</code> - User management</li>
+                        <li><code class="bg-gray-100 px-2 py-1 rounded">POST /admin/bulk-assignment</code> - Bulk word assignment</li>
+                        <li><code class="bg-gray-100 px-2 py-1 rounded">GET /admin/tickets</code> - Support tickets</li>
+                        <li><code class="bg-gray-100 px-2 py-1 rounded">POST /admin/send-message</code> - Direct messaging</li>
+                    </ul>
+                </div>
+                <p class="text-sm text-gray-500">Use API endpoints or implement your custom admin interface</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+          response = new Response(adminHTML, {
+            headers: { 'Content-Type': 'text/html' }
+          });
+        } else {
+          // Handle admin API routes
+          response = await adminAPI.handleAdminRequest(request);
+        }
+      }
       // Handle Telegram webhook
-      if (url.pathname === '/webhook' && request.method === 'POST') {
+      else if (url.pathname === '/webhook' && request.method === 'POST') {
         logEvent(env, 'WEBHOOK_RECEIVED', { contentType: request.headers.get('Content-Type') });
         response = await bot.handleWebhook(request);
       }

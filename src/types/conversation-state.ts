@@ -39,9 +39,20 @@ export interface RegistrationConversationState {
   email?: string;
 }
 
+export interface SupportTicketConversationState {
+  step: 'ask_subject' | 'ask_message' | 'confirm';
+  userId: number;
+  userEmail?: string;
+  userName?: string;
+  subject?: string;
+  message?: string;
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+}
+
 export type ConversationState = {
   addTopic?: AddTopicConversationState;
   review?: ReviewConversationState;
   registration?: RegistrationConversationState;
+  supportTicket?: SupportTicketConversationState;
   // Add more flows here as needed
 };

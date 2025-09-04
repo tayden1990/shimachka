@@ -155,3 +155,80 @@ export const LEITNER_INTERVALS = {
   4: 8,    // 8 days
   5: 16    // 16 days
 } as const;
+
+// Admin-related types
+export interface AdminUser {
+  id: string;
+  username: string;
+  email: string;
+  fullName: string;
+  role: 'super_admin' | 'admin' | 'moderator';
+  isActive: boolean;
+  createdAt: string;
+  lastLoginAt?: string;
+}
+
+export interface SupportTicket {
+  id: string;
+  userId: number;
+  userEmail?: string;
+  userName?: string;
+  subject: string;
+  message: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  assignedToAdmin?: string;
+  adminResponse?: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+}
+
+export interface DirectMessage {
+  id: string;
+  fromAdminId?: string;
+  toUserId: number;
+  fromUserId?: number;
+  toAdminId?: string;
+  message: string;
+  isRead: boolean;
+  sentAt: string;
+  readAt?: string;
+}
+
+export interface BulkWordAssignment {
+  id: string;
+  adminId: string;
+  targetUserIds: number[];
+  words: {
+    word: string;
+    translation: string;
+    definition: string;
+    sourceLanguage: string;
+    targetLanguage: string;
+  }[];
+  assignedAt: string;
+  notificationSent: boolean;
+  title?: string;
+  description?: string;
+}
+
+export interface UserActivity {
+  id: string;
+  userId: number;
+  action: string;
+  details: string;
+  timestamp: string;
+  ipAddress?: string;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  activeUsers: number;
+  totalCards: number;
+  totalReviews: number;
+  openTickets: number;
+  resolvedTickets: number;
+  recentRegistrations: number;
+  avgSessionTime: number;
+}

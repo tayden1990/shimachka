@@ -11,6 +11,7 @@ import {
   LanguageCode
 } from '../types';
 import { ConversationStateManager } from '../services/conversation-state-manager';
+import { AdminService } from '../services/admin-service';
 import { AddTopicStep, ConversationState, ReviewConversationState, RegistrationConversationState } from '../types/conversation-state';
 
 // 1. Add more languages including Persian (Farsi)
@@ -109,6 +110,7 @@ export class LeitnerBot {
   }
   private baseUrl: string;
   private conversationStateManager: ConversationStateManager;
+  private adminService: AdminService;
 
   constructor(
     private token: string,
@@ -119,6 +121,7 @@ export class LeitnerBot {
   ) {
     this.baseUrl = `https://api.telegram.org/bot${token}`;
     this.conversationStateManager = new ConversationStateManager(kv);
+    this.adminService = new AdminService(kv);
   }
 
   async handleWebhook(request: Request): Promise<Response> {
@@ -461,6 +464,15 @@ Choose what you'd like to do:
       case '/languages':
         await this.sendLanguageList(chatId);
         break;
+      case '/support':
+        await this.sendSupportMenu(chatId, userId);
+        break;
+      case '/contact':
+        await this.startSupportTicket(chatId, userId);
+        break;
+      case '/messages':
+        await this.showUserMessages(chatId, userId);
+        break;
       default:
         await this.sendMessage(chatId, 'Unknown command. Type /help for available commands.');
     }
@@ -471,6 +483,12 @@ Choose what you'd like to do:
     const state = await this.conversationStateManager.getState(userId);
     if (state && state.registration) {
       await this.handleRegistrationFlow(chatId, userId, text);
+      return;
+    }
+    
+    // Check for ongoing support ticket flow
+    if (state && state.supportTicket) {
+      await this.handleSupportTicketFlow(chatId, userId, text);
       return;
     }
     
@@ -769,6 +787,35 @@ Choose what you'd like to do:
           await this.startRegistrationFlow(chatId, userId);
         }
         break;
+      // Support ticket handlers
+      case 'create_ticket':
+        await this.handleSupportTicketFlow(chatId, userId, 'start');
+        break;
+      case 'view_messages':
+        await this.showDirectMessages(chatId, userId);
+        break;
+      case 'show_faq':
+        await this.sendFAQ(chatId);
+        break;
+      case 'submit_ticket':
+        await this.submitSupportTicket(chatId, userId);
+        break;
+      case 'edit_ticket':
+        await this.handleSupportTicketFlow(chatId, userId, 'edit');
+        break;
+      case 'cancel_ticket':
+        await this.conversationStateManager.clearState(userId);
+        await this.sendMessage(chatId, '❌ Support ticket cancelled. Use /support to start a new one.');
+        break;
+      case 'priority_normal':
+        await this.setTicketPriority(chatId, userId, 'medium');
+        break;
+      case 'priority_urgent':
+        await this.setTicketPriority(chatId, userId, 'urgent');
+        break;
+      case 'support_menu':
+        await this.handleCommand('/support', chatId, userId, []);
+        break;
     }
   }
 
@@ -827,8 +874,10 @@ Choose an option below to get started:`;
 ⚙️ **Settings:**
 /settings - Configure languages and reminders
 
-🆘 **Help:**
+🆘 **Support & Help:**
 /help - Show this help message
+/support - Contact support team
+/contact - Get contact information
 
 💡 **Tips:**
 • Study regularly for best results
@@ -848,7 +897,8 @@ Choose an action below:`;
           { text: '🗂️ My Words', callback_data: 'show_words' }
         ],
         [
-          { text: '⚙️ Settings', callback_data: 'open_settings' }
+          { text: '⚙️ Settings', callback_data: 'open_settings' },
+          { text: '🆘 Support', callback_data: 'support_menu' }
         ]
       ]
     };
@@ -1347,6 +1397,122 @@ Is this information correct?`, keyboard);
     await this.sendWelcomeMessage(chatId);
   }
 
+  private async handleSupportTicketFlow(chatId: number, userId: number, text: string): Promise<void> {
+    const state = await this.conversationStateManager.getState(userId);
+    if (!state || !state.supportTicket) {
+      // Restart support ticket if state is missing
+      await this.startSupportTicket(chatId, userId);
+      return;
+    }
+
+    const ticket = state.supportTicket;
+    switch (ticket.step) {
+      case 'ask_subject': {
+        if (text.trim().length < 5) {
+          await this.sendMessage(chatId, '❌ Please provide a more detailed subject (at least 5 characters).');
+          return;
+        }
+        ticket.subject = text.trim();
+        ticket.step = 'ask_message';
+        await this.conversationStateManager.setState(userId, state);
+        
+        await this.sendMessage(chatId, `📝 **Subject:** ${ticket.subject}
+
+Now please describe your issue or question in detail. The more information you provide, the better we can help you.
+
+Type your message below:`);
+        break;
+      }
+      case 'ask_message': {
+        if (text.trim().length < 10) {
+          await this.sendMessage(chatId, '❌ Please provide a more detailed message (at least 10 characters).');
+          return;
+        }
+        ticket.message = text.trim();
+        ticket.step = 'confirm';
+        await this.conversationStateManager.setState(userId, state);
+        
+        const keyboard: TelegramInlineKeyboard = {
+          inline_keyboard: [
+            [
+              { text: '📤 Submit Ticket', callback_data: 'submit_ticket:normal' },
+              { text: '🚨 Urgent', callback_data: 'submit_ticket:urgent' }
+            ],
+            [
+              { text: '✏️ Edit', callback_data: 'edit_ticket' },
+              { text: '❌ Cancel', callback_data: 'cancel_ticket' }
+            ]
+          ]
+        };
+
+        await this.sendMessage(chatId, 
+          `🎫 **Review Your Support Ticket**
+
+**Subject:** ${ticket.subject}
+
+**Message:** ${ticket.message}
+
+**Priority:** Choose normal or urgent (urgent for critical issues only)
+
+Please review and submit your ticket:`, keyboard);
+        break;
+      }
+      case 'confirm': {
+        // This case is handled by callback query
+        break;
+      }
+    }
+  }
+
+  private async submitSupportTicket(chatId: number, userId: number, priority: 'normal' | 'urgent' = 'normal'): Promise<void> {
+    const state = await this.conversationStateManager.getState(userId);
+    if (!state || !state.supportTicket) return;
+
+    const ticket = state.supportTicket;
+    
+    try {
+      const ticketId = await this.adminService.createSupportTicket({
+        userId: ticket.userId,
+        userEmail: ticket.userEmail,
+        userName: ticket.userName,
+        subject: ticket.subject!,
+        message: ticket.message!,
+        status: 'open',
+        priority: priority === 'urgent' ? 'urgent' : 'medium'
+      });
+
+      // Clear ticket state
+      await this.conversationStateManager.clearState(userId);
+
+      const priorityEmoji = priority === 'urgent' ? '🚨' : '📋';
+      const responseTimeText = priority === 'urgent' ? 'within 4 hours' : 'within 24 hours';
+
+      const keyboard: TelegramInlineKeyboard = {
+        inline_keyboard: [
+          [
+            { text: '💬 View Messages', callback_data: 'view_messages' },
+            { text: '🎫 New Ticket', callback_data: 'create_ticket' }
+          ]
+        ]
+      };
+
+      await this.sendMessage(chatId, 
+        `✅ **Support Ticket Submitted Successfully!**
+
+${priorityEmoji} **Ticket ID:** ${ticketId.split('_')[1]?.slice(-6) || 'Generated'}
+📋 **Status:** Open
+⏱️ **Expected Response:** ${responseTimeText}
+
+Our support team will review your request and respond as soon as possible. You'll receive a message when there's an update.
+
+Thank you for contacting us! 🎯`, keyboard);
+
+    } catch (error) {
+      console.error('Error creating support ticket:', error);
+      await this.sendMessage(chatId, '❌ **Error Creating Ticket**\n\nSorry, there was an error submitting your support ticket. Please try again later or contact us directly.');
+    }
+  }
+
   // Multi-step add topic/word flow handler
   private async handleAddTopicStep(chatId: number, userId: number, text: string, state: ConversationState): Promise<void> {
     const addTopic = state.addTopic!;
@@ -1790,5 +1956,263 @@ ${totalCards < 20 ? '📝 Build vocabulary with /topic command' : ''}`;
     }
     
     await this.conversationStateManager.clearState(userId);
+  }
+
+  // Support and messaging methods
+  private async sendSupportMenu(chatId: number, userId: number): Promise<void> {
+    const keyboard: TelegramInlineKeyboard = {
+      inline_keyboard: [
+        [
+          { text: '🎫 Create Support Ticket', callback_data: 'create_ticket' },
+          { text: '💬 View Messages', callback_data: 'view_messages' }
+        ],
+        [
+          { text: '❓ FAQ', callback_data: 'show_faq' },
+          { text: '📞 Contact Info', callback_data: 'show_contact' }
+        ]
+      ]
+    };
+
+    const message = `🛠️ **Support Center**
+
+How can we help you today?
+
+• **Create Support Ticket** - Report issues or ask questions
+• **View Messages** - Check direct messages from admin
+• **FAQ** - Common questions and answers
+• **Contact Info** - Alternative ways to reach us
+
+Choose an option below:`;
+
+    await this.sendMessage(chatId, message, keyboard);
+  }
+
+  private async startSupportTicket(chatId: number, userId: number): Promise<void> {
+    const user = await this.userManager.getUser(userId);
+    
+    const state: ConversationState = {
+      supportTicket: {
+        step: 'ask_subject',
+        userId,
+        userEmail: user?.email,
+        userName: user?.fullName || user?.firstName
+      }
+    };
+    
+    await this.conversationStateManager.setState(userId, state);
+    
+    await this.sendMessage(chatId, 
+      `🎫 **Create Support Ticket**
+
+What's the subject of your inquiry? Please provide a brief description of your issue or question.
+
+Type your subject below:`);
+  }
+
+  private async showUserMessages(chatId: number, userId: number): Promise<void> {
+    const messages = await this.adminService.getUserMessages(userId);
+    
+    if (messages.length === 0) {
+      await this.sendMessage(chatId, '📭 **No Messages**\n\nYou don\'t have any messages from our support team yet.');
+      return;
+    }
+
+    const unreadCount = messages.filter(m => !m.isRead).length;
+    let messageText = `💬 **Your Messages** ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}\n\n`;
+    
+    for (const message of messages.slice(0, 5)) { // Show latest 5 messages
+      const readStatus = message.isRead ? '✅' : '🆕';
+      const date = new Date(message.sentAt).toLocaleDateString();
+      messageText += `${readStatus} **${date}**\n${message.message}\n\n`;
+      
+      if (!message.isRead) {
+        await this.adminService.markMessageAsRead(message.id);
+      }
+    }
+
+    if (messages.length > 5) {
+      messageText += `_...and ${messages.length - 5} more messages_`;
+    }
+
+    const keyboard: TelegramInlineKeyboard = {
+      inline_keyboard: [
+        [
+          { text: '🎫 Create Ticket', callback_data: 'create_ticket' },
+          { text: '🔄 Refresh', callback_data: 'view_messages' }
+        ]
+      ]
+    };
+
+    await this.sendMessage(chatId, messageText, keyboard);
+  }
+
+  private async showFAQ(chatId: number): Promise<void> {
+    const faqText = `❓ **Frequently Asked Questions**
+
+**Q: How does the Leitner system work?**
+A: The Leitner system uses spaced repetition. Words move through 5 boxes based on your performance. Correct answers move words to higher boxes with longer intervals.
+
+**Q: How do I add vocabulary?**
+A: Use /topic to generate vocabulary from any subject, or /add to manually add words.
+
+**Q: Why can't I see some buttons?**
+A: Make sure your Telegram app is updated. If problems persist, contact support.
+
+**Q: How can I change languages?**
+A: Use /settings to configure your source and target languages.
+
+**Q: How do I reset my progress?**
+A: Contact support through /support for account management.
+
+**Q: Can I export my vocabulary?**
+A: This feature is coming soon. Contact support for manual exports.
+
+Need more help? Use /support to contact our team!`;
+
+    await this.sendMessage(chatId, faqText);
+  }
+
+  private async sendContactInfo(chatId: number): Promise<void> {
+    const contactText = `📞 **Contact Information**
+
+**Primary Support:**
+• Use /support in this bot
+• Create a support ticket for detailed help
+
+**Response Times:**
+• Support tickets: Within 24 hours
+• Urgent issues: Within 4 hours
+
+**What to include in your support request:**
+• Clear description of the issue
+• Steps you've tried
+• Screenshots if applicable
+• Your user ID: ${chatId}
+
+**Bot Version:** 2.0.0
+**Last Updated:** September 2025
+
+We're here to help! 🎯`;
+
+    await this.sendMessage(chatId, contactText);
+  }
+
+  private async showDirectMessages(chatId: number, userId: number): Promise<void> {
+    try {
+      const messages = await this.adminService.getUserMessages(userId);
+      
+      if (messages.length === 0) {
+        await this.sendMessage(chatId, '📬 No messages for you.');
+        return;
+      }
+
+      const messageText = messages.map((msg, index) => 
+        `📩 **Message ${index + 1}** (${new Date(msg.sentAt).toLocaleDateString()})
+${msg.message}
+${msg.isRead ? '✅ Read' : '🔵 New'}`
+      ).join('\n\n');
+
+      await this.sendMessage(chatId, `📬 **Your Messages**\n\n${messageText}`);
+      
+      // Mark messages as read
+      for (const msg of messages.filter(m => !m.isRead)) {
+        await this.adminService.markMessageAsRead(msg.id);
+      }
+    } catch (error) {
+      console.error('Error showing direct messages:', error);
+      await this.sendMessage(chatId, '❌ Failed to load messages. Please try again.');
+    }
+  }
+
+  private async sendFAQ(chatId: number): Promise<void> {
+    const faqText = `❓ **Frequently Asked Questions**
+
+**Q: How does the Leitner system work?**
+A: Words move between 5 boxes based on your performance. Correct answers promote words to higher boxes with longer intervals.
+
+**Q: How often should I study?**
+A: Daily practice is recommended. The system schedules reviews automatically based on spaced repetition.
+
+**Q: Can I add my own words?**
+A: Yes! Use /topic to extract words from any topic, or contact support for bulk additions.
+
+**Q: What languages are supported?**
+A: We support 19+ languages including English, Spanish, French, German, Chinese, Japanese, and more.
+
+**Q: How do I reset my progress?**
+A: Contact support for account management. We can reset specific words or your entire progress.
+
+**Q: Can I export my vocabulary?**
+A: This feature is coming soon. Contact support for manual exports.
+
+Need more help? Use /support to contact our team!`;
+
+    await this.sendMessage(chatId, faqText);
+  }
+
+  private async setTicketPriority(chatId: number, userId: number, priority: 'low' | 'medium' | 'high' | 'urgent'): Promise<void> {
+    const state = await this.conversationStateManager.getState(userId);
+    if (!state?.supportTicket) {
+      await this.sendMessage(chatId, '❌ No active ticket found. Please start a new support request.');
+      return;
+    }
+
+    // Update the conversation state with priority
+    const updatedState: ConversationState = {
+      ...state,
+      supportTicket: {
+        ...state.supportTicket,
+        priority
+      }
+    };
+    
+    await this.conversationStateManager.setState(userId, updatedState);
+
+    const priorityEmoji = priority === 'urgent' ? '🚨' : '📋';
+    await this.sendMessage(chatId, `${priorityEmoji} Priority set to: **${priority.toUpperCase()}**
+
+Now I'll submit your ticket to our support team.`);
+
+    // Auto-submit the ticket
+    await this.submitSupportTicket(chatId, userId);
+  }
+
+  // Notification system for admin actions
+  async checkForNotifications(userId: number): Promise<void> {
+    try {
+      // Check for unread direct messages
+      const messages = await this.adminService.getUserMessages(userId, true);
+      if (messages.length > 0) {
+        const chatId = userId; // In private chats, userId = chatId
+        await this.sendMessage(chatId, `📬 You have ${messages.length} new message${messages.length > 1 ? 's' : ''} from support! Use /support to view them.`);
+      }
+
+      // Check for new bulk word assignments
+      const allAssignments = await this.adminService.getBulkAssignments(1, 100);
+      const userAssignments = allAssignments.assignments.filter(a => 
+        a.targetUserIds.includes(userId) && !a.notificationSent
+      );
+      
+      if (userAssignments.length > 0) {
+        const chatId = userId;
+        for (const assignment of userAssignments) {
+          await this.sendMessage(chatId, `📚 New vocabulary assigned to you! 
+**Title:** ${assignment.title || 'New Vocabulary Assignment'}
+**Words:** ${assignment.words.length} new words
+**Description:** ${assignment.description || 'New vocabulary to study'}
+
+Start studying with /study!`);
+          
+          // Log the notification
+          await this.adminService.logActivity({
+            userId,
+            action: 'notification_sent',
+            details: `Bulk assignment notification: ${assignment.id}`
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error checking notifications:', error);
+    }
   }
 }
