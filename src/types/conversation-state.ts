@@ -33,8 +33,15 @@ export interface ReviewConversationState {
   };
 }
 
+export interface RegistrationConversationState {
+  step: 'ask_name' | 'ask_email' | 'confirm';
+  fullName?: string;
+  email?: string;
+}
+
 export type ConversationState = {
   addTopic?: AddTopicConversationState;
   review?: ReviewConversationState;
+  registration?: RegistrationConversationState;
   // Add more flows here as needed
 };

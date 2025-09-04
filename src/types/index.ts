@@ -4,12 +4,15 @@ export interface User {
   id: number;
   username?: string;
   firstName?: string;
+  fullName?: string;
+  email?: string;
   language: string;
   timezone: string;
   reminderTimes: string[]; // Array of times like ["08:00", "14:00", "20:00"]
   isActive: boolean;
   createdAt: string;
   lastActiveAt: string;
+  isRegistrationComplete?: boolean;
 }
 
 export interface Card {

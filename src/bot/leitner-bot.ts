@@ -11,7 +11,7 @@ import {
   LanguageCode
 } from '../types';
 import { ConversationStateManager } from '../services/conversation-state-manager';
-import { AddTopicStep, ConversationState, ReviewConversationState } from '../types/conversation-state';
+import { AddTopicStep, ConversationState, ReviewConversationState, RegistrationConversationState } from '../types/conversation-state';
 
 // 1. Add more languages including Persian (Farsi)
 export const LANGUAGES: Record<string, string> = {
@@ -156,9 +156,16 @@ export class LeitnerBot {
         id: userId,
         username: message.from.username,
         firstName: message.from.first_name,
-        language: message.from.language_code || 'en'
+        language: message.from.language_code || 'en',
+        isRegistrationComplete: false
       });
-      await this.sendWelcomeMessage(chatId);
+      await this.startRegistrationFlow(chatId, userId);
+      return;
+    }
+
+    // Check if registration is complete
+    if (!user.isRegistrationComplete) {
+      await this.handleRegistrationFlow(chatId, userId, text);
       return;
     }
 
@@ -382,9 +389,23 @@ Choose what you'd like to do:
 
   // Command handler method (moved switch/case block here)
   private async handleCommand(command: string, chatId: number, userId: number, args: string[]): Promise<void> {
+    // Check if registration is complete (except for /start command)
+    if (command !== '/start') {
+      const user = await this.userManager.getUser(userId);
+      if (!user || !user.isRegistrationComplete) {
+        await this.sendMessage(chatId, '👤 Please complete your registration first before using other features.\n\nUse /start to begin registration.');
+        return;
+      }
+    }
+
     switch (command) {
       case '/start':
-        await this.sendWelcomeMessage(chatId);
+        const user = await this.userManager.getUser(userId);
+        if (user && user.isRegistrationComplete) {
+          await this.sendWelcomeMessage(chatId);
+        } else {
+          await this.startRegistrationFlow(chatId, userId);
+        }
         break;
       case '/help':
         await this.sendHelpMessage(chatId);
@@ -446,8 +467,14 @@ Choose what you'd like to do:
   }
 
   private async handleTextInput(chatId: number, userId: number, text: string): Promise<void> {
-    // Check for ongoing add topic/word flow FIRST
+    // Check for ongoing registration flow FIRST
     const state = await this.conversationStateManager.getState(userId);
+    if (state && state.registration) {
+      await this.handleRegistrationFlow(chatId, userId, text);
+      return;
+    }
+    
+    // Check for ongoing add topic/word flow
     if (state && state.addTopic) {
       await this.handleAddTopicStep(chatId, userId, text, state);
       return;
@@ -734,15 +761,28 @@ Choose what you'd like to do:
           await this.sendMessage(chatId, '❌ Cancelled. Use /topic to try again.');
         }
         break;
+      case 'confirm_registration':
+        if (params[0] === 'yes') {
+          await this.completeRegistration(chatId, userId);
+        } else {
+          // Edit registration - restart the flow
+          await this.startRegistrationFlow(chatId, userId);
+        }
+        break;
     }
   }
 
   private async sendWelcomeMessage(chatId: number): Promise<void> {
-    const message = `🎯 **Welcome to the Leitner Learning Bot!**
+    // Get user info for personalization
+    const userId = chatId; // In private chats, chatId equals userId
+    const user = await this.userManager.getUser(userId);
+    const userName = user?.fullName || user?.firstName || 'there';
+    
+    const message = `🎯 **Welcome back, ${userName}!**
 
-I'll help you learn new vocabulary using the proven Leitner spaced repetition system.
+Ready to continue your vocabulary learning journey with the Leitner spaced repetition system?
 
-🚀 **Getting Started:**
+🚀 **Quick Start:**
 • Use /topic to generate vocabulary from any topic
 • Use /add to manually add words  
 • Use /study to review your flashcards
@@ -1199,6 +1239,112 @@ Use language codes when setting your preferences.`;
 
     // Process the answer and move the card
     await this.handleReviewAnswer(chatId, userId, currentCard.id, isCorrect);
+  }
+
+  // Registration flow handlers
+  private async startRegistrationFlow(chatId: number, userId: number): Promise<void> {
+    const registrationState: ConversationState = {
+      registration: {
+        step: 'ask_name'
+      }
+    };
+    await this.conversationStateManager.setState(userId, registrationState);
+    
+    const message = `🎯 **Welcome to the Leitner Learning Bot!**
+
+Before we start your vocabulary learning journey, I need to get to know you better.
+
+👤 **What's your full name?**
+
+Please type your name below:`;
+
+    await this.sendMessage(chatId, message);
+  }
+
+  private async handleRegistrationFlow(chatId: number, userId: number, text: string): Promise<void> {
+    const state = await this.conversationStateManager.getState(userId);
+    if (!state || !state.registration) {
+      // Restart registration if state is missing
+      await this.startRegistrationFlow(chatId, userId);
+      return;
+    }
+
+    const registration = state.registration;
+    switch (registration.step) {
+      case 'ask_name': {
+        if (text.trim().length < 2) {
+          await this.sendMessage(chatId, '❌ Please enter a valid name (at least 2 characters).');
+          return;
+        }
+        registration.fullName = text.trim();
+        registration.step = 'ask_email';
+        await this.conversationStateManager.setState(userId, state);
+        
+        await this.sendMessage(chatId, `Nice to meet you, ${registration.fullName}! 👋
+
+📧 **What's your email address?**
+
+This will help us:
+• Send you learning reminders (optional)
+• Keep your progress safe
+• Provide personalized insights
+
+Please type your email below:`);
+        break;
+      }
+      case 'ask_email': {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(text.trim())) {
+          await this.sendMessage(chatId, '❌ Please enter a valid email address (e.g., john@example.com).');
+          return;
+        }
+        registration.email = text.trim();
+        registration.step = 'confirm';
+        await this.conversationStateManager.setState(userId, state);
+        
+        const keyboard: TelegramInlineKeyboard = {
+          inline_keyboard: [
+            [
+              { text: '✅ Confirm', callback_data: 'confirm_registration:yes' },
+              { text: '✏️ Edit', callback_data: 'confirm_registration:edit' }
+            ]
+          ]
+        };
+
+        await this.sendMessage(chatId, 
+          `📋 **Please confirm your information:**
+
+👤 **Name:** ${registration.fullName}
+📧 **Email:** ${registration.email}
+
+Is this information correct?`, keyboard);
+        break;
+      }
+      case 'confirm': {
+        // This case is handled by callback query
+        break;
+      }
+    }
+  }
+
+  private async completeRegistration(chatId: number, userId: number): Promise<void> {
+    const state = await this.conversationStateManager.getState(userId);
+    if (!state || !state.registration) return;
+
+    const registration = state.registration;
+    
+    // Update user with registration info
+    await this.userManager.updateUser(userId, {
+      fullName: registration.fullName,
+      email: registration.email,
+      isRegistrationComplete: true
+    });
+
+    // Clear registration state
+    await this.conversationStateManager.clearState(userId);
+
+    // Send welcome message with getting started options
+    await this.sendWelcomeMessage(chatId);
   }
 
   // Multi-step add topic/word flow handler
