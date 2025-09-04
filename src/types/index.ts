@@ -110,6 +110,8 @@ export interface WordExtractionRequest {
   sourceLanguage: string;
   targetLanguage: string;
   count?: number;
+  wordLevel?: string;
+  descriptionLanguage?: string;
 }
 
 export interface ExtractedWord {
