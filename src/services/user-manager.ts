@@ -15,6 +15,7 @@ export class UserManager {
       username: userData.username,
       firstName: userData.firstName,
       language: userData.language || 'en',
+      interfaceLanguage: userData.interfaceLanguage || 'en',
       timezone: userData.timezone || 'UTC',
       reminderTimes: userData.reminderTimes || ['08:00', '14:00', '20:00'],
       isActive: true,

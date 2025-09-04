@@ -1,6 +1,7 @@
 import { UserManager } from '../services/user-manager';
 import { WordExtractor } from '../services/word-extractor';
 import { ScheduleManager } from '../services/schedule-manager';
+import { languageManager } from '../services/language-manager';
 import { 
   TelegramUpdate, 
   TelegramMessage, 
@@ -145,6 +146,12 @@ export class LeitnerBot {
     }
   }
 
+  // Helper method to get user's interface language
+  private async getUserInterfaceLanguage(userId: number): Promise<string> {
+    const user = await this.userManager.getUser(userId);
+    return user?.interfaceLanguage || 'en';
+  }
+
   private async handleMessage(message: TelegramMessage): Promise<void> {
     if (!message.from || !message.text) return;
 
@@ -160,6 +167,7 @@ export class LeitnerBot {
         username: message.from.username,
         firstName: message.from.first_name,
         language: message.from.language_code || 'en',
+        interfaceLanguage: message.from.language_code || 'en',
         isRegistrationComplete: false
       });
       await this.startRegistrationFlow(chatId, userId);
@@ -411,7 +419,7 @@ Choose what you'd like to do:
         }
         break;
       case '/help':
-        await this.sendHelpMessage(chatId);
+        await this.sendHelpMessage(chatId, userId);
         break;
       case '/menu':
         await this.sendMainMenu(chatId);
@@ -769,7 +777,7 @@ Choose what you'd like to do:
         await this.handleCommand('/settings', chatId, userId, []);
         break;
       case 'show_help':
-        await this.sendHelpMessage(chatId);
+        await this.sendHelpMessage(chatId, userId);
         break;
       case 'confirm_add_topic':
         if (params[0] === 'yes') {
@@ -816,6 +824,24 @@ Choose what you'd like to do:
       case 'support_menu':
         await this.handleCommand('/support', chatId, userId, []);
         break;
+      case 'set_interface_lang':
+        if (params[0]) {
+          // Handle interface language selection
+          await this.setInterfaceLanguage(chatId, userId, params[0]);
+        } else {
+          // Show interface language selection menu
+          await this.showInterfaceLanguageMenu(chatId, userId);
+        }
+        break;
+      case 'settings_menu':
+        await this.sendSettingsMenu(chatId, userId);
+        break;
+      case 'main_menu':
+        await this.sendWelcomeMessage(chatId);
+        break;
+      case 'reminder_settings':
+        await this.showReminderSettings(chatId, userId);
+        break;
     }
   }
 
@@ -824,8 +850,10 @@ Choose what you'd like to do:
     const userId = chatId; // In private chats, chatId equals userId
     const user = await this.userManager.getUser(userId);
     const userName = user?.fullName || user?.firstName || 'there';
+    const userLang = await this.getUserInterfaceLanguage(userId);
+    const texts = languageManager.getTexts(userLang);
     
-    const message = `🎯 **Welcome back, ${userName}!**
+    const message = `${texts.welcomeBack}, ${userName}!
 
 Ready to continue your vocabulary learning journey with the Leitner spaced repetition system?
 
@@ -842,15 +870,15 @@ Choose an option below to get started:`;
     const keyboard: TelegramInlineKeyboard = {
       inline_keyboard: [
         [
-          { text: '📚 Study Now', callback_data: 'start_study' },
-          { text: '➕ Add Topic', callback_data: 'add_topic' }
+          { text: texts.startStudy, callback_data: 'start_study' },
+          { text: `➕ ${texts.addVocabulary}`, callback_data: 'add_topic' }
         ],
         [
-          { text: '📊 View Stats', callback_data: 'view_stats' },
-          { text: '⚙️ Settings', callback_data: 'open_settings' }
+          { text: texts.myProgress, callback_data: 'view_stats' },
+          { text: texts.settings, callback_data: 'settings_menu' }
         ],
         [
-          { text: '❓ Help', callback_data: 'show_help' }
+          { text: texts.help, callback_data: 'show_help' }
         ]
       ]
     };
@@ -858,47 +886,25 @@ Choose an option below to get started:`;
     await this.sendMessage(chatId, message, keyboard);
   }
 
-  private async sendHelpMessage(chatId: number): Promise<void> {
-    const message = `📚 **Leitner Learning Bot Commands:**
-
-🎯 **Learning Commands:**
-/study - Start reviewing your flashcards
-/topic - Generate vocabulary from a topic  
-/add - Add a word manually
-
-📊 **Progress & Stats:**
-/stats - View your learning statistics
-/mywords - See your vocabulary
-/mytopics - View your topics
-
-⚙️ **Settings:**
-/settings - Configure languages and reminders
-
-🆘 **Support & Help:**
-/help - Show this help message
-/support - Contact support team
-/contact - Get contact information
-
-💡 **Tips:**
-• Study regularly for best results
-• Words move through 5 boxes based on your performance
-• Mastered words are reviewed less frequently
-
-Choose an action below:`;
+  private async sendHelpMessage(chatId: number, userId?: number): Promise<void> {
+    const userLang = await this.getUserInterfaceLanguage(userId || 0);
+    const texts = languageManager.getTexts(userLang);
+    
+    const message = texts.helpMessage;
 
     const keyboard: TelegramInlineKeyboard = {
       inline_keyboard: [
         [
-          { text: '📚 Start Study', callback_data: 'start_study' },
-          { text: '➕ Add Vocabulary', callback_data: 'add_vocabulary' }
+          { text: texts.startStudy, callback_data: 'start_study' },
+          { text: texts.addVocabulary, callback_data: 'add_vocabulary' }
         ],
         [
-          { text: '📊 My Progress', callback_data: 'view_stats' },
-          { text: '🗂️ My Words', callback_data: 'show_words' }
+          { text: texts.myProgress, callback_data: 'view_stats' },
+          { text: texts.myWords, callback_data: 'show_words' }
         ],
         [
-          { text: '⚙️ Settings', callback_data: 'open_settings' },
-          { text: '🆘 Support', callback_data: 'support_menu' }
+          { text: texts.settings, callback_data: 'open_settings' },
+          { text: texts.support, callback_data: 'support_menu' }
         ]
       ]
     };
@@ -908,14 +914,14 @@ Choose an action below:`;
 
   private async startStudySession(chatId: number, userId: number): Promise<void> {
     const cardsToReview = await this.userManager.getCardsDueForReview(userId, 1);
+    const userLang = await this.getUserInterfaceLanguage(userId);
+    const texts = languageManager.getTexts(userLang);
     
     if (cardsToReview.length === 0) {
       // Show user's current progress when no cards are due
       const cards = await this.userManager.getUserCards(userId);
       if (cards.length === 0) {
-        await this.sendMessage(chatId, 
-          '📚 **Ready to start learning?**\n\nYou haven\'t added any vocabulary yet!\n\n• Use /topic to generate vocabulary from any subject\n• Use /add to manually add words\n\nThe Leitner system will help you master new words efficiently! 🚀'
-        );
+        await this.sendMessage(chatId, texts.noVocabularyYet);
       } else {
         const nextCard = cards.reduce((earliest, card) => 
           new Date(card.nextReviewAt) < new Date(earliest.nextReviewAt) ? card : earliest
@@ -923,9 +929,14 @@ Choose an action below:`;
         const nextReview = new Date(nextCard.nextReviewAt);
         const hoursUntil = Math.round((nextReview.getTime() - Date.now()) / (1000 * 60 * 60));
         
-        await this.sendMessage(chatId, 
-          `🎉 **All caught up!**\n\nYou've reviewed all due cards. Great work!\n\n📊 **Your vocabulary:** ${cards.length} words\n⏰ **Next review:** ${hoursUntil < 24 ? `${hoursUntil} hours` : `${Math.round(hoursUntil/24)} days`}\n\n💡 Use /topic to add more vocabulary or /progress to see your stats!`
-        );
+        const message = `${texts.allCaughtUp}
+
+📊 **${texts.myWords}:** ${cards.length} words
+⏰ **${texts.nextCard}:** ${hoursUntil < 24 ? `${hoursUntil} hours` : `${Math.round(hoursUntil/24)} days`}
+
+💡 Use /topic to add more vocabulary or /progress to see your stats!`;
+        
+        await this.sendMessage(chatId, message);
       }
       return;
     }
@@ -934,17 +945,14 @@ Choose an action below:`;
     await this.userManager.createReviewSession(userId);
     
     const cards = await this.userManager.getUserCards(userId);
-    const sessionMessage = `🚀 **Study Session Started!**
+    const sessionMessage = `${texts.studySessionStarted}
 
 📊 **Today's Review:** ${cardsToReview.length} cards
 📚 **Total Vocabulary:** ${cards.length} words
 
-🎯 **How the Leitner System Works:**
-• Correct answers → Move to next box (review less often)
-• Incorrect answers → Back to Box 1 (review more often)
-• Master words by reaching Box 5!
+${texts.howLeitnerWorks}
 
-💡 **Pro tip:** You can type your answers or use the buttons. Let's begin!`;
+${texts.proTip}`;
 
     await this.sendMessage(chatId, sessionMessage);
     
@@ -953,6 +961,9 @@ Choose an action below:`;
   }
 
   private async presentCard(chatId: number, userId: number, card: Card): Promise<void> {
+    const userLang = await this.getUserInterfaceLanguage(userId);
+    const texts = languageManager.getTexts(userLang);
+    
     // Store the current card in conversation state for text input handling
     const reviewState: ReviewConversationState = {
       currentCardId: card.id,
@@ -974,13 +985,13 @@ Choose an action below:`;
     const cardsDue = cards.filter(c => new Date(c.nextReviewAt) <= new Date()).length;
     const currentIndex = cardsDue - cards.filter(c => new Date(c.nextReviewAt) <= new Date() && c.id !== card.id).length;
 
-    // Exactly 3 buttons as requested: I know, I don't know, Show meaning
+    // Localized buttons
     const keyboard: TelegramInlineKeyboard = {
       inline_keyboard: [
         [
-          { text: '✅ I Know', callback_data: `review_correct:${card.id}` },
-          { text: '❌ I Don\'t Know', callback_data: `review_incorrect:${card.id}` },
-          { text: '💡 Show Meaning', callback_data: `show_meaning:${card.id}` }
+          { text: texts.iKnow, callback_data: `review_correct:${card.id}` },
+          { text: texts.iDontKnow, callback_data: `review_incorrect:${card.id}` },
+          { text: texts.showMeaning, callback_data: `show_meaning:${card.id}` }
         ]
       ]
     };
@@ -1215,16 +1226,37 @@ Good luck! 🌟`;
 // (Class should be closed at the very end of the file)
 
   private async sendSettingsMenu(chatId: number, userId: number): Promise<void> {
-    const message = `⚙️ **Settings**
+    const userLang = await this.getUserInterfaceLanguage(userId);
+    const texts = languageManager.getTexts(userLang);
+    const user = await this.userManager.getUser(userId);
 
-Configure your learning preferences:
+    const message = `${texts.settingsMenu}
 
-• Languages: Set your source and target languages
-• Reminders: Set daily reminder times
-• Study preferences: Adjust review settings
+📖 ${texts.sourceLanguage}: ${user?.language || 'en'}
+🎯 ${texts.targetLanguage}: ${user?.language || 'en'}
+🌐 ${texts.interfaceLanguage}: ${languageManager.getSupportedLanguages()[userLang] || 'English'}
 
-Use /languages to see supported languages.`;
-    await this.sendMessage(chatId, message);
+${texts.selectLanguage}`;
+
+    const keyboard: TelegramInlineKeyboard = {
+      inline_keyboard: [
+        [
+          { text: `📖 ${texts.sourceLanguage}`, callback_data: 'set_source_lang' },
+          { text: `🎯 ${texts.targetLanguage}`, callback_data: 'set_target_lang' }
+        ],
+        [
+          { text: `🌐 ${texts.interfaceLanguage}`, callback_data: 'set_interface_lang' }
+        ],
+        [
+          { text: `⏰ ${texts.reminderSettings}`, callback_data: 'reminder_settings' }
+        ],
+        [
+          { text: texts.back, callback_data: 'main_menu' }
+        ]
+      ]
+    };
+
+    await this.sendMessage(chatId, message, keyboard);
   }
 
   private async sendLanguageList(chatId: number): Promise<void> {
@@ -2214,5 +2246,63 @@ Start studying with /study!`);
     } catch (error) {
       console.error('Error checking notifications:', error);
     }
+  }
+
+  // Language management methods
+  private async showInterfaceLanguageMenu(chatId: number, userId: number): Promise<void> {
+    const userLang = await this.getUserInterfaceLanguage(userId);
+    const texts = languageManager.getTexts(userLang);
+    
+    const message = `${texts.selectLanguage} ${texts.interfaceLanguage}:`;
+    const keyboard = languageManager.createLanguageKeyboard(userLang);
+    
+    await this.sendMessage(chatId, message, keyboard);
+  }
+
+  private async setInterfaceLanguage(chatId: number, userId: number, languageCode: string): Promise<void> {
+    const currentLang = await this.getUserInterfaceLanguage(userId);
+    
+    if (!languageManager.isLanguageSupported(languageCode)) {
+      const texts = languageManager.getTexts(currentLang);
+      await this.sendMessage(chatId, `${texts.error}: ${texts.invalidInput}`);
+      return;
+    }
+
+    // Update user's interface language
+    await this.userManager.updateUser(userId, { interfaceLanguage: languageCode });
+    
+    // Get texts in the new language
+    const texts = languageManager.getTexts(languageCode);
+    await this.sendMessage(chatId, texts.languageUpdated);
+    
+    // Show settings menu in new language
+    await this.sendSettingsMenu(chatId, userId);
+  }
+
+  private async showReminderSettings(chatId: number, userId: number): Promise<void> {
+    const userLang = await this.getUserInterfaceLanguage(userId);
+    const texts = languageManager.getTexts(userLang);
+    const user = await this.userManager.getUser(userId);
+    
+    const currentReminders = user?.reminderTimes || [];
+    const reminderText = currentReminders.length > 0 
+      ? currentReminders.join(', ') 
+      : 'None set';
+
+    const message = `${texts.reminderSettings}
+
+Current reminders: ${reminderText}
+
+Coming soon: Set custom reminder times for your daily study sessions.`;
+
+    const keyboard: TelegramInlineKeyboard = {
+      inline_keyboard: [
+        [
+          { text: texts.back, callback_data: 'settings_menu' }
+        ]
+      ]
+    };
+
+    await this.sendMessage(chatId, message, keyboard);
   }
 }

@@ -4,6 +4,7 @@ import { WordExtractor } from './services/word-extractor';
 import { ScheduleManager } from './services/schedule-manager';
 import { AdminService } from './services/admin-service';
 import { AdminAPI } from './api/admin-api';
+import { initializeAdmin } from './init-admin';
 
 export interface Env {
   TELEGRAM_BOT_TOKEN: string;
@@ -59,6 +60,9 @@ export default {
       const adminService = new AdminService(env.LEITNER_DB);
       const adminAPI = new AdminAPI(adminService, userManager);
       const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB as any);
+
+      // Initialize admin account on first run
+      await initializeAdmin(env.LEITNER_DB);
 
       let response: Response;
 

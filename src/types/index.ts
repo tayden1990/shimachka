@@ -7,6 +7,7 @@ export interface User {
   fullName?: string;
   email?: string;
   language: string;
+  interfaceLanguage: string; // Language for bot interface
   timezone: string;
   reminderTimes: string[]; // Array of times like ["08:00", "14:00", "20:00"]
   isActive: boolean;

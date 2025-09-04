@@ -123,6 +123,36 @@ curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
 - `/settings` - Configure languages and reminders
 - `/languages` - List supported languages
 
+### Multi-Language Support
+
+The bot supports multiple interface languages:
+- **English** (en) - Default
+- **Persian/Farsi** (fa) - فارسی
+- **Arabic** (ar) - العربية  
+- **Spanish** (es) - Español
+- **Russian** (ru) - Русский
+
+Users can change the interface language via `/settings` → Interface Language.
+
+### Admin Panel
+
+Access the admin dashboard at: `https://your-worker.your-subdomain.workers.dev/admin`
+
+**Default Admin Credentials:**
+- Username: `admin`
+- Password: `admin123`
+
+**⚠️ Important:** Change the default password immediately after first login!
+
+Admin features include:
+- User management and analytics
+- Bulk word assignments
+- Direct messaging to users
+- Support ticket management
+- System monitoring and reports
+
+For detailed admin setup instructions, see [ADMIN_SETUP.md](./ADMIN_SETUP.md).
+
 ### Example Usage
 
 1. **Generate vocabulary from a topic:**
