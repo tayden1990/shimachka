@@ -15,10 +15,10 @@ export default {
     const url = new URL(request.url);
     
     // Initialize services
-    const userManager = new UserManager(env.LEITNER_DB);
-    const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
-    const scheduleManager = new ScheduleManager(env.LEITNER_DB);
-    const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager);
+  const userManager = new UserManager(env.LEITNER_DB);
+  const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
+  const scheduleManager = new ScheduleManager(env.LEITNER_DB);
+  const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB);
 
     // Handle Telegram webhook
     if (url.pathname === '/webhook' && request.method === 'POST') {
@@ -40,10 +40,10 @@ export default {
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    const userManager = new UserManager(env.LEITNER_DB);
-    const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
-    const scheduleManager = new ScheduleManager(env.LEITNER_DB);
-    const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager);
+  const userManager = new UserManager(env.LEITNER_DB);
+  const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
+  const scheduleManager = new ScheduleManager(env.LEITNER_DB);
+  const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB);
     
     await bot.sendDailyReminders();
   }
