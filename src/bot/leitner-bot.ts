@@ -89,41 +89,51 @@ export class LeitnerBot {
       case '/start':
         await this.sendWelcomeMessage(chatId);
         break;
-      
       case '/help':
         await this.sendHelpMessage(chatId);
         break;
-      
       case '/study':
         await this.startStudySession(chatId, userId);
         break;
-      
       case '/add':
         if (args.length >= 2) {
           const word = args[0];
           const translation = args.slice(1).join(' ');
           await this.addManualCard(chatId, userId, word, translation);
         } else {
-          await this.sendMessage(chatId, 'Usage: /add <word> <translation>');
+          // Start multi-step add flow
+          const state: ConversationState = {
+            addTopic: {
+              step: 'ask_topic'
+            }
+          };
+          await this.conversationStateManager.setState(userId, state);
+          await this.sendMessage(chatId, '📝 What topic or word do you want to add vocabulary for?');
         }
         break;
-      
       case '/topic':
-        await this.handleTopicCommand(chatId, userId, args);
+        if (args.length === 0) {
+          // Start multi-step topic flow
+          const state: ConversationState = {
+            addTopic: {
+              step: 'ask_topic'
+            }
+          };
+          await this.conversationStateManager.setState(userId, state);
+          await this.sendMessage(chatId, '📝 What topic do you want to add vocabulary for?');
+        } else {
+          await this.handleTopicCommand(chatId, userId, args);
+        }
         break;
-      
       case '/stats':
         await this.sendUserStatistics(chatId, userId);
         break;
-      
       case '/settings':
         await this.sendSettingsMenu(chatId, userId);
         break;
-      
       case '/languages':
         await this.sendLanguageList(chatId);
         break;
-      
       default:
         await this.sendMessage(chatId, 'Unknown command. Type /help for available commands.');
     }
@@ -132,16 +142,20 @@ export class LeitnerBot {
   private async handleTextInput(chatId: number, userId: number, text: string): Promise<void> {
     // Check if user is in an active review session
     const activeSession = await this.userManager.getActiveReviewSession(userId);
-    
     if (activeSession) {
-      // Handle review session responses
       await this.handleReviewResponse(chatId, userId, text);
-    } else {
-      // Suggest using commands or starting a study session
-      await this.sendMessage(chatId, 
-        'I\'m ready to help you learn! Use /study to start reviewing cards, /topic to add new vocabulary, or /help for all commands.'
-      );
+      return;
     }
+    // Check for ongoing add topic/word flow
+    const state = await this.conversationStateManager.getState(userId);
+    if (state && state.addTopic) {
+      await this.handleAddTopicStep(chatId, userId, text, state);
+      return;
+    }
+    // Default fallback
+    await this.sendMessage(chatId,
+      'I\'m ready to help you learn! Use /study to start reviewing cards, /topic to add new vocabulary, or /help for all commands.'
+    );
   }
 
   private async handleCallbackQuery(callbackQuery: TelegramCallbackQuery): Promise<void> {
@@ -542,5 +556,108 @@ Use language codes when setting your preferences.`;
   private async handleReviewResponse(chatId: number, userId: number, text: string): Promise<void> {
     // Handle text responses during review sessions
     await this.sendMessage(chatId, 'Please use the buttons to respond during review sessions.');
+  }
+
+  // Multi-step add topic/word flow handler
+  private async handleAddTopicStep(chatId: number, userId: number, text: string, state: ConversationState): Promise<void> {
+    const addTopic = state.addTopic!;
+    switch (addTopic.step) {
+      case 'ask_topic': {
+        addTopic.topic = text;
+        addTopic.step = 'ask_source_language';
+        await this.conversationStateManager.setState(userId, state);
+        await this.sendMessage(chatId, '🌍 What is the language of the words? (e.g., en, es, fr)');
+        break;
+      }
+      case 'ask_source_language': {
+        addTopic.sourceLanguage = text;
+        addTopic.step = 'ask_target_language';
+        await this.conversationStateManager.setState(userId, state);
+        await this.sendMessage(chatId, '🌐 What is the language for the meaning/translation? (e.g., en, es, fr)');
+        break;
+      }
+      case 'ask_target_language': {
+        addTopic.targetLanguage = text;
+        addTopic.step = 'ask_description_language';
+        await this.conversationStateManager.setState(userId, state);
+        await this.sendMessage(chatId, '📝 What is the language for the description/definition? (should match the word language)');
+        break;
+      }
+      case 'ask_description_language': {
+        addTopic.descriptionLanguage = text;
+        addTopic.step = 'ask_word_level';
+        await this.conversationStateManager.setState(userId, state);
+        await this.sendMessage(chatId, '📈 What is the level of the words? (e.g., beginner, intermediate, advanced)');
+        break;
+      }
+      case 'ask_word_level': {
+        addTopic.wordLevel = text;
+        addTopic.step = 'ask_word_count';
+        await this.conversationStateManager.setState(userId, state);
+        await this.sendMessage(chatId, '🔢 How many words do you want to add? (e.g., 10)');
+        break;
+      }
+      case 'ask_word_count': {
+        const count = parseInt(text, 10);
+        if (isNaN(count) || count < 1 || count > 100) {
+          await this.sendMessage(chatId, 'Please enter a valid number between 1 and 100.');
+          return;
+        }
+        addTopic.wordCount = count;
+        addTopic.step = 'confirm';
+        await this.conversationStateManager.setState(userId, state);
+        // Show summary and confirm
+        await this.sendMessage(chatId, `✅ Confirm:\n• Topic: ${addTopic.topic}\n• Word language: ${addTopic.sourceLanguage}\n• Meaning language: ${addTopic.targetLanguage}\n• Description language: ${addTopic.descriptionLanguage}\n• Level: ${addTopic.wordLevel}\n• Count: ${addTopic.wordCount}\n\nType 'yes' to proceed or 'cancel' to abort.`);
+        break;
+      }
+      case 'confirm': {
+        if (text.toLowerCase() === 'yes') {
+          // Proceed to extract and add words
+          await this.sendMessage(chatId, `🔄 Extracting vocabulary for "${addTopic.topic}"...`);
+          try {
+            const words = await this.wordExtractor.extractWords({
+              topic: addTopic.topic!,
+              sourceLanguage: addTopic.sourceLanguage!,
+              targetLanguage: addTopic.targetLanguage!,
+              count: addTopic.wordCount,
+              wordLevel: addTopic.wordLevel,
+              descriptionLanguage: addTopic.descriptionLanguage
+            });
+            if (words.length === 0) {
+              await this.sendMessage(chatId, 'Sorry, I couldn\'t extract vocabulary for this topic. Please try a different topic.');
+              await this.conversationStateManager.clearState(userId);
+              return;
+            }
+            let createdCount = 0;
+            for (const word of words) {
+              await this.userManager.createCard({
+                userId: userId,
+                word: word.word,
+                translation: word.translation,
+                definition: word.definition,
+                sourceLanguage: addTopic.sourceLanguage!,
+                targetLanguage: addTopic.targetLanguage!,
+                box: 1,
+                nextReviewAt: new Date().toISOString(),
+                reviewCount: 0,
+                correctCount: 0,
+                topic: addTopic.topic
+              });
+              createdCount++;
+            }
+            await this.sendMessage(chatId,
+              `✅ Successfully added ${createdCount} vocabulary words for "${addTopic.topic}"!\n\nUse /study to start reviewing them.`
+            );
+          } catch (error) {
+            await this.sendMessage(chatId, 'Sorry, there was an error extracting vocabulary. Please try again later.');
+          }
+          await this.conversationStateManager.clearState(userId);
+        } else {
+          await this.sendMessage(chatId, 'Operation cancelled.');
+          await this.conversationStateManager.clearState(userId);
+        }
+        break;
+      }
+    }
   }
 }
