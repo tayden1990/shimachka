@@ -140,16 +140,16 @@ export class LeitnerBot {
   }
 
   private async handleTextInput(chatId: number, userId: number, text: string): Promise<void> {
-    // Check if user is in an active review session
-    const activeSession = await this.userManager.getActiveReviewSession(userId);
-    if (activeSession) {
-      await this.handleReviewResponse(chatId, userId, text);
-      return;
-    }
-    // Check for ongoing add topic/word flow
+    // Check for ongoing add topic/word flow FIRST
     const state = await this.conversationStateManager.getState(userId);
     if (state && state.addTopic) {
       await this.handleAddTopicStep(chatId, userId, text, state);
+      return;
+    }
+    // Then check if user is in an active review session
+    const activeSession = await this.userManager.getActiveReviewSession(userId);
+    if (activeSession) {
+      await this.handleReviewResponse(chatId, userId, text);
       return;
     }
     // Default fallback
