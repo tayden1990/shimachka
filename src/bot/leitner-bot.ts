@@ -61,15 +61,33 @@ export class LeitnerBot {
     }
   }
   // --- Telegram sendMessage wrapper ---
-  private async sendMessage(chatId: number, text: string, extra?: any): Promise<void> {
+  private async sendMessage(chatId: number, text: string, keyboard?: TelegramInlineKeyboard | any): Promise<void> {
     const url = `${this.baseUrl}/sendMessage`;
-    const payload = {
+    const payload: any = {
       chat_id: chatId,
       text: text,
-      ...extra
+      parse_mode: 'Markdown'
     };
 
+    // Handle different keyboard types
+    if (keyboard) {
+      if (keyboard.inline_keyboard) {
+        // Inline keyboard
+        payload.reply_markup = keyboard;
+      } else if (keyboard.reply_markup) {
+        // Already wrapped in reply_markup
+        payload.reply_markup = keyboard.reply_markup;
+      } else if (keyboard.keyboard) {
+        // Regular keyboard
+        payload.reply_markup = keyboard;
+      } else {
+        // Fallback: assume it's an inline keyboard or complete payload
+        payload.reply_markup = keyboard;
+      }
+    }
+
     try {
+      console.log('Sending message with payload:', JSON.stringify(payload, null, 2));
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -81,6 +99,9 @@ export class LeitnerBot {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Telegram API error:', response.status, errorText);
+        console.error('Failed payload:', JSON.stringify(payload, null, 2));
+      } else {
+        console.log('Message sent successfully');
       }
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -286,27 +307,55 @@ ${cardsDue > 0 ? '📚 Ready to study? Use /study to continue learning!' : '🎉
 
   // Send main menu with persistent keyboard
   private async sendMainMenu(chatId: number): Promise<void> {
-    const keyboard = {
-      keyboard: [
+    const message = `📋 **Main Menu**
+
+Choose what you'd like to do:
+
+🎯 **Quick Actions:**`;
+
+    // Inline keyboard for quick actions
+    const inlineKeyboard: TelegramInlineKeyboard = {
+      inline_keyboard: [
         [
-          { text: '/study' },
-          { text: '/topic' },
-          { text: '/add' }
+          { text: '📚 Study', callback_data: 'start_study' },
+          { text: '➕ Add Topic', callback_data: 'add_topic' },
+          { text: '📊 Stats', callback_data: 'view_stats' }
         ],
         [
-          { text: '/mywords' },
-          { text: '/mytopics' },
-          { text: '/stats' }
+          { text: '🗂️ My Words', callback_data: 'show_words' },
+          { text: '⚙️ Settings', callback_data: 'open_settings' }
         ],
         [
-          { text: '/settings' },
-          { text: '/help' }
+          { text: '❓ Help', callback_data: 'show_help' }
         ]
-      ],
-      resize_keyboard: true,
-      is_persistent: true
+      ]
     };
-    await this.sendMessage(chatId, '📋 Main Menu: Choose an option below or type a command.', { reply_markup: keyboard });
+
+    // Also set up persistent keyboard
+    const persistentKeyboard = {
+      reply_markup: {
+        keyboard: [
+          [
+            { text: '/study' },
+            { text: '/topic' },
+            { text: '/add' }
+          ],
+          [
+            { text: '/mywords' },
+            { text: '/stats' },
+            { text: '/help' }
+          ]
+        ],
+        resize_keyboard: true,
+        is_persistent: true
+      }
+    };
+
+    // Send message with inline keyboard
+    await this.sendMessage(chatId, message, inlineKeyboard);
+    
+    // Send a follow-up message to set persistent keyboard
+    await this.sendMessage(chatId, '💡 You can also use the keyboard below or type commands directly.', persistentKeyboard);
   }
 
   // Show user's words (first 10 for now)
@@ -654,39 +703,86 @@ ${cardsDue > 0 ? '📚 Ready to study? Use /study to continue learning!' : '🎉
       case 'show_tip':
         await this.showLeitnerTip(chatId, parseInt(params[0]) || 1);
         break;
+      // New navigation handlers
+      case 'add_topic':
+        // Start multi-step topic flow
+        const addTopicState: ConversationState = {
+          addTopic: {
+            step: 'ask_topic'
+          }
+        };
+        await this.conversationStateManager.setState(userId, addTopicState);
+        await this.sendMessage(chatId, '📝 What topic do you want to add vocabulary for?');
+        break;
+      case 'view_stats':
+        await this.handleCommand('/stats', chatId, userId, []);
+        break;
+      case 'show_words':
+        await this.sendUserWords(chatId, userId);
+        break;
+      case 'open_settings':
+        await this.handleCommand('/settings', chatId, userId, []);
+        break;
+      case 'show_help':
+        await this.sendHelpMessage(chatId);
+        break;
+      case 'confirm_add_topic':
+        if (params[0] === 'yes') {
+          await this.executeTopicWordExtraction(chatId, userId);
+        } else {
+          await this.conversationStateManager.clearState(userId);
+          await this.sendMessage(chatId, '❌ Cancelled. Use /topic to try again.');
+        }
+        break;
     }
   }
 
   private async sendWelcomeMessage(chatId: number): Promise<void> {
-    const message = `🎯 Welcome to the Leitner Learning Bot!
+    const message = `🎯 **Welcome to the Leitner Learning Bot!**
 
 I'll help you learn new vocabulary using the proven Leitner spaced repetition system.
 
-🚀 Getting Started:
-• Use /topic <subject> to generate vocabulary from any topic
-• Use /add <word> <translation> to manually add words
+🚀 **Getting Started:**
+• Use /topic to generate vocabulary from any topic
+• Use /add to manually add words  
 • Use /study to review your flashcards
-    // Multi-step add topic/word flow handler
 • Use /settings to configure languages and reminders
 
 🌍 I support multiple languages and can extract vocabulary from any topic you're interested in!
 
-Type /help for a complete list of commands.`;
+Choose an option below to get started:`;
 
-    await this.sendMessage(chatId, message);
+    const keyboard: TelegramInlineKeyboard = {
+      inline_keyboard: [
+        [
+          { text: '📚 Study Now', callback_data: 'start_study' },
+          { text: '➕ Add Topic', callback_data: 'add_topic' }
+        ],
+        [
+          { text: '📊 View Stats', callback_data: 'view_stats' },
+          { text: '⚙️ Settings', callback_data: 'open_settings' }
+        ],
+        [
+          { text: '❓ Help', callback_data: 'show_help' }
+        ]
+      ]
+    };
+
+    await this.sendMessage(chatId, message, keyboard);
   }
 
   private async sendHelpMessage(chatId: number): Promise<void> {
-    const message = `📚 Leitner Learning Bot Commands:
+    const message = `📚 **Leitner Learning Bot Commands:**
 
 🎯 **Learning Commands:**
 /study - Start reviewing your flashcards
-/topic <subject> - Generate vocabulary from a topic
-/add <word> <translation> - Add a word manually
+/topic - Generate vocabulary from a topic  
+/add - Add a word manually
 
 📊 **Progress & Stats:**
 /stats - View your learning statistics
-/languages - See supported languages
+/mywords - See your vocabulary
+/mytopics - View your topics
 
 ⚙️ **Settings:**
 /settings - Configure languages and reminders
@@ -696,11 +792,28 @@ Type /help for a complete list of commands.`;
 
 💡 **Tips:**
 • Study regularly for best results
-• I'll remind you when cards are due
 • Words move through 5 boxes based on your performance
-• Mastered words are reviewed less frequently`;
+• Mastered words are reviewed less frequently
 
-    await this.sendMessage(chatId, message);
+Choose an action below:`;
+
+    const keyboard: TelegramInlineKeyboard = {
+      inline_keyboard: [
+        [
+          { text: '📚 Start Study', callback_data: 'start_study' },
+          { text: '➕ Add Vocabulary', callback_data: 'add_vocabulary' }
+        ],
+        [
+          { text: '📊 My Progress', callback_data: 'view_stats' },
+          { text: '🗂️ My Words', callback_data: 'show_words' }
+        ],
+        [
+          { text: '⚙️ Settings', callback_data: 'open_settings' }
+        ]
+      ]
+    };
+
+    await this.sendMessage(chatId, message, keyboard);
   }
 
   private async startStudySession(chatId: number, userId: number): Promise<void> {
@@ -1098,7 +1211,8 @@ Use language codes when setting your preferences.`;
         await this.conversationStateManager.setState(userId, state);
         // Show language options as buttons
         const langButtons = Object.entries(LANGUAGES).map(([code, name]) => [{ text: name, callback_data: `set_source_lang:${code}` }]);
-        await this.sendMessage(chatId, '🌍 What is the language of the words?', { inline_keyboard: langButtons });
+        const keyboard: TelegramInlineKeyboard = { inline_keyboard: langButtons };
+        await this.sendMessage(chatId, '🌍 What is the language of the words?', keyboard);
         break;
       }
       case 'ask_source_language': {
@@ -1106,7 +1220,8 @@ Use language codes when setting your preferences.`;
         addTopic.step = 'ask_target_language';
         await this.conversationStateManager.setState(userId, state);
         const langButtons = Object.entries(LANGUAGES).map(([code, name]) => [{ text: name, callback_data: `set_target_lang:${code}` }]);
-        await this.sendMessage(chatId, '🌐 What is the language for the meaning/translation?', { inline_keyboard: langButtons });
+        const keyboard: TelegramInlineKeyboard = { inline_keyboard: langButtons };
+        await this.sendMessage(chatId, '🌐 What is the language for the meaning/translation?', keyboard);
         break;
       }
       case 'ask_target_language': {
@@ -1114,7 +1229,8 @@ Use language codes when setting your preferences.`;
         addTopic.step = 'ask_description_language';
         await this.conversationStateManager.setState(userId, state);
         const langButtons = Object.entries(LANGUAGES).map(([code, name]) => [{ text: name, callback_data: `set_desc_lang:${code}` }]);
-        await this.sendMessage(chatId, '📝 What is the language for the description/definition? (should match the word language)', { inline_keyboard: langButtons });
+        const keyboard: TelegramInlineKeyboard = { inline_keyboard: langButtons };
+        await this.sendMessage(chatId, '📝 What is the language for the description/definition? (should match the word language)', keyboard);
         break;
       }
       case 'ask_description_language': {
@@ -1126,7 +1242,8 @@ Use language codes when setting your preferences.`;
           [{ text: 'Intermediate', callback_data: 'set_level:intermediate' }],
           [{ text: 'Advanced', callback_data: 'set_level:advanced' }]
         ];
-        await this.sendMessage(chatId, '📈 What is the level of the words?', { inline_keyboard: levelButtons });
+        const keyboard: TelegramInlineKeyboard = { inline_keyboard: levelButtons };
+        await this.sendMessage(chatId, '📈 What is the level of the words?', keyboard);
         break;
       }
       case 'ask_word_level': {
@@ -1136,7 +1253,8 @@ Use language codes when setting your preferences.`;
         const countButtons = [
           [{ text: '5', callback_data: 'set_count:5' }, { text: '10', callback_data: 'set_count:10' }, { text: '20', callback_data: 'set_count:20' }]
         ];
-        await this.sendMessage(chatId, '🔢 How many words do you want to add?', { inline_keyboard: countButtons });
+        const keyboard: TelegramInlineKeyboard = { inline_keyboard: countButtons };
+        await this.sendMessage(chatId, '🔢 How many words do you want to add?', keyboard);
         break;
       }
       case 'ask_word_count': {
@@ -1458,5 +1576,73 @@ ${totalCards < 20 ? '📝 Build vocabulary with /topic command' : ''}`;
     };
 
     await this.sendMessage(chatId, message, keyboard);
+  }
+
+  private async executeTopicWordExtraction(chatId: number, userId: number): Promise<void> {
+    const state = await this.conversationStateManager.getState(userId);
+    if (!state || !state.addTopic) {
+      await this.sendMessage(chatId, '❌ Session expired. Please start again with /topic.');
+      return;
+    }
+
+    const addTopic = state.addTopic;
+    await this.sendMessage(chatId, `🔄 Extracting vocabulary for "${addTopic.topic}"...`);
+    
+    try {
+      const words = await this.wordExtractor.extractWords({
+        topic: addTopic.topic!,
+        sourceLanguage: addTopic.sourceLanguage!,
+        targetLanguage: addTopic.targetLanguage!,
+        count: addTopic.wordCount,
+        wordLevel: addTopic.wordLevel,
+        descriptionLanguage: addTopic.descriptionLanguage
+      });
+
+      if (words.length === 0) {
+        await this.sendMessage(chatId, 'Sorry, I couldn\'t extract vocabulary for this topic. Please try a different topic.');
+        await this.conversationStateManager.clearState(userId);
+        return;
+      }
+
+      let createdCount = 0;
+      for (const word of words) {
+        await this.userManager.createCard({
+          userId: userId,
+          word: word.word,
+          translation: word.translation,
+          definition: word.definition,
+          sourceLanguage: addTopic.sourceLanguage!,
+          targetLanguage: addTopic.targetLanguage!,
+          box: 1,
+          nextReviewAt: new Date().toISOString(),
+          reviewCount: 0,
+          correctCount: 0,
+          topic: addTopic.topic
+        });
+        createdCount++;
+      }
+
+      const keyboard: TelegramInlineKeyboard = {
+        inline_keyboard: [
+          [
+            { text: '📚 Study Now', callback_data: 'start_study' },
+            { text: '📊 View Stats', callback_data: 'view_stats' }
+          ],
+          [
+            { text: '➕ Add More', callback_data: 'add_topic' }
+          ]
+        ]
+      };
+
+      await this.sendMessage(chatId,
+        `✅ **Successfully added ${createdCount} vocabulary words for "${addTopic.topic}"!**\n\nReady to start learning?`,
+        keyboard
+      );
+    } catch (error) {
+      console.error('Error extracting vocabulary:', error);
+      await this.sendMessage(chatId, `Sorry, there was an error extracting vocabulary: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again later.`);
+    }
+    
+    await this.conversationStateManager.clearState(userId);
   }
 }
