@@ -187,4 +187,19 @@ export class UserManager {
 
     return null;
   }
+
+  async getAllUsers(): Promise<User[]> {
+    const list = await this.kv.list({ prefix: 'user:' });
+    const users: User[] = [];
+
+    for (const key of list.keys) {
+      const userData = await this.kv.get(key.name);
+      if (userData) {
+        const user = JSON.parse(userData) as User;
+        users.push(user);
+      }
+    }
+
+    return users;
+  }
 }

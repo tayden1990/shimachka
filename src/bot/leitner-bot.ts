@@ -48,6 +48,18 @@ function buildCondensedKeyboard<T extends { text: string; callback_data: string 
 }
 
 export class LeitnerBot {
+  // Send daily reminders to all users (stub implementation)
+  public async sendDailyReminders(): Promise<void> {
+    // Example: iterate over all users and send reminders for due cards
+    const users = await this.userManager.getAllUsers();
+    for (const user of users) {
+      const cardsToReview = await this.userManager.getCardsDueForReview(user.id);
+      if (cardsToReview.length > 0) {
+        const message = `🔔 Daily Reminder\nYou have ${cardsToReview.length} card(s) ready for review! Use /study to start.`;
+        await this.sendMessage(user.id, message);
+      }
+    }
+  }
   // --- Telegram sendMessage wrapper ---
   private async sendMessage(chatId: number, text: string, extra?: any): Promise<void> {
     // Replace with your actual Telegram API call logic
