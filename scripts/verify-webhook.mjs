@@ -1,7 +1,8 @@
 // Utility to verify and reset Telegram webhook for your bot
 // Usage: node verify-webhook.js
 
-const fetch = require('node-fetch');
+import 'dotenv/config';
+import fetch from 'node-fetch';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_URL = process.env.WEBHOOK_URL; // Set this to your deployed endpoint, e.g. https://yourdomain.com/webhook
