@@ -81,8 +81,9 @@
                         </button>
                         <button @click="activeTab = 'bulk-words'" 
                                 :class="activeTab === 'bulk-words' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-                                class="py-4 px-1 border-b-2 font-medium text-sm">
-                            <i class="fas fa-book mr-2"></i>Bulk Words
+                                class="py-4 px-1 border-b-2 font-medium text-sm relative">
+                            <i class="fas fa-magic mr-2"></i>Bulk Words AI
+                            <span class="absolute -top-1 -right-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">NEW</span>
                         </button>
                         <button @click="activeTab = 'messages'" 
                                 :class="activeTab === 'messages' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
@@ -165,6 +166,45 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Feature Highlights -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Bulk Words AI Feature -->
+                        <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+                            <div class="flex items-center mb-4">
+                                <i class="fas fa-magic text-3xl mr-4"></i>
+                                <div>
+                                    <h3 class="text-xl font-bold">AI-Powered Bulk Words</h3>
+                                    <p class="text-indigo-100">Add multiple words instantly with AI</p>
+                                </div>
+                            </div>
+                            <p class="text-indigo-100 mb-4">
+                                🚀 Add hundreds of words at once! Just paste your word list and let AI generate meanings and definitions automatically.
+                            </p>
+                            <button @click="activeTab = 'bulk-words'" 
+                                    class="bg-white text-indigo-600 px-6 py-2 rounded-lg font-semibold hover:bg-indigo-50 transition">
+                                Try Bulk Words AI →
+                            </button>
+                        </div>
+                        
+                        <!-- User Management -->
+                        <div class="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
+                            <div class="flex items-center mb-4">
+                                <i class="fas fa-users text-3xl mr-4 text-gray-600"></i>
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-900">User Management</h3>
+                                    <p class="text-gray-600">Monitor learning progress</p>
+                                </div>
+                            </div>
+                            <p class="text-gray-700 mb-4">
+                                📊 View detailed user statistics, learning progress, and assign words to specific users.
+                            </p>
+                            <button @click="activeTab = 'users'" 
+                                    class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">
+                                Manage Users →
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -423,29 +463,131 @@
 
                 <!-- Messages Tab -->
                 <div x-show="activeTab === 'messages'">
-                    <div class="bg-white shadow sm:rounded-lg">
-                        <div class="px-4 py-5 sm:p-6">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Send Direct Message</h3>
-                            
-                            <form @submit.prevent="sendDirectMessage()">
-                                <div class="grid grid-cols-1 gap-6">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">User ID</label>
-                                        <input x-model="messageForm.userId" type="number" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">Message</label>
-                                        <textarea x-model="messageForm.message" rows="4" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
-                                    </div>
+                    <div class="space-y-6">
+                        <!-- Direct Message -->
+                        <div class="bg-white shadow sm:rounded-lg">
+                            <div class="px-4 py-5 sm:p-6">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                                    <i class="fas fa-envelope mr-2 text-blue-500"></i>Send Direct Message
+                                </h3>
+                                
+                                <form @submit.prevent="sendDirectMessage()">
+                                    <div class="grid grid-cols-1 gap-6">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">User ID</label>
+                                            <input x-model="messageForm.userId" type="number" placeholder="Enter user ID" 
+                                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+                                        
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Message</label>
+                                            <textarea x-model="messageForm.message" rows="4" placeholder="Enter your message..." 
+                                                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                                        </div>
 
-                                    <div>
-                                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                                            Send Message
-                                        </button>
+                                        <div>
+                                            <button type="submit" :disabled="!messageForm.userId || !messageForm.message" 
+                                                    class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded">
+                                                <i class="fas fa-paper-plane mr-2"></i>Send Message
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Bulk Message -->
+                        <div class="bg-white shadow sm:rounded-lg">
+                            <div class="px-4 py-5 sm:p-6">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                                    <i class="fas fa-users mr-2 text-green-500"></i>Send Bulk Message
+                                </h3>
+                                
+                                <form @submit.prevent="sendBulkMessage()">
+                                    <div class="grid grid-cols-1 gap-6">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Select Recipients</label>
+                                            <div class="mt-2 space-y-2">
+                                                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                                    <label class="flex items-center">
+                                                        <input type="checkbox" x-model="bulkMessageForm.selectAll" @change="toggleSelectAllUsers()" 
+                                                               class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                                        <span class="ml-2 text-sm font-medium text-gray-700">Select All Users</span>
+                                                    </label>
+                                                    <span class="text-sm text-gray-500" x-text="`${bulkMessageForm.selectedUsers.length} selected`"></span>
+                                                </div>
+                                                
+                                                <div class="max-h-40 overflow-y-auto border border-gray-200 rounded-md">
+                                                    <template x-for="user in users" :key="user.id">
+                                                        <label class="flex items-center p-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
+                                                            <input type="checkbox" :value="user.id" x-model="bulkMessageForm.selectedUsers" 
+                                                                   class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                                            <span class="ml-2 text-sm text-gray-700" x-text="`${user.firstName} ${user.lastName} (ID: ${user.id})`"></span>
+                                                        </label>
+                                                    </template>
+                                                </div>
+                                                
+                                                <div class="text-xs text-gray-500 mt-1">
+                                                    Or enter User IDs manually (comma-separated):
+                                                </div>
+                                                <input x-model="bulkMessageForm.manualUserIds" type="text" placeholder="123, 456, 789" 
+                                                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                            </div>
+                                        </div>
+                                        
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Message</label>
+                                            <textarea x-model="bulkMessageForm.message" rows="4" placeholder="Enter message to send to selected users..." 
+                                                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                                        </div>
+
+                                        <div>
+                                            <button type="submit" :disabled="(bulkMessageForm.selectedUsers.length === 0 && !bulkMessageForm.manualUserIds) || !bulkMessageForm.message" 
+                                                    class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded">
+                                                <i class="fas fa-paper-plane mr-2"></i>Send to Selected Users
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Broadcast Message -->
+                        <div class="bg-white shadow sm:rounded-lg">
+                            <div class="px-4 py-5 sm:p-6">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                                    <i class="fas fa-bullhorn mr-2 text-red-500"></i>Send Broadcast Message
+                                </h3>
+                                <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+                                    <div class="flex">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                                        </div>
+                                        <div class="ml-3">
+                                            <p class="text-sm text-yellow-700">
+                                                This will send the message to <strong>all registered users</strong>. Use with caution.
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                            </form>
+                                
+                                <form @submit.prevent="sendBroadcastMessage()">
+                                    <div class="grid grid-cols-1 gap-6">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Broadcast Message</label>
+                                            <textarea x-model="broadcastForm.message" rows="4" placeholder="Enter message to broadcast to all users..." 
+                                                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500"></textarea>
+                                        </div>
+
+                                        <div>
+                                            <button type="submit" :disabled="!broadcastForm.message" 
+                                                    class="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded">
+                                                <i class="fas fa-bullhorn mr-2"></i>Send to All Users
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -670,6 +812,19 @@
                 // Message form
                 messageForm: {
                     userId: '',
+                    message: ''
+                },
+
+                // Bulk message form
+                bulkMessageForm: {
+                    selectedUsers: [],
+                    manualUserIds: '',
+                    message: '',
+                    selectAll: false
+                },
+
+                // Broadcast form
+                broadcastForm: {
                     message: ''
                 },
 
@@ -1013,8 +1168,7 @@
                                 'Authorization': `Bearer ${this.token}`
                             },
                             body: JSON.stringify({
-                                fromAdminId: this.admin.id,
-                                toUserId: parseInt(this.messageForm.userId),
+                                userId: parseInt(this.messageForm.userId),
                                 message: this.messageForm.message
                             })
                         });
@@ -1029,6 +1183,94 @@
                     } catch (err) {
                         this.showAlertMessage('Network error', 'error');
                     }
+                },
+
+                toggleSelectAllUsers() {
+                    if (this.bulkMessageForm.selectAll) {
+                        this.bulkMessageForm.selectedUsers = this.users.map(user => user.id);
+                    } else {
+                        this.bulkMessageForm.selectedUsers = [];
+                    }
+                },
+
+                async sendBulkMessage() {
+                    try {
+                        let userIds = [...this.bulkMessageForm.selectedUsers];
+                        
+                        // Add manual user IDs if provided
+                        if (this.bulkMessageForm.manualUserIds) {
+                            const manualIds = this.bulkMessageForm.manualUserIds
+                                .split(',')
+                                .map(id => parseInt(id.trim()))
+                                .filter(id => !isNaN(id));
+                            userIds = [...new Set([...userIds, ...manualIds])]; // Remove duplicates
+                        }
+
+                        if (userIds.length === 0) {
+                            this.showAlertMessage('Please select at least one user', 'error');
+                            return;
+                        }
+
+                        const response = await fetch('/admin/send-bulk-message', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${this.token}`
+                            },
+                            body: JSON.stringify({
+                                userIds: userIds,
+                                message: this.bulkMessageForm.message
+                            })
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            this.showAlertMessage(`Bulk message sent! Success: ${result.success}, Failed: ${result.failed}`, 'success');
+                            this.bulkMessageForm = { selectedUsers: [], manualUserIds: '', message: '', selectAll: false };
+                        } else {
+                            const error = await response.json();
+                            this.showAlertMessage(error.error || 'Failed to send bulk message', 'error');
+                        }
+                    } catch (err) {
+                        this.showAlertMessage('Network error', 'error');
+                    }
+                },
+
+                async sendBroadcastMessage() {
+                    if (!confirm('Are you sure you want to send this message to ALL users? This action cannot be undone.')) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/admin/send-broadcast-message', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${this.token}`
+                            },
+                            body: JSON.stringify({
+                                message: this.broadcastForm.message
+                            })
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            this.showAlertMessage(`Broadcast message sent! Success: ${result.success}, Failed: ${result.failed}`, 'success');
+                            this.broadcastForm = { message: '' };
+                        } else {
+                            const error = await response.json();
+                            this.showAlertMessage(error.error || 'Failed to send broadcast message', 'error');
+                        }
+                    } catch (err) {
+                        this.showAlertMessage('Network error', 'error');
+                    }
+                },
+
+                sendMessageToUser(user) {
+                    this.messageForm.userId = user.id;
+                    this.activeTab = 'messages';
+                    // Scroll to top to show the message form
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 },
 
                 async refreshTickets() {

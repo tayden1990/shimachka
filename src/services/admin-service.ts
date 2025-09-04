@@ -256,7 +256,8 @@ export class AdminService {
         message: `Your support ticket "${ticket.subject}" has been updated by admin.\n\n💬 Admin Response: ${ticket.adminResponse}`,
         ticketId: ticket.id,
         createdAt: new Date().toISOString(),
-        isRead: false
+        isRead: false,
+        status: ticket.status
       };
       
       await this.kv.put(`notification:${notification.id}`, JSON.stringify(notification));
@@ -272,21 +273,39 @@ export class AdminService {
       
       await this.kv.put(`user_notifications:${userId}`, JSON.stringify(userNotifications));
       
-      // Also send via Telegram if possible (we'll implement this when we have bot access)
-      await this.sendTelegramNotification(userId, notification.message);
+      // Send enhanced Telegram notification with buttons
+      let telegramMessage = `🎫 **Support Ticket ${ticket.status === 'resolved' ? 'Resolved' : 'Updated'}**\n\n`;
+      telegramMessage += `**Subject:** ${ticket.subject}\n`;
+      telegramMessage += `**Status:** ${ticket.status.toUpperCase()}\n\n`;
+      telegramMessage += `💬 **Admin Response:**\n${ticket.adminResponse}\n\n`;
+      
+      if (ticket.status === 'resolved') {
+        telegramMessage += `✅ Your ticket has been resolved. If you need further assistance, feel free to create a new ticket.`;
+      } else {
+        telegramMessage += `📩 Your ticket is still being processed. You'll receive updates here.`;
+      }
+      
+      await this.sendTelegramNotification(userId, telegramMessage, 'ticket_response', { 
+        ticketId: ticket.id, 
+        notificationId: notification.id,
+        hasButton: true,
+        buttonText: 'View Ticket Details',
+        buttonAction: 'view_ticket'
+      });
       
     } catch (error) {
       console.error('Error sending ticket notification:', error);
     }
   }
 
-  private async sendTelegramNotification(userId: number, message: string): Promise<void> {
+  private async sendTelegramNotification(userId: number, message: string, type: string = 'general', metadata?: any): Promise<void> {
     try {
-      // Store the notification to be sent by the bot
-      // The bot can check for pending notifications periodically
+      // Store the notification to be sent by the bot immediately
       const telegramNotification = {
         userId,
         message,
+        type, // 'ticket_response', 'admin_message', 'general'
+        metadata,
         createdAt: new Date().toISOString(),
         sent: false
       };
@@ -294,6 +313,75 @@ export class AdminService {
       await this.kv.put(`telegram_notification:${userId}:${Date.now()}`, JSON.stringify(telegramNotification));
     } catch (error) {
       console.error('Error queuing Telegram notification:', error);
+    }
+  }
+
+  // Enhanced notification system for admin messages
+  async sendAdminMessage(userId: number, message: string, type: 'direct' | 'bulk' = 'direct'): Promise<boolean> {
+    try {
+      // Create notification record
+      const notification = {
+        id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId,
+        type: 'admin_message',
+        title: type === 'bulk' ? '📢 Broadcast Message' : '💌 Personal Message',
+        message: message,
+        createdAt: new Date().toISOString(),
+        isRead: false,
+        messageType: type
+      };
+      
+      await this.kv.put(`notification:${notification.id}`, JSON.stringify(notification));
+      
+      // Add to user's notification list
+      const userNotifications = await this.kv.get(`user_notifications:${userId}`, 'json') || [];
+      userNotifications.unshift(notification.id);
+      
+      // Keep only last 50 notifications
+      if (userNotifications.length > 50) {
+        userNotifications.splice(50);
+      }
+      
+      await this.kv.put(`user_notifications:${userId}`, JSON.stringify(userNotifications));
+      
+      // Send immediate Telegram notification
+      await this.sendTelegramNotification(userId, `${notification.title}\n\n${message}`, 'admin_message', { notificationId: notification.id });
+      
+      return true;
+    } catch (error) {
+      console.error('Error sending admin message:', error);
+      return false;
+    }
+  }
+
+  // Bulk message to multiple users
+  async sendBulkMessage(userIds: number[], message: string): Promise<{ success: number, failed: number }> {
+    let success = 0;
+    let failed = 0;
+    
+    for (const userId of userIds) {
+      try {
+        const sent = await this.sendAdminMessage(userId, message, 'bulk');
+        if (sent) success++;
+        else failed++;
+      } catch (error) {
+        console.error(`Failed to send message to user ${userId}:`, error);
+        failed++;
+      }
+    }
+    
+    return { success, failed };
+  }
+
+  // Send message to all users
+  async sendBroadcastMessage(message: string): Promise<{ success: number, failed: number }> {
+    try {
+      const result = await this.getAllUsers();
+      const userIds = result.users.map(user => user.id);
+      return await this.sendBulkMessage(userIds, message);
+    } catch (error) {
+      console.error('Error sending broadcast message:', error);
+      return { success: 0, failed: 0 };
     }
   }
 
@@ -335,6 +423,43 @@ export class AdminService {
     } catch (error) {
       console.error('Error getting user notifications:', error);
       return [];
+    }
+  }
+
+  async getPendingTelegramNotifications(): Promise<any[]> {
+    try {
+      const notificationList = await this.kv.list({ prefix: 'telegram_notification:' });
+      const pendingNotifications: any[] = [];
+      
+      for (const key of notificationList.keys) {
+        const notification = await this.kv.get(key.name, 'json');
+        if (notification && !notification.sent) {
+          pendingNotifications.push({
+            ...notification,
+            key: key.name
+          });
+        }
+      }
+      
+      return pendingNotifications;
+    } catch (error) {
+      console.error('Error getting pending Telegram notifications:', error);
+      return [];
+    }
+  }
+
+  async markTelegramNotificationAsSent(notificationKey: string): Promise<boolean> {
+    try {
+      const notification = await this.kv.get(notificationKey, 'json');
+      if (notification) {
+        notification.sent = true;
+        await this.kv.put(notificationKey, JSON.stringify(notification));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error marking Telegram notification as sent:', error);
+      return false;
     }
   }
 

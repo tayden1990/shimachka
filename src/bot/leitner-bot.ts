@@ -67,11 +67,63 @@ export class LeitnerBot {
   // --- Notification System ---
   async sendPendingNotifications(): Promise<void> {
     try {
-      // This method would be called by a scheduled job to send pending notifications
-      // For now, we rely on the notification system in AdminService
       console.log('Checking for pending notifications...');
+      
+      // Get all pending Telegram notifications via AdminService
+      const pendingNotifications = await this.adminService.getPendingTelegramNotifications();
+      
+      for (const notification of pendingNotifications) {
+        try {
+          await this.sendNotificationToUser(notification);
+          await this.adminService.markTelegramNotificationAsSent(notification.key);
+        } catch (error) {
+          console.error(`Error sending notification ${notification.key}:`, error);
+        }
+      }
     } catch (error) {
       console.error('Error sending pending notifications:', error);
+    }
+  }
+
+  private async sendNotificationToUser(notification: any): Promise<void> {
+    try {
+      const { userId, message, type, metadata } = notification;
+      
+      // Create keyboard based on notification type
+      let keyboard: TelegramInlineKeyboard | undefined;
+      
+      if (metadata?.hasButton && metadata?.buttonText && metadata?.buttonAction) {
+        keyboard = {
+          inline_keyboard: [[{
+            text: metadata.buttonText,
+            callback_data: `${metadata.buttonAction}:${metadata.ticketId || metadata.notificationId}`
+          }]]
+        };
+      } else if (type === 'ticket_response') {
+        keyboard = {
+          inline_keyboard: [
+            [
+              { text: '📖 View Ticket', callback_data: `view_ticket:${metadata?.ticketId}` },
+              { text: '🔔 All Notifications', callback_data: 'show_notifications' }
+            ]
+          ]
+        };
+      } else if (type === 'admin_message') {
+        keyboard = {
+          inline_keyboard: [
+            [
+              { text: '💬 View Messages', callback_data: 'show_notifications' },
+              { text: '🎫 Support', callback_data: 'support_menu' }
+            ]
+          ]
+        };
+      }
+      
+      await this.sendMessage(userId, message, keyboard);
+      
+      console.log(`Notification sent to user ${userId}: ${type}`);
+    } catch (error) {
+      console.error(`Error sending notification to user ${notification.userId}:`, error);
     }
   }
 
@@ -142,6 +194,10 @@ export class LeitnerBot {
     try {
       const update: TelegramUpdate = await request.json();
       console.log('Received update:', JSON.stringify(update));
+      
+      // Check and send pending notifications first
+      await this.sendPendingNotifications();
+      
       if (update.message) {
         await this.handleMessage(update.message);
       } else if (update.callback_query) {
@@ -833,6 +889,11 @@ Choose what you'd like to do:
         break;
       case 'show_notifications':
         await this.showUserNotifications(chatId, userId);
+        break;
+      case 'view_ticket':
+        if (params[0]) {
+          await this.showTicketDetails(chatId, userId, params[0]);
+        }
         break;
       case 'mark_notifications_read':
         await this.markAllNotificationsRead(chatId, userId);
@@ -2317,6 +2378,56 @@ ${msg.isRead ? '✅ Read' : '🔵 New'}`
     } catch (error) {
       console.error('Error showing user tickets:', error);
       await this.sendMessage(chatId, '❌ Failed to load your tickets. Please try again.');
+    }
+  }
+
+  private async showTicketDetails(chatId: number, userId: number, ticketId: string): Promise<void> {
+    try {
+      const tickets = await this.adminService.getUserTickets(userId);
+      const ticket = tickets.find(t => t.id === ticketId);
+      
+      if (!ticket) {
+        await this.sendMessage(chatId, '❌ Ticket not found or you don\'t have permission to view it.');
+        return;
+      }
+
+      const statusEmoji = this.getTicketStatusEmoji(ticket.status);
+      const priorityEmoji = this.getTicketPriorityEmoji(ticket.priority);
+      const createdDate = new Date(ticket.createdAt).toLocaleDateString();
+      
+      let ticketDetails = `🎫 **Ticket Details** ${statusEmoji}\n\n`;
+      ticketDetails += `**Subject:** ${ticket.subject}\n`;
+      ticketDetails += `**Priority:** ${priorityEmoji} ${ticket.priority.toUpperCase()}\n`;
+      ticketDetails += `**Status:** ${ticket.status.toUpperCase()}\n`;
+      ticketDetails += `**Created:** ${createdDate}\n\n`;
+      ticketDetails += `**Your Message:**\n${ticket.message}\n\n`;
+      
+      if (ticket.adminResponse) {
+        ticketDetails += `**👨‍💼 Admin Response:**\n${ticket.adminResponse}\n\n`;
+      }
+      
+      if (ticket.resolvedAt) {
+        const resolvedDate = new Date(ticket.resolvedAt).toLocaleDateString();
+        ticketDetails += `✅ **Resolved:** ${resolvedDate}\n\n`;
+      }
+
+      const keyboard: TelegramInlineKeyboard = {
+        inline_keyboard: [
+          [
+            { text: '📋 All My Tickets', callback_data: 'my_tickets' },
+            { text: '🔔 Notifications', callback_data: 'show_notifications' }
+          ],
+          [
+            { text: '🔙 Back to Support', callback_data: 'show_support_menu' }
+          ]
+        ]
+      };
+
+      await this.sendMessage(chatId, ticketDetails, keyboard);
+      
+    } catch (error) {
+      console.error('Error showing ticket details:', error);
+      await this.sendMessage(chatId, '❌ Failed to load ticket details. Please try again.');
     }
   }
 

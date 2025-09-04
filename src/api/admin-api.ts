@@ -93,6 +93,14 @@ export class AdminAPI {
         return await this.handleSendMessage(request, corsHeaders);
       }
 
+      if (path === '/admin/send-bulk-message' && method === 'POST') {
+        return await this.handleSendBulkMessage(request, corsHeaders);
+      }
+
+      if (path === '/admin/send-broadcast-message' && method === 'POST') {
+        return await this.handleSendBroadcastMessage(request, corsHeaders);
+      }
+
       if (path === '/admin/bulk-words-ai' && method === 'POST') {
         return await this.handleBulkWordsAI(request, corsHeaders);
       }
@@ -293,16 +301,114 @@ export class AdminAPI {
   }
 
   private async handleSendMessage(request: Request, corsHeaders: any): Promise<Response> {
-    const messageData: any = await request.json();
-    
-    const messageId = await this.adminService.sendDirectMessage(messageData);
-    
-    return new Response(JSON.stringify({ 
-      message: 'Message sent successfully',
-      messageId 
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    try {
+      const messageData: any = await request.json();
+      const { userId, message } = messageData;
+      
+      if (!userId || !message) {
+        return new Response(JSON.stringify({ 
+          error: 'User ID and message are required' 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      const success = await this.adminService.sendAdminMessage(userId, message, 'direct');
+      
+      if (success) {
+        return new Response(JSON.stringify({ 
+          message: 'Message sent successfully',
+          success: true
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else {
+        return new Response(JSON.stringify({ 
+          error: 'Failed to send message' 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      return new Response(JSON.stringify({ 
+        error: 'Internal server error' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleSendBulkMessage(request: Request, corsHeaders: any): Promise<Response> {
+    try {
+      const messageData: any = await request.json();
+      const { userIds, message } = messageData;
+      
+      if (!Array.isArray(userIds) || userIds.length === 0 || !message) {
+        return new Response(JSON.stringify({ 
+          error: 'User IDs array and message are required' 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      const result = await this.adminService.sendBulkMessage(userIds, message);
+      
+      return new Response(JSON.stringify({ 
+        message: 'Bulk message processing completed',
+        success: result.success,
+        failed: result.failed,
+        total: userIds.length
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      console.error('Error sending bulk message:', error);
+      return new Response(JSON.stringify({ 
+        error: 'Internal server error' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleSendBroadcastMessage(request: Request, corsHeaders: any): Promise<Response> {
+    try {
+      const messageData: any = await request.json();
+      const { message } = messageData;
+      
+      if (!message) {
+        return new Response(JSON.stringify({ 
+          error: 'Message is required' 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      const result = await this.adminService.sendBroadcastMessage(message);
+      
+      return new Response(JSON.stringify({ 
+        message: 'Broadcast message sent',
+        success: result.success,
+        failed: result.failed
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      console.error('Error sending broadcast message:', error);
+      return new Response(JSON.stringify({ 
+        error: 'Internal server error' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
   }
 
   private async handleGetUserMessages(path: string, corsHeaders: any): Promise<Response> {
