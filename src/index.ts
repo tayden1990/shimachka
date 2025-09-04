@@ -18,7 +18,7 @@ export default {
   const userManager = new UserManager(env.LEITNER_DB);
   const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
   const scheduleManager = new ScheduleManager(env.LEITNER_DB);
-  const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB);
+  const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB as any);
 
     // Handle Telegram webhook
     if (url.pathname === '/webhook' && request.method === 'POST') {
@@ -43,7 +43,7 @@ export default {
   const userManager = new UserManager(env.LEITNER_DB);
   const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
   const scheduleManager = new ScheduleManager(env.LEITNER_DB);
-  const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB);
+  const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB as any);
     
     await bot.sendDailyReminders();
   }
