@@ -48,13 +48,25 @@ export class AdminAPI {
       if (path === '/admin/dashboard' && method === 'GET') {
         return await this.handleDashboard(corsHeaders);
       }
+
+      if (path === '/admin/profile' && method === 'GET') {
+        return await this.handleGetProfile(request, corsHeaders);
+      }
       
       if (path === '/admin/users' && method === 'GET') {
         return await this.handleGetUsers(url, corsHeaders);
       }
       
       if (path.startsWith('/admin/users/') && method === 'GET') {
-        return await this.handleGetUser(path, corsHeaders);
+        const segments = path.split('/');
+        const userId = segments[3];
+        if (segments[4] === 'stats') {
+          return await this.handleGetUserStats(userId, corsHeaders);
+        } else if (segments[4] === 'details') {
+          return await this.handleGetUserDetails(userId, corsHeaders);
+        } else {
+          return await this.handleGetUser(path, corsHeaders);
+        }
       }
       
       if (path.startsWith('/admin/users/') && method === 'PUT') {
@@ -79,6 +91,15 @@ export class AdminAPI {
       
       if (path === '/admin/send-message' && method === 'POST') {
         return await this.handleSendMessage(request, corsHeaders);
+      }
+
+      if (path === '/admin/bulk-words-ai' && method === 'POST') {
+        return await this.handleBulkWordsAI(request, corsHeaders);
+      }
+
+      if (path.startsWith('/admin/bulk-words-progress/') && method === 'GET') {
+        const jobId = path.split('/')[3];
+        return await this.handleBulkWordsProgress(jobId, corsHeaders);
       }
       
       if (path.startsWith('/admin/user-messages/')) {
@@ -129,6 +150,39 @@ export class AdminAPI {
     return new Response(JSON.stringify(stats), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
+  }
+
+  private async handleGetProfile(request: Request, corsHeaders: any): Promise<Response> {
+    try {
+      const authHeader = request.headers.get('authorization');
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // For now, return a basic admin profile since we don't have token-based admin lookup
+      // In a real implementation, you'd validate the token and get the actual admin
+      const adminProfile = {
+        id: 'admin_001',
+        username: 'admin',
+        email: 'admin@example.com',
+        fullName: 'System Administrator',
+        role: 'admin',
+        isActive: true
+      };
+      
+      return new Response(JSON.stringify(adminProfile), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      console.error('Error getting admin profile:', error);
+      return new Response(JSON.stringify({ error: 'Internal server error' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
   }
 
   private async handleGetUsers(url: URL, corsHeaders: any): Promise<Response> {
@@ -299,6 +353,75 @@ export class AdminAPI {
     } catch (error) {
       console.error('Error creating admin:', error);
       return new Response(JSON.stringify({ error: 'Failed to create admin' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleGetUserStats(userId: string, corsHeaders: any): Promise<Response> {
+    try {
+      const stats = await this.adminService.getUserStats(userId);
+      return new Response(JSON.stringify(stats), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      console.error('Error getting user stats:', error);
+      return new Response(JSON.stringify({ error: 'Failed to get user stats' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleGetUserDetails(userId: string, corsHeaders: any): Promise<Response> {
+    try {
+      const details = await this.adminService.getUserDetails(userId);
+      return new Response(JSON.stringify(details), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      console.error('Error getting user details:', error);
+      return new Response(JSON.stringify({ error: 'Failed to get user details' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleBulkWordsAI(request: Request, corsHeaders: any): Promise<Response> {
+    try {
+      const body: any = await request.json();
+      const { words, meaningLanguage, definitionLanguage, assignUsers } = body;
+      
+      // Start the AI processing job
+      const jobResult = await this.adminService.processBulkWordsWithAI(words, meaningLanguage, definitionLanguage, assignUsers);
+      
+      return new Response(JSON.stringify({ 
+        jobId: jobResult.jobId,
+        status: 'started',
+        totalWords: jobResult.totalWords
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      console.error('Error processing bulk words with AI:', error);
+      return new Response(JSON.stringify({ error: 'Failed to start AI processing' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleBulkWordsProgress(jobId: string, corsHeaders: any): Promise<Response> {
+    try {
+      const progress = await this.adminService.getBulkWordsProgress(jobId);
+      return new Response(JSON.stringify(progress), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      console.error('Error getting bulk words progress:', error);
+      return new Response(JSON.stringify({ error: 'Failed to get progress' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
