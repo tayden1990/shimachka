@@ -11,17 +11,22 @@ import {
   LANGUAGES,
   LanguageCode
 } from '../types';
+import { ConversationStateManager } from '../services/conversation-state-manager';
+import { AddTopicStep, ConversationState } from '../types/conversation-state';
 
 export class LeitnerBot {
   private baseUrl: string;
+  private conversationStateManager: ConversationStateManager;
 
   constructor(
     private token: string,
     private userManager: UserManager,
     private wordExtractor: WordExtractor,
-    private scheduleManager: ScheduleManager
+    private scheduleManager: ScheduleManager,
+    kv: KVNamespace
   ) {
     this.baseUrl = `https://api.telegram.org/bot${token}`;
+    this.conversationStateManager = new ConversationStateManager(kv);
   }
 
   async handleWebhook(request: Request): Promise<Response> {
@@ -151,23 +156,18 @@ export class LeitnerBot {
       case 'review_correct':
         await this.handleReviewAnswer(chatId, userId, params[0], true);
         break;
-      
       case 'review_incorrect':
         await this.handleReviewAnswer(chatId, userId, params[0], false);
         break;
-      
       case 'set_language':
         await this.handleLanguageSelection(chatId, userId, params[0], params[1]);
         break;
-      
       case 'show_definition':
         await this.showCardDefinition(chatId, params[0]);
         break;
-      
       case 'next_card':
         await this.continueStudySession(chatId, userId);
         break;
-      
       case 'end_session':
         await this.endStudySession(chatId, userId);
         break;
@@ -183,6 +183,7 @@ I'll help you learn new vocabulary using the proven Leitner spaced repetition sy
 • Use /topic <subject> to generate vocabulary from any topic
 • Use /add <word> <translation> to manually add words
 • Use /study to review your flashcards
+    // Multi-step add topic/word flow handler
 • Use /settings to configure languages and reminders
 
 🌍 I support multiple languages and can extract vocabulary from any topic you're interested in!
