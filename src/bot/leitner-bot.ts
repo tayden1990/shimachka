@@ -221,6 +221,18 @@ export class LeitnerBot {
         }
         break;
       }
+      case 'confirm_add_topic': {
+        const state = await this.conversationStateManager.getState(userId);
+        if (state && state.addTopic) {
+          if (params[0] === 'yes') {
+            // Proceed to extract and add words
+            await this.handleAddTopicStep(chatId, userId, 'yes', state);
+          } else if (params[0] === 'cancel') {
+            await this.handleAddTopicStep(chatId, userId, 'cancel', state);
+          }
+        }
+        break;
+      }
       case 'show_definition':
         await this.showCardDefinition(chatId, params[0]);
         break;
@@ -659,8 +671,18 @@ Use language codes when setting your preferences.`;
         addTopic.wordCount = count;
         addTopic.step = 'confirm';
         await this.conversationStateManager.setState(userId, state);
-        // Show summary and confirm
-        await this.sendMessage(chatId, `✅ Confirm:\n• Topic: ${addTopic.topic}\n• Word language: ${addTopic.sourceLanguage}\n• Meaning language: ${addTopic.targetLanguage}\n• Description language: ${addTopic.descriptionLanguage}\n• Level: ${addTopic.wordLevel}\n• Count: ${addTopic.wordCount}\n\nType 'yes' to proceed or 'cancel' to abort.`);
+        // Show summary and confirm with inline buttons
+        const confirmButtons = [
+          [
+            { text: '✅ Yes, add words', callback_data: 'confirm_add_topic:yes' },
+            { text: '❌ Cancel', callback_data: 'confirm_add_topic:cancel' }
+          ]
+        ];
+        await this.sendMessage(
+          chatId,
+          `✅ Confirm:\n• Topic: ${addTopic.topic}\n• Word language: ${addTopic.sourceLanguage}\n• Meaning language: ${addTopic.targetLanguage}\n• Description language: ${addTopic.descriptionLanguage}\n• Level: ${addTopic.wordLevel}\n• Count: ${addTopic.wordCount}`,
+          { inline_keyboard: confirmButtons }
+        );
         break;
       }
   // Handle inline keyboard callbacks for language, level, and count
@@ -707,7 +729,7 @@ Use language codes when setting your preferences.`;
             await this.sendMessage(chatId, 'Sorry, there was an error extracting vocabulary. Please try again later.');
           }
           await this.conversationStateManager.clearState(userId);
-        } else {
+        } else if (text.toLowerCase() === 'cancel') {
           await this.sendMessage(chatId, 'Operation cancelled.');
           await this.conversationStateManager.clearState(userId);
         }
