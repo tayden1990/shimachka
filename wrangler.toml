@@ -6,27 +6,9 @@ compatibility_date = "2024-09-02"
 node_compat = true
 minify = true
 
-# Observability settings
-[observability]
-enabled = true
-
-# Logpush configuration for detailed logging
-[logpush]
-enabled = true
-
-# Tail worker logs configuration
-[tail]
-enabled = true
-
 # Analytics and metrics
-[analytics_engine_datasets]
 [[analytics_engine_datasets]]
 binding = "AE"
-
-# Deploy configuration
-[deploy]
-compatibility_date = "2024-09-02"
-compatibility_flags = ["nodejs_compat"]
 
 [vars]
 # Environment variables - set these in your Cloudflare dashboard
@@ -47,9 +29,6 @@ crons = ["0 8,14,20 * * *"]  # Daily reminders at 8 AM, 2 PM, and 8 PM
 name = "leitner-telegram-bot-staging"
 node_compat = true
 minify = false  # Keep unminified for easier debugging in staging
-
-[env.staging.observability]
-enabled = true
 
 [[env.staging.kv_namespaces]]
 binding = "LEITNER_DB"

@@ -11,7 +11,7 @@ import {
   LanguageCode
 } from '../types';
 import { ConversationStateManager } from '../services/conversation-state-manager';
-import { AddTopicStep, ConversationState } from '../types/conversation-state';
+import { AddTopicStep, ConversationState, ReviewConversationState } from '../types/conversation-state';
 
 // 1. Add more languages including Persian (Farsi)
 export const LANGUAGES: Record<string, string> = {
@@ -313,12 +313,20 @@ export class LeitnerBot {
       await this.handleAddTopicStep(chatId, userId, text, state);
       return;
     }
-    // Then check if user is in an active review session
-    const activeSession = await this.userManager.getActiveReviewSession(userId);
-    if (activeSession) {
+    
+    // Check if user is in a review session with conversation state
+    if (state && state.review) {
       await this.handleReviewResponse(chatId, userId, text);
       return;
     }
+    
+    // Then check if user is in an active review session (fallback)
+    const activeSession = await this.userManager.getActiveReviewSession(userId);
+    if (activeSession) {
+      await this.sendMessage(chatId, 'Please use the buttons to respond during review sessions, or type /study to start a new session.');
+      return;
+    }
+    
     // Default fallback
     await this.sendMessage(chatId,
       'I\'m ready to help you learn! Use /study to start reviewing cards, /topic to add new vocabulary, or /help for all commands.'
@@ -338,9 +346,13 @@ export class LeitnerBot {
 
     switch (action) {
       case 'review_correct':
+        // Clear review state before processing button answer
+        await this.conversationStateManager.clearState(userId);
         await this.handleReviewAnswer(chatId, userId, params[0], true);
         break;
       case 'review_incorrect':
+        // Clear review state before processing button answer
+        await this.conversationStateManager.clearState(userId);
         await this.handleReviewAnswer(chatId, userId, params[0], false);
         break;
       case 'set_language':
@@ -591,6 +603,22 @@ Type /help for a complete list of commands.`;
   }
 
   private async presentCard(chatId: number, userId: number, card: Card): Promise<void> {
+    // Store the current card in conversation state for text input handling
+    const reviewState: ReviewConversationState = {
+      currentCardId: card.id,
+      currentCard: {
+        id: card.id,
+        word: card.word,
+        translation: card.translation,
+        definition: card.definition,
+        sourceLanguage: card.sourceLanguage,
+        targetLanguage: card.targetLanguage,
+        box: card.box
+      }
+    };
+    
+    await this.conversationStateManager.setState(userId, { review: reviewState });
+
     const keyboard: TelegramInlineKeyboard = {
       inline_keyboard: [
         [
@@ -667,6 +695,9 @@ Next review: ${new Date(updatedCard.nextReviewAt).toLocaleDateString()}`;
   }
 
   private async endStudySession(chatId: number, userId: number): Promise<void> {
+    // Clear review conversation state
+    await this.conversationStateManager.clearState(userId);
+    
     const activeSession = await this.userManager.getActiveReviewSession(userId);
     if (activeSession) {
       await this.userManager.updateReviewSession(userId, activeSession.id, {
@@ -774,24 +805,22 @@ Use language codes when setting your preferences.`;
   }
 
   private async handleReviewResponse(chatId: number, userId: number, text: string): Promise<void> {
-    // Get the current review session
-    const activeSession = await this.userManager.getActiveReviewSession(userId);
-    if (!activeSession) {
+    // Get the current review state from conversation
+    const state = await this.conversationStateManager.getState(userId);
+    if (!state || !state.review) {
       await this.sendMessage(chatId, 'No active review session found. Use /study to start a new session.');
       return;
     }
 
-    // Get the current card being reviewed
-    const currentCard = activeSession.currentCard;
-    if (!currentCard) {
-      await this.sendMessage(chatId, 'No card found in current session. Use /study to start a new session.');
-      return;
-    }
-
+    const currentCard = state.review.currentCard;
+    
     // Check if the answer is correct (case-insensitive comparison)
     const userAnswer = text.toLowerCase().trim();
     const correctAnswer = currentCard.translation.toLowerCase().trim();
     const isCorrect = userAnswer === correctAnswer;
+
+    // Clear the review state before processing the answer
+    await this.conversationStateManager.clearState(userId);
 
     // Process the answer and move the card
     await this.handleReviewAnswer(chatId, userId, currentCard.id, isCorrect);

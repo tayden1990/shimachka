@@ -20,7 +20,21 @@ export interface AddTopicConversationState {
   wordCount?: number;
 }
 
+export interface ReviewConversationState {
+  currentCardId: string;
+  currentCard: {
+    id: string;
+    word: string;
+    translation: string;
+    definition: string;
+    sourceLanguage: string;
+    targetLanguage: string;
+    box: number;
+  };
+}
+
 export type ConversationState = {
   addTopic?: AddTopicConversationState;
+  review?: ReviewConversationState;
   // Add more flows here as needed
 };
