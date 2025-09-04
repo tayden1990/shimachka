@@ -180,6 +180,47 @@ export class LeitnerBot {
       case 'set_language':
         await this.handleLanguageSelection(chatId, userId, params[0], params[1]);
         break;
+      case 'set_source_lang':
+      case 'set_target_lang':
+      case 'set_desc_lang': {
+        // Multi-step flow: update state and continue
+        const state = await this.conversationStateManager.getState(userId);
+        if (state && state.addTopic) {
+          if (action === 'set_source_lang') {
+            state.addTopic.sourceLanguage = params[0];
+            state.addTopic.step = 'ask_target_language';
+          } else if (action === 'set_target_lang') {
+            state.addTopic.targetLanguage = params[0];
+            state.addTopic.step = 'ask_description_language';
+          } else if (action === 'set_desc_lang') {
+            state.addTopic.descriptionLanguage = params[0];
+            state.addTopic.step = 'ask_word_level';
+          }
+          await this.conversationStateManager.setState(userId, state);
+          await this.handleAddTopicStep(chatId, userId, params[0], state);
+        }
+        break;
+      }
+      case 'set_level': {
+        const state = await this.conversationStateManager.getState(userId);
+        if (state && state.addTopic) {
+          state.addTopic.wordLevel = params[0];
+          state.addTopic.step = 'ask_word_count';
+          await this.conversationStateManager.setState(userId, state);
+          await this.handleAddTopicStep(chatId, userId, params[0], state);
+        }
+        break;
+      }
+      case 'set_count': {
+        const state = await this.conversationStateManager.getState(userId);
+        if (state && state.addTopic) {
+          state.addTopic.wordCount = parseInt(params[0], 10);
+          state.addTopic.step = 'confirm';
+          await this.conversationStateManager.setState(userId, state);
+          await this.handleAddTopicStep(chatId, userId, params[0], state);
+        }
+        break;
+      }
       case 'show_definition':
         await this.showCardDefinition(chatId, params[0]);
         break;
@@ -566,35 +607,47 @@ Use language codes when setting your preferences.`;
         addTopic.topic = text;
         addTopic.step = 'ask_source_language';
         await this.conversationStateManager.setState(userId, state);
-        await this.sendMessage(chatId, '🌍 What is the language of the words? (e.g., en, es, fr)');
+        // Show language options as buttons
+        const langButtons = Object.entries(LANGUAGES).map(([code, name]) => [{ text: name, callback_data: `set_source_lang:${code}` }]);
+        await this.sendMessage(chatId, '🌍 What is the language of the words?', { inline_keyboard: langButtons });
         break;
       }
       case 'ask_source_language': {
         addTopic.sourceLanguage = text;
         addTopic.step = 'ask_target_language';
         await this.conversationStateManager.setState(userId, state);
-        await this.sendMessage(chatId, '🌐 What is the language for the meaning/translation? (e.g., en, es, fr)');
+        const langButtons = Object.entries(LANGUAGES).map(([code, name]) => [{ text: name, callback_data: `set_target_lang:${code}` }]);
+        await this.sendMessage(chatId, '🌐 What is the language for the meaning/translation?', { inline_keyboard: langButtons });
         break;
       }
       case 'ask_target_language': {
         addTopic.targetLanguage = text;
         addTopic.step = 'ask_description_language';
         await this.conversationStateManager.setState(userId, state);
-        await this.sendMessage(chatId, '📝 What is the language for the description/definition? (should match the word language)');
+        const langButtons = Object.entries(LANGUAGES).map(([code, name]) => [{ text: name, callback_data: `set_desc_lang:${code}` }]);
+        await this.sendMessage(chatId, '📝 What is the language for the description/definition? (should match the word language)', { inline_keyboard: langButtons });
         break;
       }
       case 'ask_description_language': {
         addTopic.descriptionLanguage = text;
         addTopic.step = 'ask_word_level';
         await this.conversationStateManager.setState(userId, state);
-        await this.sendMessage(chatId, '📈 What is the level of the words? (e.g., beginner, intermediate, advanced)');
+        const levelButtons = [
+          [{ text: 'Beginner', callback_data: 'set_level:beginner' }],
+          [{ text: 'Intermediate', callback_data: 'set_level:intermediate' }],
+          [{ text: 'Advanced', callback_data: 'set_level:advanced' }]
+        ];
+        await this.sendMessage(chatId, '📈 What is the level of the words?', { inline_keyboard: levelButtons });
         break;
       }
       case 'ask_word_level': {
         addTopic.wordLevel = text;
         addTopic.step = 'ask_word_count';
         await this.conversationStateManager.setState(userId, state);
-        await this.sendMessage(chatId, '🔢 How many words do you want to add? (e.g., 10)');
+        const countButtons = [
+          [{ text: '5', callback_data: 'set_count:5' }, { text: '10', callback_data: 'set_count:10' }, { text: '20', callback_data: 'set_count:20' }]
+        ];
+        await this.sendMessage(chatId, '🔢 How many words do you want to add?', { inline_keyboard: countButtons });
         break;
       }
       case 'ask_word_count': {
@@ -610,6 +663,8 @@ Use language codes when setting your preferences.`;
         await this.sendMessage(chatId, `✅ Confirm:\n• Topic: ${addTopic.topic}\n• Word language: ${addTopic.sourceLanguage}\n• Meaning language: ${addTopic.targetLanguage}\n• Description language: ${addTopic.descriptionLanguage}\n• Level: ${addTopic.wordLevel}\n• Count: ${addTopic.wordCount}\n\nType 'yes' to proceed or 'cancel' to abort.`);
         break;
       }
+  // Handle inline keyboard callbacks for language, level, and count
+  // This logic should be added to handleCallbackQuery
       case 'confirm': {
         if (text.toLowerCase() === 'yes') {
           // Proceed to extract and add words
