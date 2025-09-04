@@ -179,6 +179,50 @@ See [DEPLOYMENT.md](.github/DEPLOYMENT.md) for detailed setup instructions.
 npm run dev
 ```
 
+## 📊 Monitoring & Logging
+
+This project includes comprehensive monitoring and logging capabilities:
+
+### Real-time Monitoring
+```bash
+# View live logs with pretty formatting
+npm run logs:live
+
+# View raw logs
+npm run logs
+
+# Search logs for specific terms
+npm run logs:search "ERROR"
+```
+
+### Health Monitoring
+```bash
+# Check service status
+npm run health
+
+# Debug endpoint
+curl https://your-worker.your-subdomain.workers.dev/debug
+```
+
+### Available Monitoring Features
+- **Analytics Engine Integration**: Track all bot events and performance metrics
+- **Real-time Error Tracking**: Immediate notification of issues
+- **Performance Monitoring**: Request times, success rates, and resource usage
+- **User Activity Analytics**: Command usage patterns and engagement metrics
+- **Custom Dashboards**: Visual monitoring of key metrics
+
+### Debug Commands
+```bash
+# Local development with enhanced logging
+npm run debug
+
+# View analytics data
+npm run analytics
+```
+
+### Monitoring Documentation
+For detailed monitoring setup and troubleshooting, see [docs/logging-monitoring.md](docs/logging-monitoring.md)
+
 ### Build
 ```bash
 npm run build

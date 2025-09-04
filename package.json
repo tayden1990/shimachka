@@ -7,7 +7,13 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "build": "tsc",
-    "start": "wrangler dev --local"
+    "start": "wrangler dev --local",
+    "logs": "wrangler tail",
+    "logs:live": "wrangler tail --format=pretty",
+    "logs:search": "wrangler tail --search",
+    "debug": "wrangler dev --log-level debug",
+    "analytics": "wrangler analytics",
+    "health": "curl https://leitner-telegram-bot.t-ak-sa.workers.dev/health"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240925.0",
