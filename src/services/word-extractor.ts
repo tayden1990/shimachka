@@ -9,44 +9,58 @@ export class WordExtractor {
   }
 
   async extractWords(request: WordExtractionRequest): Promise<ExtractedWord[]> {
-    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  // Use the latest stable Gemini 2.5 Flash model for best price-performance
+  const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     
     const sourceLanguageName = LANGUAGES[request.sourceLanguage as LanguageCode] || request.sourceLanguage;
     const targetLanguageName = LANGUAGES[request.targetLanguage as LanguageCode] || request.targetLanguage;
     const wordCount = request.count || 15;
 
+    // Build prompt dynamically based on user input (level, description language)
+    let levelInstruction = '';
+    if ((request as any).wordLevel) {
+      levelInstruction = `\n- Focus on words suitable for ${((request as any).wordLevel).toLowerCase()} learners.`;
+    }
+    let descriptionLangInstruction = '';
+    if ((request as any).descriptionLanguage && (request as any).descriptionLanguage !== request.sourceLanguage) {
+      const descLang = LANGUAGES[(request as any).descriptionLanguage as LanguageCode] || (request as any).descriptionLanguage;
+      descriptionLangInstruction = `\n- The definition for each word should be in ${descLang}.`;
+    } else {
+      descriptionLangInstruction = `\n- The definition for each word should be in ${sourceLanguageName}.`;
+    }
+
     const prompt = `
-You are a language learning expert. Generate ${wordCount} vocabulary words related to the topic "${request.topic}" in ${sourceLanguageName}.
+You are an expert language tutor. Your task is to generate a list of ${wordCount} important vocabulary words for the topic "${request.topic}" in ${sourceLanguageName}.
 
 For each word, provide:
 1. The word in ${sourceLanguageName}
 2. The translation in ${targetLanguageName}
-3. A clear definition in ${targetLanguageName}
-4. A simple example sentence using the word in ${sourceLanguageName}
+3. A clear, simple definition in ${descriptionLangInstruction.includes('should be in') ? descriptionLangInstruction.split('be in ')[1].replace('.', '') : sourceLanguageName}
+4. A simple example sentence in ${sourceLanguageName}
 
-Focus on:
-- Common, useful vocabulary that beginners to intermediate learners would benefit from
-- Words that are directly related to the topic
-- Accurate translations and definitions
-- Simple, clear example sentences
+Guidelines:
+- Choose words that are common, useful, and relevant to the topic.${levelInstruction}${descriptionLangInstruction}
+- Ensure translations and definitions are accurate and easy to understand.
+- Example sentences should be short and demonstrate the word in context.
 
-Format your response as a JSON array where each object has these exact properties:
+Output:
+Return a JSON array. Each object must have these properties:
 - "word": the word in ${sourceLanguageName}
 - "translation": the translation in ${targetLanguageName}
-- "definition": the definition in ${targetLanguageName}
+- "definition": the definition in ${descriptionLangInstruction.includes('should be in') ? descriptionLangInstruction.split('be in ')[1].replace('.', '') : sourceLanguageName}
 - "context": the example sentence in ${sourceLanguageName}
 
-Example format:
+Example:
 [
   {
     "word": "example_word",
     "translation": "translated_word",
-    "definition": "clear definition of the word",
-    "context": "Example sentence using the word in context."
+    "definition": "A clear definition of the word in ${descriptionLangInstruction.includes('should be in') ? descriptionLangInstruction.split('be in ')[1].replace('.', '') : sourceLanguageName}.",
+    "context": "Example sentence using the word."
   }
 ]
 
-Return only the JSON array, no additional text.
+Return only the JSON array, with no extra text or explanation.
 `;
 
     try {
@@ -80,7 +94,7 @@ Return only the JSON array, no additional text.
   }
 
   async translateWord(word: string, sourceLanguage: string, targetLanguage: string): Promise<ExtractedWord> {
-    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     
     const sourceLanguageName = LANGUAGES[sourceLanguage as LanguageCode] || sourceLanguage;
     const targetLanguageName = LANGUAGES[targetLanguage as LanguageCode] || targetLanguage;
@@ -132,7 +146,7 @@ Return only the JSON object, no additional text.
   }
 
   async generateDefinition(word: string, language: string): Promise<string> {
-    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     
     const languageName = LANGUAGES[language as LanguageCode] || language;
 
