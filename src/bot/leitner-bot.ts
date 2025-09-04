@@ -536,6 +536,12 @@ export class LeitnerBot {
       case 'end_session':
         await this.endStudySession(chatId, userId);
         break;
+      case 'show_progress':
+        await this.showUserProgress(chatId, userId);
+        break;
+      case 'show_tip':
+        await this.showLeitnerTip(chatId, parseInt(params[0]) || 1);
+        break;
     }
   }
 
@@ -589,14 +595,43 @@ Type /help for a complete list of commands.`;
     const cardsToReview = await this.userManager.getCardsDueForReview(userId, 1);
     
     if (cardsToReview.length === 0) {
-      await this.sendMessage(chatId, 
-        '🎉 No cards due for review right now!\n\nUse /topic to add new vocabulary or check back later.'
-      );
+      // Show user's current progress when no cards are due
+      const cards = await this.userManager.getUserCards(userId);
+      if (cards.length === 0) {
+        await this.sendMessage(chatId, 
+          '📚 **Ready to start learning?**\n\nYou haven\'t added any vocabulary yet!\n\n• Use /topic to generate vocabulary from any subject\n• Use /add to manually add words\n\nThe Leitner system will help you master new words efficiently! 🚀'
+        );
+      } else {
+        const nextCard = cards.reduce((earliest, card) => 
+          new Date(card.nextReviewAt) < new Date(earliest.nextReviewAt) ? card : earliest
+        );
+        const nextReview = new Date(nextCard.nextReviewAt);
+        const hoursUntil = Math.round((nextReview.getTime() - Date.now()) / (1000 * 60 * 60));
+        
+        await this.sendMessage(chatId, 
+          `🎉 **All caught up!**\n\nYou've reviewed all due cards. Great work!\n\n📊 **Your vocabulary:** ${cards.length} words\n⏰ **Next review:** ${hoursUntil < 24 ? `${hoursUntil} hours` : `${Math.round(hoursUntil/24)} days`}\n\n💡 Use /topic to add more vocabulary or /progress to see your stats!`
+        );
+      }
       return;
     }
 
-    // Create new review session
+    // Create new review session with motivational message
     await this.userManager.createReviewSession(userId);
+    
+    const cards = await this.userManager.getUserCards(userId);
+    const sessionMessage = `🚀 **Study Session Started!**
+
+📊 **Today's Review:** ${cardsToReview.length} cards
+📚 **Total Vocabulary:** ${cards.length} words
+
+🎯 **How the Leitner System Works:**
+• Correct answers → Move to next box (review less often)
+• Incorrect answers → Back to Box 1 (review more often)
+• Master words by reaching Box 5!
+
+💡 **Pro tip:** You can type your answers or use the buttons. Let's begin!`;
+
+    await this.sendMessage(chatId, sessionMessage);
     
     // Start with the first card
     await this.presentCard(chatId, userId, cardsToReview[0]);
@@ -619,6 +654,12 @@ Type /help for a complete list of commands.`;
     
     await this.conversationStateManager.setState(userId, { review: reviewState });
 
+    // Get user's progress for motivation
+    const cards = await this.userManager.getUserCards(userId);
+    const totalCards = cards.length;
+    const cardsDue = cards.filter(c => new Date(c.nextReviewAt) <= new Date()).length;
+    const userCards = cards.filter(c => c.box === card.box).length;
+
     const keyboard: TelegramInlineKeyboard = {
       inline_keyboard: [
         [
@@ -626,18 +667,31 @@ Type /help for a complete list of commands.`;
           { text: '❌ I don\'t know', callback_data: `review_incorrect:${card.id}` }
         ],
         [
-          { text: '💡 Show Definition', callback_data: `show_definition:${card.id}` }
+          { text: '💡 Show Definition', callback_data: `show_definition:${card.id}` },
+          { text: '📊 Progress', callback_data: 'show_progress' }
         ]
       ]
     };
 
-    const message = `📖 **Review Card**
+    // Enhanced card presentation with context
+    const boxEmojis = ['', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'];
+    const difficultyLabels = ['', 'New/Difficult', 'Learning', 'Good', 'Almost Mastered', 'Mastered'];
+    
+    // Calculate success rate for this specific card
+    const successRate = card.reviewCount > 0 ? Math.round((card.correctCount / card.reviewCount) * 100) : 0;
+    
+    const message = `📖 **Review Card** ${boxEmojis[card.box]}
 
-**Word:** ${card.word}
-**Language:** ${card.sourceLanguage} → ${card.targetLanguage}
-**Box:** ${card.box}/5
+🔤 **Word:** ${card.word}
+🌍 **Language:** ${card.sourceLanguage} → ${card.targetLanguage}
+📦 **Box:** ${card.box}/5 (${difficultyLabels[card.box]})
+🎯 **Your Success Rate:** ${successRate}% (${card.correctCount}/${card.reviewCount})
 
-What is the translation of "${card.word}"?`;
+❓ **What is the translation of "${card.word}"?**
+
+💭 *Type your answer or use the buttons below*
+
+📈 **Session Progress:** ${cardsDue - 1} cards remaining | ${totalCards} total words`;
 
     await this.sendMessage(chatId, message, keyboard);
   }
@@ -651,22 +705,57 @@ What is the translation of "${card.word}"?`;
       return;
     }
 
-    // Show the correct answer
+    // Enhanced feedback with Leitner progression
     const resultEmoji = isCorrect ? '✅' : '❌';
-    const message = `${resultEmoji} **${isCorrect ? 'Correct!' : 'Incorrect'}**
+    const progressEmoji = isCorrect ? '📈' : '📉';
+    
+    // Calculate next review time in a user-friendly format
+    const nextReview = new Date(updatedCard.nextReviewAt);
+    const now = new Date();
+    const diffHours = Math.round((nextReview.getTime() - now.getTime()) / (1000 * 60 * 60));
+    const diffDays = Math.round(diffHours / 24);
+    
+    let nextReviewText;
+    if (diffHours < 24) {
+      nextReviewText = `${diffHours} hours`;
+    } else if (diffDays === 1) {
+      nextReviewText = 'tomorrow';
+    } else {
+      nextReviewText = `${diffDays} days`;
+    }
+
+    // Box progression explanation
+    const boxInfo = [
+      "📦 Box 1: Review daily (new/difficult words)",
+      "📦 Box 2: Review every 2 days",
+      "📦 Box 3: Review every 4 days", 
+      "📦 Box 4: Review every 8 days",
+      "📦 Box 5: Review every 16 days (mastered!)"
+    ];
+
+    const message = `${resultEmoji} **${isCorrect ? 'Excellent!' : 'Keep practicing!'}**
 
 **Word:** ${updatedCard.word}
-**Translation:** ${updatedCard.translation}
+**Correct Answer:** ${updatedCard.translation}
 **Definition:** ${updatedCard.definition}
 
-${isCorrect ? `Moved to box ${updatedCard.box}` : 'Moved back to box 1'}
-Next review: ${new Date(updatedCard.nextReviewAt).toLocaleDateString()}`;
+${progressEmoji} **Leitner Progress:**
+${isCorrect ? `Advanced to Box ${updatedCard.box}/5` : 'Moved back to Box 1 for more practice'}
+
+${boxInfo[updatedCard.box - 1]}
+
+⏰ **Next Review:** ${nextReviewText}
+🎯 **Success Rate:** ${Math.round((updatedCard.correctCount / updatedCard.reviewCount) * 100)}% (${updatedCard.correctCount}/${updatedCard.reviewCount})`;
 
     const keyboard: TelegramInlineKeyboard = {
       inline_keyboard: [
         [
-          { text: '▶️ Next Card', callback_data: 'next_card' },
-          { text: '🏁 End Session', callback_data: 'end_session' }
+          { text: '▶️ Continue Studying', callback_data: 'next_card' },
+          { text: '📊 View Progress', callback_data: 'show_progress' }
+        ],
+        [
+          { text: '🏁 End Session', callback_data: 'end_session' },
+          { text: '💡 Show Tip', callback_data: `show_tip:${updatedCard.box}` }
         ]
       ]
     };
@@ -814,10 +903,30 @@ Use language codes when setting your preferences.`;
 
     const currentCard = state.review.currentCard;
     
-    // Check if the answer is correct (case-insensitive comparison)
+    // Enhanced answer checking with multiple validation methods
     const userAnswer = text.toLowerCase().trim();
     const correctAnswer = currentCard.translation.toLowerCase().trim();
-    const isCorrect = userAnswer === correctAnswer;
+    
+    // Method 1: Exact match
+    let isCorrect = userAnswer === correctAnswer;
+    
+    // Method 2: Check if user answer matches the main part (before parentheses)
+    if (!isCorrect) {
+      const mainAnswer = correctAnswer.split('(')[0].trim();
+      isCorrect = userAnswer === mainAnswer;
+    }
+    
+    // Method 3: Check if user answer is contained in correct answer (for multi-script)
+    if (!isCorrect) {
+      isCorrect = correctAnswer.includes(userAnswer) && userAnswer.length > 2;
+    }
+    
+    // Method 4: Remove common separators and check
+    if (!isCorrect) {
+      const cleanCorrect = correctAnswer.replace(/[()،,\-\s]/g, '');
+      const cleanUser = userAnswer.replace(/[()،,\-\s]/g, '');
+      isCorrect = cleanUser === cleanCorrect;
+    }
 
     // Clear the review state before processing the answer
     await this.conversationStateManager.clearState(userId);
@@ -952,5 +1061,93 @@ Use language codes when setting your preferences.`;
         break;
       }
     }
+  }
+
+  private async showUserProgress(chatId: number, userId: number): Promise<void> {
+    const cards = await this.userManager.getUserCards(userId);
+    const totalCards = cards.length;
+    
+    if (totalCards === 0) {
+      await this.sendMessage(chatId, '📊 You haven\'t added any vocabulary yet! Use /topic or /add to get started.');
+      return;
+    }
+
+    // Calculate box distribution
+    const boxCounts = [1,2,3,4,5].map(box => cards.filter(c => c.box === box).length);
+    const boxPercentages = boxCounts.map(count => Math.round((count / totalCards) * 100));
+    
+    // Calculate overall statistics
+    const totalReviews = cards.reduce((sum, card) => sum + card.reviewCount, 0);
+    const totalCorrect = cards.reduce((sum, card) => sum + card.correctCount, 0);
+    const overallAccuracy = totalReviews > 0 ? Math.round((totalCorrect / totalReviews) * 100) : 0;
+    
+    // Create visual progress bars
+    const progressBars = boxCounts.map((count, i) => {
+      const filled = Math.round((count / Math.max(...boxCounts)) * 10);
+      const boxEmoji = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣'][i];
+      const bar = '█'.repeat(filled) + '░'.repeat(10 - filled);
+      return `${boxEmoji} ${bar} ${count} cards (${boxPercentages[i]}%)`;
+    });
+
+    // Calculate cards due today
+    const now = new Date();
+    const cardsDue = cards.filter(card => new Date(card.nextReviewAt) <= now).length;
+    
+    const message = `📊 **Your Learning Progress**
+
+📚 **Total Vocabulary:** ${totalCards} words
+🎯 **Overall Accuracy:** ${overallAccuracy}% (${totalCorrect}/${totalReviews})
+⏰ **Cards Due Today:** ${cardsDue}
+
+**Leitner Box Distribution:**
+${progressBars.join('\n')}
+
+📈 **Box Meanings:**
+• Box 1: Daily review (new/difficult)
+• Box 2: Every 2 days (getting better)
+• Box 3: Every 4 days (good progress)
+• Box 4: Every 8 days (almost mastered)
+• Box 5: Every 16 days (mastered!)
+
+${cardsDue > 0 ? '🔥 Ready to study? Use /study to continue!' : '🎉 All caught up! Check back later for more reviews.'}`;
+
+    await this.sendMessage(chatId, message);
+  }
+
+  private async showLeitnerTip(chatId: number, box: number): Promise<void> {
+    const tips = {
+      1: `💡 **Box 1 Tips:**
+• These are new or difficult words
+• Review daily for best retention
+• Don't worry about mistakes - they're part of learning!
+• Try to create mental associations or mnemonics`,
+      
+      2: `💡 **Box 2 Tips:**
+• You're making progress! 
+• Review every 2 days
+• Try using these words in sentences
+• Practice writing them down`,
+      
+      3: `💡 **Box 3 Tips:**
+• Great job! You're getting comfortable with these words
+• Review every 4 days
+• Try teaching these words to someone else
+• Look for these words in real content`,
+      
+      4: `💡 **Box 4 Tips:**
+• Excellent progress! These words are nearly mastered
+• Review every 8 days
+• Use them in conversations or writing
+• Create stories using multiple Box 4 words`,
+      
+      5: `💡 **Box 5 Tips:**
+• 🎉 Congratulations! You've mastered these words!
+• Review every 16 days to maintain mastery
+• These words are now part of your active vocabulary
+• Keep using them to prevent forgetting`
+    };
+
+    const tip = tips[box as keyof typeof tips] || tips[1];
+    await this.sendMessage(chatId, tip);
   }
 }
