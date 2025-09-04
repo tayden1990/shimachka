@@ -64,6 +64,17 @@ export class LeitnerBot {
       }
     }
   }
+  // --- Notification System ---
+  async sendPendingNotifications(): Promise<void> {
+    try {
+      // This method would be called by a scheduled job to send pending notifications
+      // For now, we rely on the notification system in AdminService
+      console.log('Checking for pending notifications...');
+    } catch (error) {
+      console.error('Error sending pending notifications:', error);
+    }
+  }
+
   // --- Telegram sendMessage wrapper ---
   private async sendMessage(chatId: number, text: string, keyboard?: TelegramInlineKeyboard | any): Promise<void> {
     const url = `${this.baseUrl}/sendMessage`;
@@ -817,6 +828,15 @@ Choose what you'd like to do:
       case 'view_messages':
         await this.showDirectMessages(chatId, userId);
         break;
+      case 'my_tickets':
+        await this.showUserTickets(chatId, userId);
+        break;
+      case 'show_notifications':
+        await this.showUserNotifications(chatId, userId);
+        break;
+      case 'mark_notifications_read':
+        await this.markAllNotificationsRead(chatId, userId);
+        break;
       case 'show_faq':
         await this.sendFAQ(chatId);
         break;
@@ -840,6 +860,9 @@ Choose what you'd like to do:
         break;
       case 'support_menu':
         await this.handleCommand('/support', chatId, userId, []);
+        break;
+      case 'show_support_menu':
+        await this.sendSupportMenu(chatId, userId);
         break;
       case 'set_interface_lang':
         if (params[0]) {
@@ -2072,10 +2095,13 @@ ${totalCards < 20 ? '📝 Build vocabulary with /topic command' : ''}`;
       inline_keyboard: [
         [
           { text: '🎫 Create Support Ticket', callback_data: 'create_ticket' },
-          { text: '💬 View Messages', callback_data: 'view_messages' }
+          { text: '� My Tickets', callback_data: 'my_tickets' }
         ],
         [
-          { text: '❓ FAQ', callback_data: 'show_faq' },
+          { text: '💬 View Messages', callback_data: 'view_messages' },
+          { text: '❓ FAQ', callback_data: 'show_faq' }
+        ],
+        [
           { text: '📞 Contact Info', callback_data: 'show_contact' }
         ]
       ]
@@ -2086,6 +2112,7 @@ ${totalCards < 20 ? '📝 Build vocabulary with /topic command' : ''}`;
 How can we help you today?
 
 • **Create Support Ticket** - Report issues or ask questions
+• **My Tickets** - View your support tickets and admin responses
 • **View Messages** - Check direct messages from admin
 • **FAQ** - Common questions and answers
 • **Contact Info** - Alternative ways to reach us
@@ -2229,6 +2256,164 @@ ${msg.isRead ? '✅ Read' : '🔵 New'}`
     } catch (error) {
       console.error('Error showing direct messages:', error);
       await this.sendMessage(chatId, '❌ Failed to load messages. Please try again.');
+    }
+  }
+
+  private async showUserTickets(chatId: number, userId: number): Promise<void> {
+    try {
+      const tickets = await this.adminService.getUserTickets(userId);
+      
+      if (tickets.length === 0) {
+        const keyboard: TelegramInlineKeyboard = {
+          inline_keyboard: [
+            [
+              { text: '🎫 Create New Ticket', callback_data: 'create_ticket' },
+              { text: '🔙 Back to Support', callback_data: 'show_support_menu' }
+            ]
+          ]
+        };
+        
+        await this.sendMessage(chatId, '📋 **My Support Tickets**\n\nYou have no support tickets yet.\n\nCreate a new ticket if you need help!', keyboard);
+        return;
+      }
+
+      let ticketList = '📋 **My Support Tickets**\n\n';
+      
+      tickets.forEach((ticket, index) => {
+        const statusEmoji = this.getTicketStatusEmoji(ticket.status);
+        const priorityEmoji = this.getTicketPriorityEmoji(ticket.priority);
+        const createdDate = new Date(ticket.createdAt).toLocaleDateString();
+        
+        ticketList += `${statusEmoji} **Ticket #${index + 1}** ${priorityEmoji}\n`;
+        ticketList += `📅 ${createdDate}\n`;
+        ticketList += `📝 ${ticket.subject}\n`;
+        ticketList += `💬 ${ticket.message.substring(0, 100)}${ticket.message.length > 100 ? '...' : ''}\n`;
+        
+        if (ticket.adminResponse) {
+          ticketList += `👨‍💼 **Admin Response:**\n${ticket.adminResponse.substring(0, 150)}${ticket.adminResponse.length > 150 ? '...' : ''}\n`;
+        }
+        
+        if (ticket.resolvedAt) {
+          ticketList += `✅ Resolved: ${new Date(ticket.resolvedAt).toLocaleDateString()}\n`;
+        }
+        
+        ticketList += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+      });
+
+      const keyboard: TelegramInlineKeyboard = {
+        inline_keyboard: [
+          [
+            { text: '🎫 Create New Ticket', callback_data: 'create_ticket' },
+            { text: '🔄 Refresh', callback_data: 'my_tickets' }
+          ],
+          [
+            { text: '🔙 Back to Support', callback_data: 'show_support_menu' }
+          ]
+        ]
+      };
+
+      await this.sendMessage(chatId, ticketList, keyboard);
+      
+    } catch (error) {
+      console.error('Error showing user tickets:', error);
+      await this.sendMessage(chatId, '❌ Failed to load your tickets. Please try again.');
+    }
+  }
+
+  private async showUserNotifications(chatId: number, userId: number): Promise<void> {
+    try {
+      const notifications = await this.adminService.getUserNotifications(userId);
+      
+      if (notifications.length === 0) {
+        const keyboard: TelegramInlineKeyboard = {
+          inline_keyboard: [
+            [
+              { text: '🔙 Back to Support', callback_data: 'show_support_menu' }
+            ]
+          ]
+        };
+        
+        await this.sendMessage(chatId, '🔔 **Notifications**\n\nYou have no notifications.\n\nWe\'ll notify you when admins respond to your tickets!', keyboard);
+        return;
+      }
+
+      let notificationText = '🔔 **Your Notifications**\n\n';
+      
+      notifications.slice(0, 10).forEach((notification, index) => {
+        const statusEmoji = notification.isRead ? '✅' : '🔵';
+        const createdDate = new Date(notification.createdAt).toLocaleDateString();
+        
+        notificationText += `${statusEmoji} **${notification.title}**\n`;
+        notificationText += `📅 ${createdDate}\n`;
+        notificationText += `💬 ${notification.message.substring(0, 200)}${notification.message.length > 200 ? '...' : ''}\n\n`;
+        notificationText += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+      });
+
+      if (notifications.length > 10) {
+        notificationText += `\n...and ${notifications.length - 10} more notifications.`;
+      }
+
+      const keyboard: TelegramInlineKeyboard = {
+        inline_keyboard: [
+          [
+            { text: '✅ Mark All Read', callback_data: 'mark_notifications_read' },
+            { text: '🔄 Refresh', callback_data: 'show_notifications' }
+          ],
+          [
+            { text: '🔙 Back to Support', callback_data: 'show_support_menu' }
+          ]
+        ]
+      };
+
+      await this.sendMessage(chatId, notificationText, keyboard);
+      
+      // Mark notifications as read automatically
+      for (const notification of notifications.filter(n => !n.isRead)) {
+        await this.adminService.markNotificationAsRead(notification.id);
+      }
+      
+    } catch (error) {
+      console.error('Error showing user notifications:', error);
+      await this.sendMessage(chatId, '❌ Failed to load notifications. Please try again.');
+    }
+  }
+
+  private async markAllNotificationsRead(chatId: number, userId: number): Promise<void> {
+    try {
+      const notifications = await this.adminService.getUserNotifications(userId);
+      
+      for (const notification of notifications) {
+        if (!notification.isRead) {
+          await this.adminService.markNotificationAsRead(notification.id);
+        }
+      }
+      
+      await this.sendMessage(chatId, '✅ All notifications marked as read!');
+      await this.showUserNotifications(chatId, userId);
+      
+    } catch (error) {
+      console.error('Error marking notifications as read:', error);
+      await this.sendMessage(chatId, '❌ Failed to mark notifications as read.');
+    }
+  }
+
+  private getTicketStatusEmoji(status: string): string {
+    switch (status) {
+      case 'open': return '🔴';
+      case 'in_progress': return '🟡';
+      case 'resolved': return '✅';
+      case 'closed': return '⚫';
+      default: return '🔵';
+    }
+  }
+
+  private getTicketPriorityEmoji(priority: string): string {
+    switch (priority) {
+      case 'urgent': return '🚨';
+      case 'high': return '🔥';
+      case 'medium': return '📝';
+      case 'low': return '📋';
+      default: return '📝';
     }
   }
 

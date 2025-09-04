@@ -232,9 +232,122 @@ export class AdminService {
       };
       
       await this.kv.put(`ticket:${ticketId}`, JSON.stringify(updatedTicket));
+      
+      // Send notification to user if admin responded
+      if (updates.adminResponse && ticket.userId) {
+        await this.sendTicketNotification(ticket.userId, updatedTicket);
+      }
+      
       return true;
     } catch (error) {
       console.error('Error updating support ticket:', error);
+      return false;
+    }
+  }
+
+  private async sendTicketNotification(userId: number, ticket: any): Promise<void> {
+    try {
+      // Store notification for the user - they'll see it when they check messages or tickets
+      const notification = {
+        id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId,
+        type: 'ticket_response',
+        title: '🎫 Support Ticket Update',
+        message: `Your support ticket "${ticket.subject}" has been updated by admin.\n\n💬 Admin Response: ${ticket.adminResponse}`,
+        ticketId: ticket.id,
+        createdAt: new Date().toISOString(),
+        isRead: false
+      };
+      
+      await this.kv.put(`notification:${notification.id}`, JSON.stringify(notification));
+      
+      // Also add to user's notification list
+      const userNotifications = await this.kv.get(`user_notifications:${userId}`, 'json') || [];
+      userNotifications.unshift(notification.id);
+      
+      // Keep only last 50 notifications
+      if (userNotifications.length > 50) {
+        userNotifications.splice(50);
+      }
+      
+      await this.kv.put(`user_notifications:${userId}`, JSON.stringify(userNotifications));
+      
+      // Also send via Telegram if possible (we'll implement this when we have bot access)
+      await this.sendTelegramNotification(userId, notification.message);
+      
+    } catch (error) {
+      console.error('Error sending ticket notification:', error);
+    }
+  }
+
+  private async sendTelegramNotification(userId: number, message: string): Promise<void> {
+    try {
+      // Store the notification to be sent by the bot
+      // The bot can check for pending notifications periodically
+      const telegramNotification = {
+        userId,
+        message,
+        createdAt: new Date().toISOString(),
+        sent: false
+      };
+      
+      await this.kv.put(`telegram_notification:${userId}:${Date.now()}`, JSON.stringify(telegramNotification));
+    } catch (error) {
+      console.error('Error queuing Telegram notification:', error);
+    }
+  }
+
+  async getUserTickets(userId: number): Promise<SupportTicket[]> {
+    try {
+      const ticketsList = await this.kv.list({ prefix: 'ticket:' });
+      const userTickets: SupportTicket[] = [];
+
+      for (const key of ticketsList.keys) {
+        const ticket = await this.kv.get(key.name, 'json');
+        if (ticket && ticket.userId === userId) {
+          userTickets.push(ticket);
+        }
+      }
+
+      // Sort by creation date (newest first)
+      userTickets.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      return userTickets;
+    } catch (error) {
+      console.error('Error getting user tickets:', error);
+      return [];
+    }
+  }
+
+  async getUserNotifications(userId: number): Promise<any[]> {
+    try {
+      const notificationIds = await this.kv.get(`user_notifications:${userId}`, 'json') || [];
+      const notifications: any[] = [];
+      
+      for (const notifId of notificationIds) {
+        const notification = await this.kv.get(`notification:${notifId}`, 'json');
+        if (notification) {
+          notifications.push(notification);
+        }
+      }
+      
+      return notifications;
+    } catch (error) {
+      console.error('Error getting user notifications:', error);
+      return [];
+    }
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<boolean> {
+    try {
+      const notification = await this.kv.get(`notification:${notificationId}`, 'json');
+      if (!notification) return false;
+      
+      notification.isRead = true;
+      await this.kv.put(`notification:${notificationId}`, JSON.stringify(notification));
+      return true;
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
       return false;
     }
   }
