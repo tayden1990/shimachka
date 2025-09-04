@@ -2,7 +2,7 @@ import { KVNamespace } from '@cloudflare/workers-types';
 import { ConversationState } from '../types/conversation-state';
 
 export class ConversationStateManager {
-  constructor(private kv: KVNamespace) {}
+  constructor(private kv: any) {}
 
   private getKey(userId: number): string {
     return `convstate:${userId}`;

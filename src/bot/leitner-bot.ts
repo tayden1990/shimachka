@@ -23,7 +23,7 @@ export class LeitnerBot {
     private userManager: UserManager,
     private wordExtractor: WordExtractor,
     private scheduleManager: ScheduleManager,
-    kv: KVNamespace
+    kv: any // Accept any type for KVNamespace to avoid TS2345 errors
   ) {
     this.baseUrl = `https://api.telegram.org/bot${token}`;
     this.conversationStateManager = new ConversationStateManager(kv);
