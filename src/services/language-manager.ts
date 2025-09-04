@@ -5,6 +5,14 @@ export interface BotTexts {
   welcome: string;
   welcomeBack: string;
   registrationComplete: string;
+  readyToContinue: string;
+  quickStart: string;
+  useTopicToGenerate: string;
+  useAddToManual: string;
+  useStudyToReview: string;
+  useSettingsToConfig: string;
+  supportMultipleLanguages: string;
+  chooseOptionBelow: string;
   
   // Main menu and navigation
   mainMenu: string;
@@ -90,6 +98,54 @@ export interface BotTexts {
   tryAgain: string;
   invalidInput: string;
   networkError: string;
+  cancelled: string;
+  pleaseComplete: string;
+  completeRegistrationFirst: string;
+  useStartToBegin: string;
+  pleaseSelectValid: string;
+  noVocabularyStats: string;
+  getStarted: string;
+  startLearningToday: string;
+  pleaseUseButtons: string;
+  readyToStudy: string;
+  useStudyToContinue: string;
+  allCaughtUpAddMore: string;
+  
+  // Daily reminder messages
+  dailyReminder: string;
+  cardsReadyForReview: string;
+  useStudyToStart: string;
+  
+  // Review session messages
+  pleaseUseButtonsToRespond: string;
+  typeStudyToStartNew: string;
+  pleaseSelectValidNumber: string;
+  cancelledUseTopic: string;
+  supportTicketCancelled: string;
+  useSupportToStartNew: string;
+  operationCancelled: string;
+  allCaughtUpCheckLater: string;
+  
+  // Registration flow messages
+  welcomeToBot: string;
+  beforeWeStart: string;
+  selectPreferredLanguage: string;
+  chooseLanguageBelow: string;
+  whatsYourFullName: string;
+  pleaseTypeNameBelow: string;
+  niceToMeet: string;
+  whatsYourEmail: string;
+  emailWillHelp: string;
+  sendReminders: string;
+  keepProgressSafe: string;
+  personalizedInsights: string;
+  pleaseTypeEmailBelow: string;
+  pleaseConfirmInfo: string;
+  nameLabel: string;
+  emailLabel: string;
+  isInfoCorrect: string;
+  confirmButton: string;
+  editButton: string;
   
   // Time and dates
   today: string;
@@ -131,6 +187,14 @@ const TEXTS: Record<string, BotTexts> = {
     welcome: "🎯 Welcome to Leitner Learning Bot!",
     welcomeBack: "🎯 Welcome back!",
     registrationComplete: "✅ Registration complete! You're ready to start learning.",
+    readyToContinue: "Ready to continue your vocabulary learning journey with the Leitner spaced repetition system?",
+    quickStart: "🚀 **Quick Start:**",
+    useTopicToGenerate: "• Use /topic to generate vocabulary from any topic",
+    useAddToManual: "• Use /add to manually add words",
+    useStudyToReview: "• Use /study to review your flashcards",
+    useSettingsToConfig: "• Use /settings to configure languages and reminders",
+    supportMultipleLanguages: "🌍 I support multiple languages and can extract vocabulary from any topic you're interested in!",
+    chooseOptionBelow: "Choose an option below to get started:",
     
     // Main menu and navigation
     mainMenu: "📚 Main Menu",
@@ -241,6 +305,54 @@ Choose an action below:`,
     tryAgain: "Please try again.",
     invalidInput: "Invalid input. Please try again.",
     networkError: "Network error. Please try again later.",
+    cancelled: "❌ Cancelled. Use /topic to try again.",
+    pleaseComplete: "👤 Please complete your registration first before using other features.",
+    completeRegistrationFirst: "👤 Please complete your registration first before using other features.",
+    useStartToBegin: "Use /start to begin registration.",
+    pleaseSelectValid: "Please select a valid number between 1 and 100.",
+    noVocabularyStats: "📊 **Your Learning Statistics**\n\n📚 No vocabulary added yet!",
+    getStarted: "🚀 **Get Started:**",
+    startLearningToday: "Start your learning journey today! 💪",
+    pleaseUseButtons: "Please use the buttons to respond during review sessions, or type /study to start a new session.",
+    readyToStudy: "📚 Ready to study?",
+    useStudyToContinue: "Use /study to continue learning!",
+    allCaughtUpAddMore: "🎉 All caught up! Add more vocabulary with /topic",
+    
+    // Daily reminder messages
+    dailyReminder: "🔔 Daily Reminder",
+    cardsReadyForReview: "You have {count} card(s) ready for review!",
+    useStudyToStart: "Use /study to start.",
+    
+    // Review session messages
+    pleaseUseButtonsToRespond: "Please use the buttons to respond during review sessions, or type /study to start a new session.",
+    typeStudyToStartNew: "type /study to start a new session.",
+    pleaseSelectValidNumber: "Please select a valid number between 1 and 100.",
+    cancelledUseTopic: "❌ Cancelled. Use /topic to try again.",
+    supportTicketCancelled: "❌ Support ticket cancelled. Use /support to start a new one.",
+    useSupportToStartNew: "Use /support to start a new one.",
+    operationCancelled: "Operation cancelled.",
+    allCaughtUpCheckLater: "🎉 All caught up! Check back later for more reviews.",
+    
+    // Registration flow messages
+    welcomeToBot: "🎯 **Welcome to the Leitner Learning Bot!**",
+    beforeWeStart: "Before we start your vocabulary learning journey, let's set up your preferences.",
+    selectPreferredLanguage: "🌍 **Select your preferred interface language:**",
+    chooseLanguageBelow: "Choose your language from the options below:",
+    whatsYourFullName: "👤 **What's your full name?**",
+    pleaseTypeNameBelow: "Please type your name below:",
+    niceToMeet: "Nice to meet you",
+    whatsYourEmail: "📧 **What's your email address?**",
+    emailWillHelp: "This will help us:",
+    sendReminders: "• Send you learning reminders (optional)",
+    keepProgressSafe: "• Keep your progress safe",
+    personalizedInsights: "• Provide personalized insights",
+    pleaseTypeEmailBelow: "Please type your email below:",
+    pleaseConfirmInfo: "📋 **Please confirm your information:**",
+    nameLabel: "👤 **Name:**",
+    emailLabel: "📧 **Email:**",
+    isInfoCorrect: "Is this information correct?",
+    confirmButton: "✅ Confirm",
+    editButton: "✏️ Edit",
     
     // Time and dates
     today: "today",
@@ -259,6 +371,14 @@ Choose an action below:`,
     welcome: "🎯 به ربات یادگیری لایتنر خوش آمدید!",
     welcomeBack: "🎯 دوباره خوش آمدید!",
     registrationComplete: "✅ ثبت نام کامل شد! آماده شروع یادگیری هستید.",
+    readyToContinue: "آماده ادامه سفر یادگیری واژگان با سیستم تکرار فاصله‌دار لایتنر؟",
+    quickStart: "🚀 **شروع سریع:**",
+    useTopicToGenerate: "• از /topic برای تولید واژگان از هر موضوعی استفاده کنید",
+    useAddToManual: "• از /add برای افزودن دستی کلمات استفاده کنید",
+    useStudyToReview: "• از /study برای مرور فلش کارت‌هایتان استفاده کنید",
+    useSettingsToConfig: "• از /settings برای تنظیم زبان‌ها و یادآوری‌ها استفاده کنید",
+    supportMultipleLanguages: "🌍 من از زبان‌های متعدد پشتیبانی می‌کنم و می‌توانم از هر موضوعی که علاقه‌مند هستید واژگان استخراج کنم!",
+    chooseOptionBelow: "برای شروع، گزینه‌ای را در زیر انتخاب کنید:",
     
     // Main menu and navigation
     mainMenu: "📚 منوی اصلی",
@@ -369,6 +489,54 @@ Choose an action below:`,
     tryAgain: "لطفاً دوباره تلاش کنید.",
     invalidInput: "ورودی نامعتبر. لطفاً دوباره تلاش کنید.",
     networkError: "خطای شبکه. لطفاً بعداً تلاش کنید.",
+    cancelled: "❌ لغو شد. از /topic برای تلاش مجدد استفاده کنید.",
+    pleaseComplete: "👤 لطفاً ابتدا ثبت نام خود را تکمیل کنید قبل از استفاده از سایر ویژگی‌ها.",
+    completeRegistrationFirst: "👤 لطفاً ابتدا ثبت نام خود را تکمیل کنید قبل از استفاده از سایر ویژگی‌ها.",
+    useStartToBegin: "از /start برای شروع ثبت نام استفاده کنید.",
+    pleaseSelectValid: "لطفاً عددی معتبر بین ۱ تا ۱۰۰ انتخاب کنید.",
+    noVocabularyStats: "📊 **آمار یادگیری شما**\n\n📚 هنوز هیچ واژگانی اضافه نشده!",
+    getStarted: "🚀 **شروع کنید:**",
+    startLearningToday: "امروز سفر یادگیری خود را شروع کنید! 💪",
+    pleaseUseButtons: "لطفاً در طول جلسات مرور از دکمه‌ها استفاده کنید، یا برای شروع جلسه جدید /study تایپ کنید.",
+    readyToStudy: "📚 آماده مطالعه؟",
+    useStudyToContinue: "از /study برای ادامه یادگیری استفاده کنید!",
+    allCaughtUpAddMore: "🎉 همه چیز انجام شد! با /topic واژگان بیشتری اضافه کنید",
+    
+    // Daily reminder messages
+    dailyReminder: "🔔 یادآوری روزانه",
+    cardsReadyForReview: "شما {count} کارت آماده برای مرور دارید!",
+    useStudyToStart: "از /study برای شروع استفاده کنید.",
+    
+    // Review session messages
+    pleaseUseButtonsToRespond: "لطفاً در طول جلسات مرور از دکمه‌ها استفاده کنید، یا برای شروع جلسه جدید /study تایپ کنید.",
+    typeStudyToStartNew: "برای شروع جلسه جدید /study تایپ کنید.",
+    pleaseSelectValidNumber: "لطفاً عددی معتبر بین ۱ تا ۱۰۰ انتخاب کنید.",
+    cancelledUseTopic: "❌ لغو شد. از /topic برای تلاش مجدد استفاده کنید.",
+    supportTicketCancelled: "❌ تیکت پشتیبانی لغو شد. از /support برای شروع تیکت جدید استفاده کنید.",
+    useSupportToStartNew: "از /support برای شروع تیکت جدید استفاده کنید.",
+    operationCancelled: "عملیات لغو شد.",
+    allCaughtUpCheckLater: "🎉 همه چیز انجام شد! بعداً برای مرورهای بیشتر بررسی کنید.",
+    
+    // Registration flow messages
+    welcomeToBot: "🎯 **به ربات یادگیری لایتنر خوش آمدید!**",
+    beforeWeStart: "قبل از شروع سفر یادگیری واژگان، بیایید تنظیمات شما را انجام دهیم.",
+    selectPreferredLanguage: "🌍 **زبان مورد نظر خود را انتخاب کنید:**",
+    chooseLanguageBelow: "زبان خود را از گزینه‌های زیر انتخاب کنید:",
+    whatsYourFullName: "👤 **نام کامل شما چیست؟**",
+    pleaseTypeNameBelow: "لطفاً نام خود را در زیر تایپ کنید:",
+    niceToMeet: "از آشنایی با شما خوشحالم",
+    whatsYourEmail: "📧 **آدرس ایمیل شما چیست؟**",
+    emailWillHelp: "این به ما کمک می‌کند:",
+    sendReminders: "• یادآورهای یادگیری بفرستیم (اختیاری)",
+    keepProgressSafe: "• پیشرفت شما را ایمن نگه داریم",
+    personalizedInsights: "• بینش‌های شخصی‌سازی شده ارائه دهیم",
+    pleaseTypeEmailBelow: "لطفاً ایمیل خود را در زیر تایپ کنید:",
+    pleaseConfirmInfo: "📋 **لطفاً اطلاعات خود را تأیید کنید:**",
+    nameLabel: "👤 **نام:**",
+    emailLabel: "📧 **ایمیل:**",
+    isInfoCorrect: "آیا این اطلاعات درست است؟",
+    confirmButton: "✅ تأیید",
+    editButton: "✏️ ویرایش",
     
     // Time and dates
     today: "امروز",
@@ -387,6 +555,14 @@ Choose an action below:`,
     welcome: "🎯 مرحباً بك في بوت تعلم لايتنر!",
     welcomeBack: "🎯 أهلاً وسهلاً!",
     registrationComplete: "✅ اكتمل التسجيل! أنت مستعد لبدء التعلم.",
+    readyToContinue: "مستعد لمتابعة رحلة تعلم المفردات مع نظام التكرار المتباعد لايتنر؟",
+    quickStart: "🚀 **بداية سريعة:**",
+    useTopicToGenerate: "• استخدم /topic لتوليد مفردات من أي موضوع",
+    useAddToManual: "• استخدم /add لإضافة كلمات يدوياً",
+    useStudyToReview: "• استخدم /study لمراجعة بطاقاتك التعليمية",
+    useSettingsToConfig: "• استخدم /settings لتكوين اللغات والتذكيرات",
+    supportMultipleLanguages: "🌍 أدعم لغات متعددة ويمكنني استخراج مفردات من أي موضوع تهتم به!",
+    chooseOptionBelow: "اختر خياراً أدناه للبدء:",
     
     // Main menu and navigation
     mainMenu: "📚 القائمة الرئيسية",
@@ -497,6 +673,54 @@ Choose an action below:`,
     tryAgain: "حاول مرة أخرى من فضلك.",
     invalidInput: "إدخال غير صحيح. حاول مرة أخرى من فضلك.",
     networkError: "خطأ في الشبكة. حاول لاحقاً من فضلك.",
+    cancelled: "❌ تم الإلغاء. استخدم /topic للمحاولة مرة أخرى.",
+    pleaseComplete: "👤 يرجى إكمال التسجيل أولاً قبل استخدام الميزات الأخرى.",
+    completeRegistrationFirst: "👤 يرجى إكمال التسجيل أولاً قبل استخدام الميزات الأخرى.",
+    useStartToBegin: "استخدم /start لبدء التسجيل.",
+    pleaseSelectValid: "يرجى اختيار رقم صالح بين ١ و ١٠٠.",
+    noVocabularyStats: "📊 **إحصائيات التعلم الخاصة بك**\n\n📚 لم تتم إضافة مفردات بعد!",
+    getStarted: "🚀 **ابدأ:**",
+    startLearningToday: "ابدأ رحلة التعلم اليوم! 💪",
+    pleaseUseButtons: "يرجى استخدام الأزرار للرد أثناء جلسات المراجعة، أو اكتب /study لبدء جلسة جديدة.",
+    readyToStudy: "📚 مستعد للدراسة؟",
+    useStudyToContinue: "استخدم /study لمتابعة التعلم!",
+    allCaughtUpAddMore: "🎉 كل شيء منجز! أضف المزيد من المفردات باستخدام /topic",
+    
+    // Daily reminder messages
+    dailyReminder: "🔔 تذكير يومي",
+    cardsReadyForReview: "لديك {count} بطاقة جاهزة للمراجعة!",
+    useStudyToStart: "استخدم /study للبدء.",
+    
+    // Review session messages
+    pleaseUseButtonsToRespond: "يرجى استخدام الأزرار للرد أثناء جلسات المراجعة، أو اكتب /study لبدء جلسة جديدة.",
+    typeStudyToStartNew: "اكتب /study لبدء جلسة جديدة.",
+    pleaseSelectValidNumber: "يرجى اختيار رقم صالح بين ١ و ١٠٠.",
+    cancelledUseTopic: "❌ تم الإلغاء. استخدم /topic للمحاولة مرة أخرى.",
+    supportTicketCancelled: "❌ تم إلغاء تذكرة الدعم. استخدم /support لبدء تذكرة جديدة.",
+    useSupportToStartNew: "استخدم /support لبدء تذكرة جديدة.",
+    operationCancelled: "تم إلغاء العملية.",
+    allCaughtUpCheckLater: "🎉 كل شيء منجز! راجع لاحقاً للمزيد من المراجعات.",
+    
+    // Registration flow messages
+    welcomeToBot: "🎯 **مرحباً بك في بوت التعلم لايتنر!**",
+    beforeWeStart: "قبل أن نبدأ رحلة تعلم المفردات، دعنا نقوم بإعداد تفضيلاتك.",
+    selectPreferredLanguage: "🌍 **اختر لغة الواجهة المفضلة لديك:**",
+    chooseLanguageBelow: "اختر لغتك من الخيارات أدناه:",
+    whatsYourFullName: "👤 **ما هو اسمك الكامل؟**",
+    pleaseTypeNameBelow: "يرجى كتابة اسمك أدناه:",
+    niceToMeet: "سعيد بلقائك",
+    whatsYourEmail: "📧 **ما هو عنوان بريدك الإلكتروني؟**",
+    emailWillHelp: "سيساعدنا هذا في:",
+    sendReminders: "• إرسال تذكيرات التعلم (اختياري)",
+    keepProgressSafe: "• الحفاظ على تقدمك آمناً",
+    personalizedInsights: "• تقديم رؤى شخصية",
+    pleaseTypeEmailBelow: "يرجى كتابة بريدك الإلكتروني أدناه:",
+    pleaseConfirmInfo: "📋 **يرجى تأكيد معلوماتك:**",
+    nameLabel: "👤 **الاسم:**",
+    emailLabel: "📧 **البريد الإلكتروني:**",
+    isInfoCorrect: "هل هذه المعلومات صحيحة؟",
+    confirmButton: "✅ تأكيد",
+    editButton: "✏️ تعديل",
     
     // Time and dates
     today: "اليوم",
@@ -515,6 +739,14 @@ Choose an action below:`,
     welcome: "🎯 ¡Bienvenido al Bot de Aprendizaje Leitner!",
     welcomeBack: "🎯 ¡Bienvenido de nuevo!",
     registrationComplete: "✅ ¡Registro completo! Estás listo para empezar a aprender.",
+    readyToContinue: "¿Listo para continuar tu viaje de aprendizaje de vocabulario con el sistema de repetición espaciada Leitner?",
+    quickStart: "🚀 **Inicio Rápido:**",
+    useTopicToGenerate: "• Usa /topic para generar vocabulario de cualquier tema",
+    useAddToManual: "• Usa /add para añadir palabras manualmente",
+    useStudyToReview: "• Usa /study para revisar tus tarjetas de estudio",
+    useSettingsToConfig: "• Usa /settings para configurar idiomas y recordatorios",
+    supportMultipleLanguages: "🌍 ¡Apoyo múltiples idiomas y puedo extraer vocabulario de cualquier tema que te interese!",
+    chooseOptionBelow: "Elige una opción abajo para comenzar:",
     
     // Main menu and navigation
     mainMenu: "📚 Menú Principal",
@@ -625,6 +857,54 @@ Elige una acción abajo:`,
     tryAgain: "Por favor, inténtalo de nuevo.",
     invalidInput: "Entrada inválida. Por favor, inténtalo de nuevo.",
     networkError: "Error de red. Por favor, inténtalo más tarde.",
+    cancelled: "❌ Cancelado. Usa /topic para intentar de nuevo.",
+    pleaseComplete: "👤 Por favor, completa tu registro primero antes de usar otras características.",
+    completeRegistrationFirst: "👤 Por favor, completa tu registro primero antes de usar otras características.",
+    useStartToBegin: "Usa /start para comenzar el registro.",
+    pleaseSelectValid: "Por favor, selecciona un número válido entre 1 y 100.",
+    noVocabularyStats: "📊 **Tus Estadísticas de Aprendizaje**\n\n📚 ¡Aún no se ha añadido vocabulario!",
+    getStarted: "🚀 **Comenzar:**",
+    startLearningToday: "¡Comienza tu viaje de aprendizaje hoy! 💪",
+    pleaseUseButtons: "Por favor, usa los botones para responder durante las sesiones de revisión, o escribe /study para comenzar una nueva sesión.",
+    readyToStudy: "📚 ¿Listo para estudiar?",
+    useStudyToContinue: "¡Usa /study para continuar aprendiendo!",
+    allCaughtUpAddMore: "🎉 ¡Todo al día! Añade más vocabulario con /topic",
+    
+    // Daily reminder messages
+    dailyReminder: "🔔 Recordatorio Diario",
+    cardsReadyForReview: "¡Tienes {count} tarjeta(s) lista(s) para revisar!",
+    useStudyToStart: "Usa /study para comenzar.",
+    
+    // Review session messages
+    pleaseUseButtonsToRespond: "Por favor, usa los botones para responder durante las sesiones de revisión, o escribe /study para comenzar una nueva sesión.",
+    typeStudyToStartNew: "escribe /study para comenzar una nueva sesión.",
+    pleaseSelectValidNumber: "Por favor, selecciona un número válido entre 1 y 100.",
+    cancelledUseTopic: "❌ Cancelado. Usa /topic para intentar de nuevo.",
+    supportTicketCancelled: "❌ Ticket de soporte cancelado. Usa /support para comenzar uno nuevo.",
+    useSupportToStartNew: "Usa /support para comenzar uno nuevo.",
+    operationCancelled: "Operación cancelada.",
+    allCaughtUpCheckLater: "🎉 ¡Todo al día! Vuelve más tarde para más revisiones.",
+    
+    // Registration flow messages
+    welcomeToBot: "🎯 **¡Bienvenido al Bot de Aprendizaje Leitner!**",
+    beforeWeStart: "Antes de comenzar tu viaje de aprendizaje de vocabulario, vamos a configurar tus preferencias.",
+    selectPreferredLanguage: "🌍 **Selecciona tu idioma de interfaz preferido:**",
+    chooseLanguageBelow: "Elige tu idioma de las opciones de abajo:",
+    whatsYourFullName: "👤 **¿Cuál es tu nombre completo?**",
+    pleaseTypeNameBelow: "Por favor, escribe tu nombre abajo:",
+    niceToMeet: "Mucho gusto conocerte",
+    whatsYourEmail: "📧 **¿Cuál es tu dirección de correo electrónico?**",
+    emailWillHelp: "Esto nos ayudará a:",
+    sendReminders: "• Enviarte recordatorios de aprendizaje (opcional)",
+    keepProgressSafe: "• Mantener tu progreso seguro",
+    personalizedInsights: "• Proporcionar información personalizada",
+    pleaseTypeEmailBelow: "Por favor, escribe tu correo electrónico abajo:",
+    pleaseConfirmInfo: "📋 **Por favor, confirma tu información:**",
+    nameLabel: "👤 **Nombre:**",
+    emailLabel: "📧 **Correo electrónico:**",
+    isInfoCorrect: "¿Es correcta esta información?",
+    confirmButton: "✅ Confirmar",
+    editButton: "✏️ Editar",
     
     // Time and dates
     today: "hoy",
@@ -643,6 +923,14 @@ Elige una acción abajo:`,
     welcome: "🎯 Добро пожаловать в Leitner Learning Bot!",
     welcomeBack: "🎯 С возвращением!",
     registrationComplete: "✅ Регистрация завершена! Вы готовы начать обучение.",
+    readyToContinue: "Готовы продолжить ваше путешествие изучения словаря с системой интервального повторения Лейтнера?",
+    quickStart: "🚀 **Быстрый старт:**",
+    useTopicToGenerate: "• Используйте /topic для генерации словаря по любой теме",
+    useAddToManual: "• Используйте /add для ручного добавления слов",
+    useStudyToReview: "• Используйте /study для повторения ваших флешкарт",
+    useSettingsToConfig: "• Используйте /settings для настройки языков и напоминаний",
+    supportMultipleLanguages: "🌍 Я поддерживаю множество языков и могу извлекать словарь из любой интересующей вас темы!",
+    chooseOptionBelow: "Выберите опцию ниже для начала:",
     
     // Main menu and navigation
     mainMenu: "📚 Главное меню",
@@ -753,6 +1041,54 @@ Elige una acción abajo:`,
     tryAgain: "Пожалуйста, попробуйте ещё раз.",
     invalidInput: "Неверный ввод. Пожалуйста, попробуйте ещё раз.",
     networkError: "Ошибка сети. Пожалуйста, попробуйте позже.",
+    cancelled: "❌ Отменено. Используйте /topic для повторной попытки.",
+    pleaseComplete: "👤 Пожалуйста, сначала завершите регистрацию перед использованием других функций.",
+    completeRegistrationFirst: "👤 Пожалуйста, сначала завершите регистрацию перед использованием других функций.",
+    useStartToBegin: "Используйте /start для начала регистрации.",
+    pleaseSelectValid: "Пожалуйста, выберите действительное число от 1 до 100.",
+    noVocabularyStats: "📊 **Ваша статистика обучения**\n\n📚 Словарь ещё не добавлен!",
+    getStarted: "🚀 **Начать:**",
+    startLearningToday: "Начните своё путешествие обучения сегодня! 💪",
+    pleaseUseButtons: "Пожалуйста, используйте кнопки для ответов во время сессий повторения, или введите /study для начала новой сессии.",
+    readyToStudy: "📚 Готовы к изучению?",
+    useStudyToContinue: "Используйте /study для продолжения обучения!",
+    allCaughtUpAddMore: "🎉 Всё изучено! Добавьте больше словаря с помощью /topic",
+    
+    // Daily reminder messages
+    dailyReminder: "🔔 Ежедневное напоминание",
+    cardsReadyForReview: "У вас {count} карточка(и) готова(ы) для повторения!",
+    useStudyToStart: "Используйте /study для начала.",
+    
+    // Review session messages
+    pleaseUseButtonsToRespond: "Пожалуйста, используйте кнопки для ответов во время сессий повторения, или введите /study для начала новой сессии.",
+    typeStudyToStartNew: "введите /study для начала новой сессии.",
+    pleaseSelectValidNumber: "Пожалуйста, выберите действительное число от 1 до 100.",
+    cancelledUseTopic: "❌ Отменено. Используйте /topic для повторной попытки.",
+    supportTicketCancelled: "❌ Запрос в поддержку отменён. Используйте /support для создания нового.",
+    useSupportToStartNew: "Используйте /support для создания нового.",
+    operationCancelled: "Операция отменена.",
+    allCaughtUpCheckLater: "🎉 Всё изучено! Проверьте позже для новых повторений.",
+    
+    // Registration flow messages
+    welcomeToBot: "🎯 **Добро пожаловать в Leitner Learning Bot!**",
+    beforeWeStart: "Прежде чем начать ваше путешествие изучения словаря, давайте настроим ваши предпочтения.",
+    selectPreferredLanguage: "🌍 **Выберите предпочитаемый язык интерфейса:**",
+    chooseLanguageBelow: "Выберите ваш язык из вариантов ниже:",
+    whatsYourFullName: "👤 **Как вас зовут?**",
+    pleaseTypeNameBelow: "Пожалуйста, введите ваше имя ниже:",
+    niceToMeet: "Приятно познакомиться",
+    whatsYourEmail: "📧 **Какой ваш адрес электронной почты?**",
+    emailWillHelp: "Это поможет нам:",
+    sendReminders: "• Отправлять напоминания об обучении (по желанию)",
+    keepProgressSafe: "• Сохранять ваш прогресс в безопасности",
+    personalizedInsights: "• Предоставлять персонализированную аналитику",
+    pleaseTypeEmailBelow: "Пожалуйста, введите ваш email ниже:",
+    pleaseConfirmInfo: "📋 **Пожалуйста, подтвердите вашу информацию:**",
+    nameLabel: "👤 **Имя:**",
+    emailLabel: "📧 **Email:**",
+    isInfoCorrect: "Правильна ли эта информация?",
+    confirmButton: "✅ Подтвердить",
+    editButton: "✏️ Редактировать",
     
     // Time and dates
     today: "сегодня",

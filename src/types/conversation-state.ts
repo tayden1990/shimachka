@@ -34,7 +34,8 @@ export interface ReviewConversationState {
 }
 
 export interface RegistrationConversationState {
-  step: 'ask_name' | 'ask_email' | 'confirm';
+  step: 'ask_language' | 'ask_name' | 'ask_email' | 'confirm';
+  interfaceLanguage?: string;
   fullName?: string;
   email?: string;
 }

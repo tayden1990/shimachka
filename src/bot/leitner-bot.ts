@@ -57,7 +57,9 @@ export class LeitnerBot {
     for (const user of users) {
       const cardsToReview = await this.userManager.getCardsDueForReview(user.id);
       if (cardsToReview.length > 0) {
-        const message = `🔔 Daily Reminder\nYou have ${cardsToReview.length} card(s) ready for review! Use /study to start.`;
+        const userLang = await this.getUserInterfaceLanguage(user.id);
+        const texts = languageManager.getTexts(userLang);
+        const message = `${texts.dailyReminder}\n${texts.cardsReadyForReview.replace('{count}', cardsToReview.length.toString())} ${texts.useStudyToStart}`;
         await this.sendMessage(user.id, message);
       }
     }
@@ -201,10 +203,12 @@ export class LeitnerBot {
   private async sendUserStatistics(chatId: number, userId: number): Promise<void> {
     const cards = await this.userManager.getUserCards(userId);
     const totalCards = cards.length;
+    const userLang = await this.getUserInterfaceLanguage(userId);
+    const texts = languageManager.getTexts(userLang);
     
     if (totalCards === 0) {
       await this.sendMessage(chatId, 
-        '📊 **Your Learning Statistics**\n\n📚 No vocabulary added yet!\n\n🚀 **Get Started:**\n• Use /topic to generate vocabulary\n• Use /add to manually add words\n\nStart your learning journey today! 💪'
+        `${texts.noVocabularyStats}\n\n${texts.getStarted}\n${texts.useTopicToGenerate}\n${texts.useAddToManual}\n\n${texts.startLearningToday}`
       );
       return;
     }
@@ -274,7 +278,7 @@ ${overallAccuracy >= 80 ? '🎯 Sharp Shooter (80%+ accuracy)' : ''}
 ${studyDays >= 7 ? '🔥 Dedicated Learner (7+ study days)' : ''}
 ${totalReviews >= 50 ? '💪 Review Champion (50+ reviews)' : ''}
 
-${cardsDue > 0 ? '📚 Ready to study? Use /study to continue learning!' : '🎉 All caught up! Add more vocabulary with /topic'}`;
+${cardsDue > 0 ? `${texts.readyToStudy} ${texts.useStudyToContinue}` : texts.allCaughtUpAddMore}`;
 
     const keyboard: TelegramInlineKeyboard = {
       inline_keyboard: [
@@ -404,7 +408,9 @@ Choose what you'd like to do:
     if (command !== '/start') {
       const user = await this.userManager.getUser(userId);
       if (!user || !user.isRegistrationComplete) {
-        await this.sendMessage(chatId, '👤 Please complete your registration first before using other features.\n\nUse /start to begin registration.');
+        const userLang = await this.getUserInterfaceLanguage(userId);
+        const texts = languageManager.getTexts(userLang);
+        await this.sendMessage(chatId, `${texts.completeRegistrationFirst}\n\n${texts.useStartToBegin}`);
         return;
       }
     }
@@ -515,7 +521,9 @@ Choose what you'd like to do:
     // Then check if user is in an active review session (fallback)
     const activeSession = await this.userManager.getActiveReviewSession(userId);
     if (activeSession) {
-      await this.sendMessage(chatId, 'Please use the buttons to respond during review sessions, or type /study to start a new session.');
+      const userLang = await this.getUserInterfaceLanguage(userId);
+      const texts = languageManager.getTexts(userLang);
+      await this.sendMessage(chatId, texts.pleaseUseButtonsToRespond);
       return;
     }
     
@@ -537,6 +545,9 @@ Choose what you'd like to do:
     const [action, ...params] = data.split(':');
 
     switch (action) {
+      case 'select_language':
+        await this.handleRegistrationLanguageSelection(chatId, userId, params[0]);
+        break;
       case 'review_correct':
         // Clear review state before processing button answer
         await this.conversationStateManager.clearState(userId);
@@ -629,7 +640,9 @@ Choose what you'd like to do:
         if (state && state.addTopic) {
           const count = parseInt(params[0], 10);
           if (isNaN(count) || count < 1 || count > 100) {
-            await this.sendMessage(chatId, 'Please select a valid number between 1 and 100.');
+            const userLang = await this.getUserInterfaceLanguage(userId);
+            const texts = languageManager.getTexts(userLang);
+            await this.sendMessage(chatId, texts.pleaseSelectValidNumber);
             break;
           }
           state.addTopic.wordCount = count;
@@ -784,7 +797,9 @@ Choose what you'd like to do:
           await this.executeTopicWordExtraction(chatId, userId);
         } else {
           await this.conversationStateManager.clearState(userId);
-          await this.sendMessage(chatId, '❌ Cancelled. Use /topic to try again.');
+          const userLang = await this.getUserInterfaceLanguage(userId);
+          const texts = languageManager.getTexts(userLang);
+          await this.sendMessage(chatId, texts.cancelledUseTopic);
         }
         break;
       case 'confirm_registration':
@@ -813,7 +828,9 @@ Choose what you'd like to do:
         break;
       case 'cancel_ticket':
         await this.conversationStateManager.clearState(userId);
-        await this.sendMessage(chatId, '❌ Support ticket cancelled. Use /support to start a new one.');
+        const userLang = await this.getUserInterfaceLanguage(userId);
+        const texts = languageManager.getTexts(userLang);
+        await this.sendMessage(chatId, texts.supportTicketCancelled);
         break;
       case 'priority_normal':
         await this.setTicketPriority(chatId, userId, 'medium');
@@ -855,17 +872,17 @@ Choose what you'd like to do:
     
     const message = `${texts.welcomeBack}, ${userName}!
 
-Ready to continue your vocabulary learning journey with the Leitner spaced repetition system?
+${texts.readyToContinue}
 
-🚀 **Quick Start:**
-• Use /topic to generate vocabulary from any topic
-• Use /add to manually add words  
-• Use /study to review your flashcards
-• Use /settings to configure languages and reminders
+${texts.quickStart}
+${texts.useTopicToGenerate}
+${texts.useAddToManual}
+${texts.useStudyToReview}
+${texts.useSettingsToConfig}
 
-🌍 I support multiple languages and can extract vocabulary from any topic you're interested in!
+${texts.supportMultipleLanguages}
 
-Choose an option below to get started:`;
+${texts.chooseOptionBelow}`;
 
     const keyboard: TelegramInlineKeyboard = {
       inline_keyboard: [
@@ -1327,20 +1344,39 @@ Use language codes when setting your preferences.`;
   private async startRegistrationFlow(chatId: number, userId: number): Promise<void> {
     const registrationState: ConversationState = {
       registration: {
-        step: 'ask_name'
+        step: 'ask_language'
       }
     };
     await this.conversationStateManager.setState(userId, registrationState);
     
-    const message = `🎯 **Welcome to the Leitner Learning Bot!**
+    // Use English as default for the initial language selection message
+    const texts = languageManager.getTexts('en');
+    
+    const languageKeyboard: TelegramInlineKeyboard = {
+      inline_keyboard: [
+        [
+          { text: '🇺🇸 English', callback_data: 'select_language:en' },
+          { text: '🇮🇷 فارسی', callback_data: 'select_language:fa' }
+        ],
+        [
+          { text: '🇸🇦 العربية', callback_data: 'select_language:ar' },
+          { text: '🇪🇸 Español', callback_data: 'select_language:es' }
+        ],
+        [
+          { text: '🇷🇺 Русский', callback_data: 'select_language:ru' }
+        ]
+      ]
+    };
 
-Before we start your vocabulary learning journey, I need to get to know you better.
+    const message = `${texts.welcomeToBot}
 
-👤 **What's your full name?**
+${texts.beforeWeStart}
 
-Please type your name below:`;
+${texts.selectPreferredLanguage}
 
-    await this.sendMessage(chatId, message);
+${texts.chooseLanguageBelow}`;
+
+    await this.sendMessage(chatId, message, languageKeyboard);
   }
 
   private async handleRegistrationFlow(chatId: number, userId: number, text: string): Promise<void> {
@@ -1352,7 +1388,15 @@ Please type your name below:`;
     }
 
     const registration = state.registration;
+    const userLang = registration.interfaceLanguage || 'en';
+    const texts = languageManager.getTexts(userLang);
+    
     switch (registration.step) {
+      case 'ask_language': {
+        // This is handled by callback queries, so ignore text input
+        await this.sendMessage(chatId, texts.chooseLanguageBelow);
+        break;
+      }
       case 'ask_name': {
         if (text.trim().length < 2) {
           await this.sendMessage(chatId, '❌ Please enter a valid name (at least 2 characters).');
@@ -1362,16 +1406,16 @@ Please type your name below:`;
         registration.step = 'ask_email';
         await this.conversationStateManager.setState(userId, state);
         
-        await this.sendMessage(chatId, `Nice to meet you, ${registration.fullName}! 👋
+        await this.sendMessage(chatId, `${texts.niceToMeet}, ${registration.fullName}! 👋
 
-📧 **What's your email address?**
+${texts.whatsYourEmail}
 
-This will help us:
-• Send you learning reminders (optional)
-• Keep your progress safe
-• Provide personalized insights
+${texts.emailWillHelp}
+${texts.sendReminders}
+${texts.keepProgressSafe}
+${texts.personalizedInsights}
 
-Please type your email below:`);
+${texts.pleaseTypeEmailBelow}`);
         break;
       }
       case 'ask_email': {
@@ -1387,19 +1431,19 @@ Please type your email below:`);
         const keyboard: TelegramInlineKeyboard = {
           inline_keyboard: [
             [
-              { text: '✅ Confirm', callback_data: 'confirm_registration:yes' },
-              { text: '✏️ Edit', callback_data: 'confirm_registration:edit' }
+              { text: texts.confirmButton, callback_data: 'confirm_registration:yes' },
+              { text: texts.editButton, callback_data: 'confirm_registration:edit' }
             ]
           ]
         };
 
         await this.sendMessage(chatId, 
-          `📋 **Please confirm your information:**
+          `${texts.pleaseConfirmInfo}
 
-👤 **Name:** ${registration.fullName}
-📧 **Email:** ${registration.email}
+${texts.nameLabel} ${registration.fullName}
+${texts.emailLabel} ${registration.email}
 
-Is this information correct?`, keyboard);
+${texts.isInfoCorrect}`, keyboard);
         break;
       }
       case 'confirm': {
@@ -1407,6 +1451,31 @@ Is this information correct?`, keyboard);
         break;
       }
     }
+  }
+
+  private async handleRegistrationLanguageSelection(chatId: number, userId: number, languageCode: string): Promise<void> {
+    const state = await this.conversationStateManager.getState(userId);
+    if (!state || !state.registration || state.registration.step !== 'ask_language') {
+      await this.startRegistrationFlow(chatId, userId);
+      return;
+    }
+
+    // Save selected language and update user
+    state.registration.interfaceLanguage = languageCode;
+    await this.userManager.updateUser(userId, { interfaceLanguage: languageCode });
+    
+    // Move to next step
+    state.registration.step = 'ask_name';
+    await this.conversationStateManager.setState(userId, state);
+
+    // Get texts in the selected language
+    const texts = languageManager.getTexts(languageCode);
+
+    const message = `${texts.whatsYourFullName}
+
+${texts.pleaseTypeNameBelow}`;
+
+    await this.sendMessage(chatId, message);
   }
 
   private async completeRegistration(chatId: number, userId: number): Promise<void> {
@@ -1419,6 +1488,7 @@ Is this information correct?`, keyboard);
     await this.userManager.updateUser(userId, {
       fullName: registration.fullName,
       email: registration.email,
+      interfaceLanguage: registration.interfaceLanguage || 'en',
       isRegistrationComplete: true
     });
 
@@ -1670,7 +1740,9 @@ Thank you for contacting us! 🎯`, keyboard);
           }
           await this.conversationStateManager.clearState(userId);
         } else if (text.toLowerCase() === 'cancel') {
-          await this.sendMessage(chatId, 'Operation cancelled.');
+          const userLang = await this.getUserInterfaceLanguage(userId);
+          const texts = languageManager.getTexts(userLang);
+          await this.sendMessage(chatId, texts.operationCancelled);
           await this.conversationStateManager.clearState(userId);
         }
         break;
@@ -1681,9 +1753,13 @@ Thank you for contacting us! 🎯`, keyboard);
   private async showUserProgress(chatId: number, userId: number): Promise<void> {
     const cards = await this.userManager.getUserCards(userId);
     const totalCards = cards.length;
+    const userLang = await this.getUserInterfaceLanguage(userId);
+    const texts = languageManager.getTexts(userLang);
     
     if (totalCards === 0) {
-      await this.sendMessage(chatId, '📊 You haven\'t added any vocabulary yet! Use /topic or /add to get started.');
+      await this.sendMessage(chatId, 
+        `${texts.noVocabularyStats}\n\n${texts.getStarted}\n${texts.useTopicToGenerate}\n${texts.useAddToManual}\n\n${texts.startLearningToday}`
+      );
       return;
     }
 
@@ -1724,7 +1800,7 @@ ${progressBars.join('\n')}
 • Box 4: Every 8 days (almost mastered)
 • Box 5: Every 16 days (mastered!)
 
-${cardsDue > 0 ? '🔥 Ready to study? Use /study to continue!' : '🎉 All caught up! Check back later for more reviews.'}`;
+${cardsDue > 0 ? `🔥 ${texts.readyToStudy} ${texts.useStudyToContinue}` : texts.allCaughtUpCheckLater}`;
 
     await this.sendMessage(chatId, message);
   }
