@@ -32,16 +32,20 @@ export class LeitnerBot {
   async handleWebhook(request: Request): Promise<Response> {
     try {
       const update: TelegramUpdate = await request.json();
-      
+      console.log('Received update:', JSON.stringify(update));
       if (update.message) {
         await this.handleMessage(update.message);
       } else if (update.callback_query) {
         await this.handleCallbackQuery(update.callback_query);
       }
-
       return new Response('OK', { status: 200 });
     } catch (error) {
       console.error('Webhook error:', error);
+      // Log request body for debugging
+      try {
+        const body = await request.text();
+        console.error('Request body:', body);
+      } catch (e) {}
       return new Response('Error', { status: 500 });
     }
   }
