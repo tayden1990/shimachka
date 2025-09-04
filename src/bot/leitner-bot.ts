@@ -774,8 +774,27 @@ Use language codes when setting your preferences.`;
   }
 
   private async handleReviewResponse(chatId: number, userId: number, text: string): Promise<void> {
-    // Handle text responses during review sessions
-    await this.sendMessage(chatId, 'Please use the buttons to respond during review sessions.');
+    // Get the current review session
+    const activeSession = await this.userManager.getActiveReviewSession(userId);
+    if (!activeSession) {
+      await this.sendMessage(chatId, 'No active review session found. Use /study to start a new session.');
+      return;
+    }
+
+    // Get the current card being reviewed
+    const currentCard = activeSession.currentCard;
+    if (!currentCard) {
+      await this.sendMessage(chatId, 'No card found in current session. Use /study to start a new session.');
+      return;
+    }
+
+    // Check if the answer is correct (case-insensitive comparison)
+    const userAnswer = text.toLowerCase().trim();
+    const correctAnswer = currentCard.translation.toLowerCase().trim();
+    const isCorrect = userAnswer === correctAnswer;
+
+    // Process the answer and move the card
+    await this.handleReviewAnswer(chatId, userId, currentCard.id, isCorrect);
   }
 
   // Multi-step add topic/word flow handler
