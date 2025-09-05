@@ -11,10 +11,8 @@ minify = true
 binding = "AE"
 
 [vars]
-# Environment variables - set these in your Cloudflare dashboard
-TELEGRAM_BOT_TOKEN = "dummy_token_for_local_testing"
-GEMINI_API_KEY = "dummy_gemini_key_for_local_testing"
-WEBHOOK_SECRET = "dummy_webhook_secret_for_local_testing"
+# Environment variables will be set as secrets via wrangler secret put
+# No dummy values needed - secrets will override
 
 [[kv_namespaces]]
 binding = "LEITNER_DB"
