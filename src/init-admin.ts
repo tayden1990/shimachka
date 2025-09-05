@@ -1,11 +1,14 @@
 import { AdminService } from './services/admin-service';
 
 // Initialize admin account
-export async function initializeAdmin(kv: any): Promise<void> {
-  const adminService = new AdminService(kv, {});
+export async function initializeAdmin(kv: any, env: any): Promise<void> {
+  const adminService = new AdminService(kv, env);
+  
+  // Get admin password from environment
+  const adminPassword = env.ADMIN_PASSWORD || 'temp_admin_123';
   
   // Check if admin already exists
-  const existingAdmin = await adminService.authenticateAdmin('admin', 'admin123');
+  const existingAdmin = await adminService.authenticateAdmin('admin', adminPassword);
   if (existingAdmin) {
     console.log('Admin account already exists');
     return;
@@ -15,7 +18,7 @@ export async function initializeAdmin(kv: any): Promise<void> {
   try {
     const admin = await adminService.createAdmin({
       username: 'admin',
-      password: 'admin123', // Change this in production!
+      password: adminPassword,
       email: 'admin@leitnerbot.com',
       fullName: 'System Administrator',
       role: 'super_admin',

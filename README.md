@@ -140,9 +140,9 @@ Access the admin dashboard at: `https://your-worker.your-subdomain.workers.dev/a
 
 **Default Admin Credentials:**
 - Username: `admin`
-- Password: `admin123`
+- Password: Set via `ADMIN_PASSWORD` environment variable/secret
 
-**⚠️ Important:** Change the default password immediately after first login!
+**⚠️ Important:** Always set a secure admin password via the ADMIN_PASSWORD secret!
 
 Admin features include:
 - User management and analytics

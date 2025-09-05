@@ -6,7 +6,7 @@ A default admin account is automatically created when the bot is first deployed:
 
 ```
 Username: admin
-Password: admin123
+Password: Set via ADMIN_PASSWORD environment variable/secret
 Email: admin@leitnerbot.com
 Role: super_admin
 ```

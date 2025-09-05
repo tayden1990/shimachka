@@ -95,7 +95,7 @@ export default {
       }
 
       // Initialize admin account on first run
-      await initializeAdmin(env.LEITNER_DB);
+      await initializeAdmin(env.LEITNER_DB, env);
 
       let response: Response;
 
