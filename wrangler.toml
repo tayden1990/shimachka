@@ -11,10 +11,11 @@ minify = true
 binding = "AE"
 
 [vars]
-# Environment variables - set these in your Cloudflare dashboard
-TELEGRAM_BOT_TOKEN = "dummy_token_for_local_testing"
-GEMINI_API_KEY = "dummy_gemini_key_for_local_testing"
-WEBHOOK_SECRET = "dummy_webhook_secret_for_local_testing"
+# Environment variables - these are set via GitHub secrets in CI/CD
+# For local development, set these in your Cloudflare dashboard or use .dev.vars file
+# TELEGRAM_BOT_TOKEN = "your_real_token"
+# GEMINI_API_KEY = "your_real_key"  
+# WEBHOOK_SECRET = "your_real_secret"
 
 [[kv_namespaces]]
 binding = "LEITNER_DB"
