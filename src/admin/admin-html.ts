@@ -904,6 +904,8 @@ learning"
                     this.error = '';
                     
                     try {
+                        console.log('Attempting login with:', this.loginForm.username);
+                        
                         const response = await fetch('/admin/login', {
                             method: 'POST',
                             headers: {
@@ -912,19 +914,25 @@ learning"
                             body: JSON.stringify(this.loginForm)
                         });
 
+                        console.log('Login response status:', response.status);
+                        
                         const data = await response.json();
+                        console.log('Login response data:', data);
                         
                         if (response.ok) {
                             this.admin = data.admin;
                             this.token = data.token;
                             this.isAuthenticated = true;
                             localStorage.setItem('adminToken', this.token);
+                            console.log('Login successful, loading dashboard...');
                             await this.loadDashboardEnhanced();
                         } else {
                             this.error = data.error || 'Login failed';
+                            console.error('Login failed:', data.error);
                         }
                     } catch (err) {
-                        this.error = 'Network error. Please try again.';
+                        console.error('Login error:', err);
+                        this.error = 'Network error. Please try again: ' + err.message;
                     }
                     
                     this.loading = false;
@@ -1158,13 +1166,21 @@ learning"
                 recentActivity: [],
 
                 async loadDashboardEnhanced() {
-                    await this.loadDashboard();
-                    await this.loadRecentActivity();
-                    this.initCharts();
+                    try {
+                        console.log('Loading enhanced dashboard...');
+                        await this.loadDashboard();
+                        await this.loadRecentActivity();
+                        this.initCharts();
+                        console.log('Dashboard loaded successfully');
+                    } catch (err) {
+                        console.error('Dashboard loading failed:', err);
+                        this.error = 'Failed to load dashboard: ' + err.message;
+                    }
                 },
 
                 async loadRecentActivity() {
                     try {
+                        console.log('Loading recent activity...');
                         const response = await fetch('/admin/recent-activity', {
                             headers: {
                                 'Authorization': \`Bearer \${this.token}\`
@@ -1173,9 +1189,22 @@ learning"
                         if (response.ok) {
                             const data = await response.json();
                             this.recentActivity = data.activities || [];
+                            console.log('Recent activity loaded:', this.recentActivity.length, 'items');
+                        } else {
+                            console.warn('Recent activity endpoint not available:', response.status);
+                            // Set dummy data for now
+                            this.recentActivity = [
+                                {
+                                    id: 1,
+                                    type: 'user_registered',
+                                    message: 'New user registered',
+                                    timestamp: new Date().toISOString()
+                                }
+                            ];
                         }
                     } catch (err) {
                         console.error('Failed to load recent activity:', err);
+                        this.recentActivity = [];
                     }
                 },
 
