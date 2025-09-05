@@ -33,7 +33,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+          command: deploy --var TELEGRAM_BOT_TOKEN:${{ secrets.TELEGRAM_BOT_TOKEN }} --var GEMINI_API_KEY:${{ secrets.GEMINI_API_KEY }} --var WEBHOOK_SECRET:${{ secrets.WEBHOOK_SECRET }}
 
       - name: Set Telegram Webhook
         if: success()
