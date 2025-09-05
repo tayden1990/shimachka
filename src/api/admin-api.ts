@@ -74,8 +74,8 @@ export class AdminAPI {
     }
 
     try {
-      // Authentication check - all admin endpoints require authentication except login
-      if (!path.includes('/admin/login')) {
+      // Authentication check - all admin endpoints require authentication except login and main panel
+      if (!path.includes('/admin/login') && path !== '/admin') {
         const authHeader = request.headers.get('Authorization');
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
           return new Response(JSON.stringify({ error: 'Unauthorized' }), {
