@@ -773,6 +773,25 @@ export class AdminService {
         return;
       }
       
+      // If no users are specified, assign to all users in the system
+      let targetUsers = assignUsers;
+      if (!assignUsers || assignUsers.length === 0) {
+        console.log('No users specified, getting all users in the system...');
+        try {
+          const allUsersResult = await this.getAllUsers();
+          targetUsers = allUsersResult.users.map(user => parseInt(user.id.toString()));
+          console.log(`Found ${targetUsers.length} users in the system: ${targetUsers.join(', ')}`);
+          jobProgress.logs.push(`No users specified - assigning to all ${targetUsers.length} users in the system`);
+        } catch (error) {
+          console.error('Failed to get all users:', error);
+          jobProgress.logs.push('Warning: Failed to get user list, no cards will be created');
+          targetUsers = [];
+        }
+      } else {
+        console.log(`Assigning to ${targetUsers.length} specified users: ${targetUsers.join(', ')}`);
+        jobProgress.logs.push(`Assigning to ${targetUsers.length} specified users`);
+      }
+      
       for (let i = 0; i < words.length; i++) {
         const word = words[i].trim();
         if (!word) continue;
@@ -787,10 +806,10 @@ export class AdminService {
           console.log(`AI result for "${word}":`, aiResult);
           
           if (aiResult.success) {
-            console.log(`Creating cards for "${word}" for ${assignUsers.length} users`);
+            console.log(`Creating cards for "${word}" for ${targetUsers.length} users`);
             
             // Create cards for assigned users
-            for (const userId of assignUsers) {
+            for (const userId of targetUsers) {
               try {
                 console.log(`Creating card for user ${userId} with word "${word}"`);
                 await this.createCardForUser(userId, word, aiResult.meaning, aiResult.definition);
