@@ -66,8 +66,9 @@ export function getSimpleAdminHTML(): string {
 
             <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
                 <div class="px-4 py-6 sm:px-0">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <!-- Status Card -->
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <!-- System Status -->
                         <div class="bg-white overflow-hidden shadow rounded-lg">
                             <div class="p-5">
                                 <div class="flex items-center">
@@ -86,24 +87,41 @@ export function getSimpleAdminHTML(): string {
                             </div>
                         </div>
 
-                        <!-- Create User -->
+                        <!-- Users Count -->
                         <div class="bg-white overflow-hidden shadow rounded-lg">
                             <div class="p-5">
-                                <button @click="showCreateUser = true" class="w-full text-left">
-                                    <div class="flex items-center">
-                                        <div class="flex-shrink-0">
-                                            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                                                <span class="text-white text-sm">+</span>
-                                            </div>
-                                        </div>
-                                        <div class="ml-5 w-0 flex-1">
-                                            <dl>
-                                                <dt class="text-sm font-medium text-gray-500 truncate">Create User</dt>
-                                                <dd class="text-lg font-medium text-gray-900">Add New</dd>
-                                            </dl>
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                                            <span class="text-white text-sm">👥</span>
                                         </div>
                                     </div>
-                                </button>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Total Users</dt>
+                                            <dd class="text-lg font-medium text-gray-900" x-text="stats.totalUsers || 'Loading...'"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Active Cards -->
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                                            <span class="text-white text-sm">📚</span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Total Cards</dt>
+                                            <dd class="text-lg font-medium text-gray-900" x-text="stats.totalCards || 'Loading...'"></dd>
+                                        </dl>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -113,7 +131,7 @@ export function getSimpleAdminHTML(): string {
                                 <button @click="testAPI()" class="w-full text-left">
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0">
-                                            <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                                            <div class="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
                                                 <span class="text-white text-sm">🔧</span>
                                             </div>
                                         </div>
@@ -125,6 +143,155 @@ export function getSimpleAdminHTML(): string {
                                         </div>
                                     </div>
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Tabs -->
+                    <div class="bg-white shadow rounded-lg">
+                        <div class="border-b border-gray-200">
+                            <nav class="flex space-x-8 px-6" aria-label="Tabs">
+                                <button @click="activeTab = 'overview'" 
+                                        :class="activeTab === 'overview' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                                        class="py-4 px-1 border-b-2 font-medium text-sm">
+                                    📊 Overview
+                                </button>
+                                <button @click="activeTab = 'users'" 
+                                        :class="activeTab === 'users' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                                        class="py-4 px-1 border-b-2 font-medium text-sm">
+                                    👥 Users
+                                </button>
+                                <button @click="activeTab = 'settings'" 
+                                        :class="activeTab === 'settings' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                                        class="py-4 px-1 border-b-2 font-medium text-sm">
+                                    ⚙️ Settings
+                                </button>
+                                <button @click="activeTab = 'tools'" 
+                                        :class="activeTab === 'tools' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                                        class="py-4 px-1 border-b-2 font-medium text-sm">
+                                    🔨 Tools
+                                </button>
+                            </nav>
+                        </div>
+
+                        <div class="p-6">
+                            <!-- Overview Tab -->
+                            <div x-show="activeTab === 'overview'">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">System Overview</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-medium text-gray-900 mb-2">🤖 Bot Status</h4>
+                                        <p class="text-sm text-gray-600">Telegram bot is running in simplified mode</p>
+                                        <button @click="testTelegramBot()" class="mt-2 text-blue-600 hover:text-blue-700 text-sm">Test Bot Connection</button>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-medium text-gray-900 mb-2">💾 Database</h4>
+                                        <p class="text-sm text-gray-600">Cloudflare KV storage active</p>
+                                        <button @click="testDatabase()" class="mt-2 text-blue-600 hover:text-blue-700 text-sm">Test Database</button>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-medium text-gray-900 mb-2">🧠 AI Service</h4>
+                                        <p class="text-sm text-gray-600">Google Gemini API integration</p>
+                                        <button @click="testAI()" class="mt-2 text-blue-600 hover:text-blue-700 text-sm">Test AI Connection</button>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
+                                        <h4 class="font-medium text-gray-900 mb-2">📈 Analytics</h4>
+                                        <p class="text-sm text-gray-600">Performance monitoring active</p>
+                                        <button @click="viewAnalytics()" class="mt-2 text-blue-600 hover:text-blue-700 text-sm">View Analytics</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Users Tab -->
+                            <div x-show="activeTab === 'users'">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">User Management</h3>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <h4 class="font-medium text-gray-900">👤 Create Admin Account</h4>
+                                            <p class="text-sm text-gray-600">Set up a new admin user in the database</p>
+                                        </div>
+                                        <button @click="createAdminUser()" 
+                                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+                                            Create Admin
+                                        </button>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <h4 class="font-medium text-gray-900">📊 Load User Stats</h4>
+                                            <p class="text-sm text-gray-600">Fetch current user statistics</p>
+                                        </div>
+                                        <button @click="loadUserStats()" 
+                                                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+                                            Load Stats
+                                        </button>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <h4 class="font-medium text-gray-900">📝 Export Users</h4>
+                                            <p class="text-sm text-gray-600">Download user data as CSV</p>
+                                        </div>
+                                        <button @click="exportUsers()" 
+                                                class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">
+                                            Export CSV
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Settings Tab -->
+                            <div x-show="activeTab === 'settings'">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">System Settings</h3>
+                                <div class="space-y-6">
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 mb-2">🔑 Environment Variables</h4>
+                                        <div class="bg-gray-50 p-4 rounded-lg space-y-2">
+                                            <div class="flex justify-between">
+                                                <span class="text-sm text-gray-600">TELEGRAM_BOT_TOKEN:</span>
+                                                <span class="text-sm font-mono" x-text="envStatus.telegram || 'Checking...'"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-sm text-gray-600">GEMINI_API_KEY:</span>
+                                                <span class="text-sm font-mono" x-text="envStatus.gemini || 'Checking...'"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-sm text-gray-600">WEBHOOK_SECRET:</span>
+                                                <span class="text-sm font-mono" x-text="envStatus.webhook || 'Checking...'"></span>
+                                            </div>
+                                        </div>
+                                        <button @click="checkEnvironment()" 
+                                                class="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+                                            Check Environment
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tools Tab -->
+                            <div x-show="activeTab === 'tools'">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Admin Tools</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <button @click="clearCache()" 
+                                            class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 text-left">
+                                        <div class="text-lg mb-2">🗑️ Clear Cache</div>
+                                        <p class="text-sm text-gray-600">Clear all cached data</p>
+                                    </button>
+                                    <button @click="resetDatabase()" 
+                                            class="p-4 border-2 border-dashed border-red-300 rounded-lg hover:border-red-400 text-left">
+                                        <div class="text-lg mb-2">⚠️ Reset Database</div>
+                                        <p class="text-sm text-gray-600">Danger: Clear all data</p>
+                                    </button>
+                                    <button @click="viewLogs()" 
+                                            class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 text-left">
+                                        <div class="text-lg mb-2">📋 View Logs</div>
+                                        <p class="text-sm text-gray-600">Check worker logs</p>
+                                    </button>
+                                    <button @click="restoreFullBot()" 
+                                            class="p-4 border-2 border-dashed border-green-300 rounded-lg hover:border-green-400 text-left">
+                                        <div class="text-lg mb-2">🚀 Restore Full Bot</div>
+                                        <p class="text-sm text-gray-600">Enable full functionality</p>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -147,6 +314,17 @@ export function getSimpleAdminHTML(): string {
                 message: '',
                 messageType: 'success',
                 showCreateUser: false,
+                activeTab: 'overview',
+                stats: {
+                    totalUsers: 'Loading...',
+                    totalCards: 'Loading...',
+                    activeUsers: 'Loading...'
+                },
+                envStatus: {
+                    telegram: 'Checking...',
+                    gemini: 'Checking...',
+                    webhook: 'Checking...'
+                },
                 loginForm: {
                     username: '',
                     password: ''
@@ -157,6 +335,8 @@ export function getSimpleAdminHTML(): string {
                     const token = localStorage.getItem('adminToken');
                     if (token) {
                         this.isAuthenticated = true;
+                        this.loadUserStats();
+                        this.checkEnvironment();
                     }
                 },
 
@@ -169,11 +349,57 @@ export function getSimpleAdminHTML(): string {
                         this.isAuthenticated = true;
                         localStorage.setItem('adminToken', 'simple-token');
                         this.showMessage('Login successful!', 'success');
+                        this.loadUserStats();
+                        this.checkEnvironment();
                     } else {
                         this.error = 'Invalid credentials';
                     }
                     
                     this.loading = false;
+                },
+
+                async loadUserStats() {
+                    try {
+                        const response = await fetch('/api/admin/stats');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.stats = data;
+                        } else {
+                            this.stats = {
+                                totalUsers: 'N/A',
+                                totalCards: 'N/A',
+                                activeUsers: 'N/A'
+                            };
+                        }
+                    } catch (error) {
+                        this.stats = {
+                            totalUsers: 'Error',
+                            totalCards: 'Error',
+                            activeUsers: 'Error'
+                        };
+                    }
+                },
+
+                async checkEnvironment() {
+                    try {
+                        const response = await fetch('/api/admin/env-check');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.envStatus = data;
+                        } else {
+                            this.envStatus = {
+                                telegram: '❌ Not checked',
+                                gemini: '❌ Not checked',
+                                webhook: '❌ Not checked'
+                            };
+                        }
+                    } catch (error) {
+                        this.envStatus = {
+                            telegram: '❌ Error',
+                            gemini: '❌ Error',
+                            webhook: '❌ Error'
+                        };
+                    }
                 },
 
                 async createAdminUser() {
@@ -212,10 +438,135 @@ export function getSimpleAdminHTML(): string {
                 async testAPI() {
                     try {
                         const response = await fetch('/health');
-                        const data = await response.text();
-                        this.showMessage(\`API Response: \${data}\`, response.ok ? 'success' : 'error');
-                    } catch (err) {
-                        this.showMessage(\`API Error: \${err.message}\`, 'error');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.showMessage('API Health Check: ✅ ' + JSON.stringify(data), 'success');
+                        } else {
+                            this.showMessage('API Health Check Failed: ' + response.status, 'error');
+                        }
+                    } catch (error) {
+                        this.showMessage('API Test Error: ' + error.message, 'error');
+                    }
+                },
+
+                async testTelegramBot() {
+                    try {
+                        const response = await fetch('/api/admin/test-telegram');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.showMessage('🤖 Telegram Bot: ' + (data.success ? '✅ Connected' : '❌ Failed'), data.success ? 'success' : 'error');
+                        } else {
+                            this.showMessage('❌ Telegram test failed', 'error');
+                        }
+                    } catch (error) {
+                        this.showMessage('❌ Telegram test error: ' + error.message, 'error');
+                    }
+                },
+
+                async testDatabase() {
+                    try {
+                        const response = await fetch('/api/admin/test-database');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.showMessage('💾 Database: ' + (data.success ? '✅ Connected' : '❌ Failed'), data.success ? 'success' : 'error');
+                        } else {
+                            this.showMessage('❌ Database test failed', 'error');
+                        }
+                    } catch (error) {
+                        this.showMessage('❌ Database test error: ' + error.message, 'error');
+                    }
+                },
+
+                async testAI() {
+                    try {
+                        const response = await fetch('/api/admin/test-ai');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.showMessage('🧠 AI Service: ' + (data.success ? '✅ Connected' : '❌ Failed'), data.success ? 'success' : 'error');
+                        } else {
+                            this.showMessage('❌ AI test failed', 'error');
+                        }
+                    } catch (error) {
+                        this.showMessage('❌ AI test error: ' + error.message, 'error');
+                    }
+                },
+
+                async exportUsers() {
+                    try {
+                        const response = await fetch('/api/admin/export-users');
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'users-' + new Date().toISOString().split('T')[0] + '.csv';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+                            this.showMessage('✅ Users exported successfully', 'success');
+                        } else {
+                            this.showMessage('❌ Export failed', 'error');
+                        }
+                    } catch (error) {
+                        this.showMessage('❌ Export error: ' + error.message, 'error');
+                    }
+                },
+
+                async clearCache() {
+                    if (confirm('Are you sure you want to clear all cache?')) {
+                        try {
+                            const response = await fetch('/api/admin/clear-cache', { method: 'POST' });
+                            if (response.ok) {
+                                this.showMessage('✅ Cache cleared successfully', 'success');
+                            } else {
+                                this.showMessage('❌ Failed to clear cache', 'error');
+                            }
+                        } catch (error) {
+                            this.showMessage('❌ Clear cache error: ' + error.message, 'error');
+                        }
+                    }
+                },
+
+                async resetDatabase() {
+                    if (confirm('⚠️ WARNING: This will delete ALL data! Are you absolutely sure?')) {
+                        if (confirm('🚨 FINAL WARNING: This action cannot be undone! Type "DELETE" to confirm:') && 
+                            prompt('Type "DELETE" to confirm:') === 'DELETE') {
+                            try {
+                                const response = await fetch('/api/admin/reset-database', { method: 'POST' });
+                                if (response.ok) {
+                                    this.showMessage('⚠️ Database reset successfully', 'success');
+                                } else {
+                                    this.showMessage('❌ Failed to reset database', 'error');
+                                }
+                            } catch (error) {
+                                this.showMessage('❌ Reset error: ' + error.message, 'error');
+                            }
+                        }
+                    }
+                },
+
+                viewLogs() {
+                    window.open('https://dash.cloudflare.com/', '_blank');
+                    this.showMessage('📋 Opening Cloudflare dashboard for logs...', 'success');
+                },
+
+                viewAnalytics() {
+                    this.showMessage('📈 Analytics feature coming soon...', 'success');
+                },
+
+                async restoreFullBot() {
+                    if (confirm('Restore full bot functionality? This may cause the admin panel to become unavailable if there are initialization issues.')) {
+                        try {
+                            const response = await fetch('/api/admin/restore-full-bot', { method: 'POST' });
+                            if (response.ok) {
+                                this.showMessage('🚀 Full bot restoration initiated. Please monitor the system.', 'success');
+                            } else {
+                                this.showMessage('❌ Failed to restore full bot', 'error');
+                            }
+                        } catch (error) {
+                            this.showMessage('❌ Restoration error: ' + error.message, 'error');
+                        }
                     }
                 },
 
