@@ -67,6 +67,10 @@ export class AdminAPI {
         return await this.handleDashboard(corsHeaders);
       }
 
+      if (path === '/admin' && method === 'GET') {
+        return await this.handleAdminPanelHTML(corsHeaders);
+      }
+
       if (path === '/admin/profile' && method === 'GET') {
         return await this.handleGetProfile(request, corsHeaders);
       }
@@ -179,6 +183,793 @@ export class AdminAPI {
       message: 'Login successful' 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  private async handleAdminPanelHTML(corsHeaders: any): Promise<Response> {
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leitner Telegram Bot - Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .status-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .status-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-ok { background: #10b981; }
+        .status-warning { background: #f59e0b; }
+        .status-error { background: #ef4444; }
+
+        .tabs {
+            display: flex;
+            background: rgba(255,255,255,0.9);
+            border-radius: 15px;
+            padding: 5px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .tab {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .monitoring-section {
+            margin-bottom: 30px;
+        }
+
+        .monitoring-section h4 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+
+        .logs-container {
+            background: #1f2937;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px 0;
+            border-bottom: 1px solid #374151;
+        }
+
+        .log-timestamp {
+            color: #9ca3af;
+            margin-right: 10px;
+        }
+
+        .log-level {
+            margin-right: 10px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .log-level-info { background: #3b82f6; color: white; }
+        .log-level-warn { background: #f59e0b; color: white; }
+        .log-level-error { background: #ef4444; color: white; }
+        .log-level-debug { background: #6b7280; color: white; }
+
+        .log-message {
+            color: #f3f4f6;
+        }
+
+        .bulk-words-form {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #10b981;
+            transition: width 0.3s ease;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+        }
+
+        .alert-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .metric-card {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .refresh-btn {
+            background: none;
+            border: 1px solid #667eea;
+            color: #667eea;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-left: 10px;
+        }
+
+        .refresh-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            border: 2px solid #f3f4f6;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Leitner Telegram Bot - Admin Panel</h1>
+            <p>Complete monitoring, logging, and management dashboard</p>
+        </div>
+
+        <div class="status-grid">
+            <div class="status-card">
+                <h3><span class="status-indicator status-ok"></span>System Health</h3>
+                <div id="systemStatus">Loading...</div>
+            </div>
+            <div class="status-card">
+                <h3><span class="status-indicator status-ok"></span>Active Users</h3>
+                <div id="activeUsers">Loading...</div>
+            </div>
+            <div class="status-card">
+                <h3><span class="status-indicator status-ok"></span>Total Cards</h3>
+                <div id="totalCards">Loading...</div>
+            </div>
+            <div class="status-card">
+                <h3><span class="status-indicator status-ok"></span>Processing Jobs</h3>
+                <div id="processingJobs">0 active</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('monitoring')">📊 Monitoring</button>
+            <button class="tab" onclick="showTab('logs')">📝 Logs</button>
+            <button class="tab" onclick="showTab('bulk-words')">🔄 Bulk Words</button>
+            <button class="tab" onclick="showTab('users')">👥 Users</button>
+            <button class="tab" onclick="showTab('health')">🏥 Health Check</button>
+        </div>
+
+        <div id="monitoring" class="tab-content active">
+            <div class="monitoring-section">
+                <h4>📈 System Metrics <button class="refresh-btn" onclick="refreshMetrics()">🔄 Refresh</button></h4>
+                <div class="metric-grid" id="metricsGrid">
+                    <!-- Metrics will be loaded here -->
+                </div>
+            </div>
+            
+            <div class="monitoring-section">
+                <h4>⚡ Real-time Activity</h4>
+                <div class="logs-container" id="realtimeLogs">
+                    <div class="log-entry">
+                        <span class="log-timestamp">[Loading...]</span>
+                        <span class="log-level log-level-info">INFO</span>
+                        <span class="log-message">Initializing monitoring dashboard...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="logs" class="tab-content">
+            <div class="monitoring-section">
+                <h4>🔍 System Logs <button class="refresh-btn" onclick="refreshLogs()">🔄 Refresh</button></h4>
+                <div class="logs-container" id="systemLogs">
+                    <!-- Logs will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <div id="bulk-words" class="tab-content">
+            <div class="monitoring-section">
+                <h4>🚀 AI Bulk Words Processing</h4>
+                
+                <div class="bulk-words-form">
+                    <div class="form-group">
+                        <label>Words to Process (comma-separated):</label>
+                        <textarea id="wordsInput" placeholder="apple,book,computer,happiness"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Meaning Language:</label>
+                        <select id="meaningLanguage">
+                            <option value="English">English</option>
+                            <option value="Spanish">Spanish</option>
+                            <option value="French">French</option>
+                            <option value="German">German</option>
+                            <option value="Persian">Persian</option>
+                            <option value="Arabic">Arabic</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Definition Language:</label>
+                        <select id="definitionLanguage">
+                            <option value="English">English</option>
+                            <option value="Spanish">Spanish</option>
+                            <option value="French">French</option>
+                            <option value="German">German</option>
+                            <option value="Persian">Persian</option>
+                            <option value="Arabic">Arabic</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Assign to Specific Users (optional, comma-separated user IDs):</label>
+                        <input type="text" id="assignUsers" placeholder="235552633,123456789">
+                    </div>
+                    
+                    <button class="btn" id="processBulkWords" onclick="processBulkWords()">
+                        🎯 Process Words with AI
+                    </button>
+                </div>
+                
+                <div id="bulkProgress" class="hidden">
+                    <h4>📊 Processing Progress</h4>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <div id="progressText">Initializing...</div>
+                    <div id="processingLogs" class="logs-container" style="max-height: 200px;">
+                        <!-- Processing logs will appear here -->
+                    </div>
+                </div>
+                
+                <div id="bulkResults" class="hidden">
+                    <!-- Results will appear here -->
+                </div>
+            </div>
+        </div>
+
+        <div id="users" class="tab-content">
+            <div class="monitoring-section">
+                <h4>👥 User Management <button class="refresh-btn" onclick="refreshUsers()">🔄 Refresh</button></h4>
+                <div id="usersTable">
+                    <!-- Users table will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <div id="health" class="tab-content">
+            <div class="monitoring-section">
+                <h4>🏥 Health Check <button class="refresh-btn" onclick="refreshHealthCheck()">🔄 Refresh</button></h4>
+                <div id="healthStatus">
+                    <!-- Health status will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentJobId = null;
+        let progressInterval = null;
+        let logsInterval = null;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardData();
+            startRealtimeUpdates();
+        });
+
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+            
+            // Load tab-specific data
+            if (tabName === 'logs') refreshLogs();
+            if (tabName === 'users') refreshUsers();
+            if (tabName === 'health') refreshHealthCheck();
+        }
+
+        async function loadDashboardData() {
+            try {
+                // Load system stats
+                const response = await fetch('/admin/dashboard', {
+                    headers: { 'Authorization': 'Bearer admin:password' }
+                });
+                const stats = await response.json();
+                
+                document.getElementById('activeUsers').textContent = stats.totalUsers || '0';
+                document.getElementById('totalCards').textContent = stats.totalCards || '0';
+                document.getElementById('systemStatus').textContent = 'Online';
+                
+                // Load metrics
+                refreshMetrics();
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                document.getElementById('systemStatus').textContent = 'Error';
+            }
+        }
+
+        async function refreshMetrics() {
+            try {
+                const response = await fetch('/admin/metrics', {
+                    headers: { 'Authorization': 'Bearer admin:password' }
+                });
+                const metrics = await response.json();
+                
+                const grid = document.getElementById('metricsGrid');
+                grid.innerHTML = \`
+                    <div class="metric-card">
+                        <div class="metric-value">\${metrics.requestCount || 0}</div>
+                        <div class="metric-label">Total Requests</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">\${metrics.errorCount || 0}</div>
+                        <div class="metric-label">Errors</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">\${metrics.averageResponseTime || 0}ms</div>
+                        <div class="metric-label">Avg Response Time</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">\${metrics.uptime || 'N/A'}</div>
+                        <div class="metric-label">Uptime</div>
+                    </div>
+                \`;
+            } catch (error) {
+                console.error('Error refreshing metrics:', error);
+            }
+        }
+
+        async function refreshLogs() {
+            try {
+                const response = await fetch('/admin/logs?limit=50', {
+                    headers: { 'Authorization': 'Bearer admin:password' }
+                });
+                const data = await response.json();
+                
+                const container = document.getElementById('systemLogs');
+                container.innerHTML = '';
+                
+                if (data.logs && data.logs.length > 0) {
+                    data.logs.forEach(log => {
+                        const entry = document.createElement('div');
+                        entry.className = 'log-entry';
+                        
+                        const timestamp = new Date(log.timestamp).toLocaleTimeString();
+                        entry.innerHTML = \`
+                            <span class="log-timestamp">[\${timestamp}]</span>
+                            <span class="log-level log-level-\${log.level.toLowerCase()}">\${log.level}</span>
+                            <span class="log-message">\${log.message}</span>
+                        \`;
+                        container.appendChild(entry);
+                    });
+                } else {
+                    container.innerHTML = '<div class="log-entry"><span class="log-message">No logs available</span></div>';
+                }
+                
+                container.scrollTop = container.scrollHeight;
+            } catch (error) {
+                console.error('Error refreshing logs:', error);
+            }
+        }
+
+        async function refreshUsers() {
+            try {
+                const response = await fetch('/admin/users', {
+                    headers: { 'Authorization': 'Bearer admin:password' }
+                });
+                const data = await response.json();
+                
+                const container = document.getElementById('usersTable');
+                let html = '<table style="width: 100%; border-collapse: collapse;">';
+                html += '<tr style="background: #f3f4f6;"><th style="padding: 10px; border: 1px solid #d1d5db;">ID</th><th style="padding: 10px; border: 1px solid #d1d5db;">Username</th><th style="padding: 10px; border: 1px solid #d1d5db;">Name</th><th style="padding: 10px; border: 1px solid #d1d5db;">Cards</th><th style="padding: 10px; border: 1px solid #d1d5db;">Active</th></tr>';
+                
+                if (data.users && data.users.length > 0) {
+                    data.users.forEach(user => {
+                        html += \`<tr>
+                            <td style="padding: 10px; border: 1px solid #d1d5db;">\${user.id}</td>
+                            <td style="padding: 10px; border: 1px solid #d1d5db;">\${user.username || 'N/A'}</td>
+                            <td style="padding: 10px; border: 1px solid #d1d5db;">\${user.firstName || 'N/A'}</td>
+                            <td style="padding: 10px; border: 1px solid #d1d5db;">\${user.cardCount || 0}</td>
+                            <td style="padding: 10px; border: 1px solid #d1d5db;">\${user.isActive ? '✅' : '❌'}</td>
+                        </tr>\`;
+                    });
+                } else {
+                    html += '<tr><td colspan="5" style="padding: 20px; text-align: center;">No users found</td></tr>';
+                }
+                
+                html += '</table>';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error refreshing users:', error);
+            }
+        }
+
+        async function refreshHealthCheck() {
+            try {
+                const response = await fetch('/admin/health', {
+                    headers: { 'Authorization': 'Bearer admin:password' }
+                });
+                const health = await response.json();
+                
+                const container = document.getElementById('healthStatus');
+                let html = '<div class="metric-grid">';
+                
+                Object.entries(health).forEach(([key, value]) => {
+                    const status = value === true || value === 'OK' ? 'status-ok' : 'status-warning';
+                    html += \`
+                        <div class="metric-card">
+                            <div class="metric-value"><span class="status-indicator \${status}"></span></div>
+                            <div class="metric-label">\${key}: \${value}</div>
+                        </div>
+                    \`;
+                });
+                
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error refreshing health check:', error);
+                document.getElementById('healthStatus').innerHTML = '<div class="alert alert-error">❌ Health check failed</div>';
+            }
+        }
+
+        async function processBulkWords() {
+            const words = document.getElementById('wordsInput').value.trim();
+            if (!words) {
+                alert('Please enter some words to process');
+                return;
+            }
+
+            const button = document.getElementById('processBulkWords');
+            const progressDiv = document.getElementById('bulkProgress');
+            const resultsDiv = document.getElementById('bulkResults');
+
+            // Show loading state
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner"></span>Processing...';
+            progressDiv.classList.remove('hidden');
+            resultsDiv.classList.add('hidden');
+
+            try {
+                const requestData = {
+                    words: words,
+                    meaningLanguage: document.getElementById('meaningLanguage').value,
+                    definitionLanguage: document.getElementById('definitionLanguage').value,
+                    assignUsers: document.getElementById('assignUsers').value.split(',').filter(id => id.trim()).map(id => id.trim())
+                };
+
+                const response = await fetch('/admin/bulk-words-ai', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer admin:password'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    currentJobId = result.jobId;
+                    document.getElementById('progressText').textContent = \`Job started: \${result.jobId}\`;
+                    
+                    // Start monitoring progress
+                    monitorProgress();
+                } else {
+                    throw new Error(result.error || 'Failed to start processing');
+                }
+            } catch (error) {
+                console.error('Error processing bulk words:', error);
+                progressDiv.classList.add('hidden');
+                resultsDiv.innerHTML = \`<div class="alert alert-error">❌ Error: \${error.message}</div>\`;
+                resultsDiv.classList.remove('hidden');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = '🎯 Process Words with AI';
+            }
+        }
+
+        async function monitorProgress() {
+            if (!currentJobId) return;
+
+            try {
+                const response = await fetch(\`/admin/bulk-words-progress/\${currentJobId}\`, {
+                    headers: { 'Authorization': 'Bearer admin:password' }
+                });
+                const progress = await response.json();
+
+                // Update progress bar
+                const percentage = progress.totalWords > 0 ? (progress.processedWords / progress.totalWords) * 100 : 0;
+                document.getElementById('progressFill').style.width = percentage + '%';
+                document.getElementById('progressText').textContent = 
+                    \`\${progress.status.toUpperCase()}: \${progress.processedWords}/\${progress.totalWords} words processed (\${progress.successCount} success, \${progress.errorCount} errors)\`;
+
+                // Update processing logs
+                const logsContainer = document.getElementById('processingLogs');
+                if (progress.logs && progress.logs.length > 0) {
+                    logsContainer.innerHTML = '';
+                    progress.logs.slice(-10).forEach(logMsg => {
+                        const logEntry = document.createElement('div');
+                        logEntry.className = 'log-entry';
+                        logEntry.innerHTML = \`<span class="log-message">\${logMsg}</span>\`;
+                        logsContainer.appendChild(logEntry);
+                    });
+                    logsContainer.scrollTop = logsContainer.scrollHeight;
+                }
+
+                // Check if completed
+                if (progress.status === 'completed' || progress.status === 'failed') {
+                    clearInterval(progressInterval);
+                    
+                    const resultsDiv = document.getElementById('bulkResults');
+                    const alertClass = progress.status === 'completed' ? 'alert-success' : 'alert-error';
+                    const icon = progress.status === 'completed' ? '✅' : '❌';
+                    
+                    resultsDiv.innerHTML = \`
+                        <div class="alert \${alertClass}">
+                            \${icon} Processing \${progress.status}!
+                            <br>Successfully processed: \${progress.successCount}/\${progress.totalWords} words
+                            \${progress.errorCount > 0 ? \`<br>Errors: \${progress.errorCount}\` : ''}
+                        </div>
+                    \`;
+                    resultsDiv.classList.remove('hidden');
+                    
+                    currentJobId = null;
+                } else {
+                    // Continue monitoring
+                    setTimeout(monitorProgress, 2000);
+                }
+            } catch (error) {
+                console.error('Error monitoring progress:', error);
+                clearInterval(progressInterval);
+            }
+        }
+
+        function startRealtimeUpdates() {
+            // Refresh logs every 10 seconds
+            logsInterval = setInterval(() => {
+                if (document.getElementById('monitoring').classList.contains('active')) {
+                    refreshLogs().then(() => {
+                        const realtimeLogs = document.getElementById('realtimeLogs');
+                        const systemLogs = document.getElementById('systemLogs');
+                        realtimeLogs.innerHTML = systemLogs.innerHTML;
+                    });
+                }
+            }, 10000);
+            
+            // Refresh metrics every 30 seconds
+            setInterval(refreshMetrics, 30000);
+        }
+
+        // Cleanup intervals when page unloads
+        window.addEventListener('beforeunload', function() {
+            if (progressInterval) clearInterval(progressInterval);
+            if (logsInterval) clearInterval(logsInterval);
+        });
+    </script>
+</body>
+</html>
+    `;
+
+    return new Response(html, {
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'text/html; charset=utf-8'
+      }
     });
   }
 

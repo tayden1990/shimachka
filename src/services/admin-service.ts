@@ -321,6 +321,65 @@ export class AdminService {
     }
   }
 
+  private async sendBulkProcessingNotifications(userIds: number[], successCount: number, errorCount: number, totalWords: number): Promise<void> {
+    try {
+      await this.logger.info('bulk_notification_start', `Sending bulk processing notifications to ${userIds.length} users`, {
+        userCount: userIds.length,
+        successCount,
+        errorCount,
+        totalWords
+      });
+
+      for (const userId of userIds) {
+        try {
+          const cardsCreatedForUser = successCount; // This could be more specific per user if needed
+          
+          let notificationMessage = `🎉 **New Cards Added!**\n\n`;
+          notificationMessage += `📚 **${cardsCreatedForUser} new flashcards** have been added to your collection!\n\n`;
+          
+          if (cardsCreatedForUser > 0) {
+            notificationMessage += `✅ Successfully processed: ${successCount}/${totalWords} words\n`;
+            notificationMessage += `🎯 Your cards are ready for study!\n\n`;
+            notificationMessage += `📖 Use /study to start reviewing your new cards\n`;
+            notificationMessage += `📊 Use /mycards to see all your cards\n`;
+            notificationMessage += `📈 Use /stats to check your progress`;
+          }
+          
+          if (errorCount > 0) {
+            notificationMessage += `\n\n⚠️ ${errorCount} words couldn't be processed due to errors.`;
+          }
+
+          await this.sendTelegramNotification(userId, notificationMessage, 'bulk_cards_added', {
+            cardsAdded: cardsCreatedForUser,
+            successCount,
+            errorCount,
+            totalWords
+          });
+          
+          await this.logger.debug('bulk_notification_sent', `Notification sent to user ${userId}`, {
+            userId,
+            cardsAdded: cardsCreatedForUser
+          });
+          
+        } catch (userError) {
+          await this.logger.warn('bulk_notification_user_failed', `Failed to send notification to user ${userId}`, {
+            userId,
+            error: userError instanceof Error ? userError.message : userError
+          });
+        }
+      }
+      
+      await this.logger.info('bulk_notification_completed', `Bulk processing notifications completed`, {
+        userCount: userIds.length,
+        successCount,
+        errorCount
+      });
+      
+    } catch (error) {
+      await this.logger.error('bulk_notification_error', 'Error sending bulk processing notifications', error, undefined);
+    }
+  }
+
   // Enhanced notification system for admin messages
   async sendAdminMessage(userId: number, message: string, type: 'direct' | 'bulk' = 'direct'): Promise<boolean> {
     try {
@@ -983,6 +1042,9 @@ export class AdminService {
         errorCount: jobProgress.errorCount,
         totalProcessingTime: Date.now() - startTime
       });
+      
+      // Send Telegram notifications to users about their new cards
+      await this.sendBulkProcessingNotifications(targetUsers, jobProgress.successCount, jobProgress.errorCount, words.length);
       
       await this.kv.put(`bulk_job:${jobId}`, JSON.stringify(jobProgress));
       
