@@ -503,6 +503,7 @@ Choose what you'd like to do:
 
   // Command handler method (moved switch/case block here)
   private async handleCommand(command: string, chatId: number, userId: number, args: string[]): Promise<void> {
+  // (Removed stray case statement outside switch)
     // Check if registration is complete (except for /start command)
     if (command !== '/start') {
       const user = await this.userManager.getUser(userId);
@@ -515,11 +516,10 @@ Choose what you'd like to do:
     }
 
     switch (command) {
-      case '/start':
+      case '/start': {
         console.log('🚀 /start command received for user:', userId);
         const user = await this.userManager.getUser(userId);
         console.log('👤 User data:', user ? 'Found existing user' : 'New user');
-        
         if (user && user.isRegistrationComplete) {
           console.log('✅ User is registered, sending welcome message');
           await this.sendWelcomeMessage(chatId);
@@ -528,6 +528,28 @@ Choose what you'd like to do:
           await this.startRegistrationFlow(chatId, userId);
         }
         break;
+      }
+      case '/debug_state': {
+        // Debug command: dump user and registration state for troubleshooting
+        const debugUser = await this.userManager.getUser(userId);
+        const debugState = await this.conversationStateManager.getState(userId);
+        let debugMsg = '🛠️ <b>Debug State</b>\n\n';
+        debugMsg += `<b>User:</b>\n<pre>${JSON.stringify(debugUser, null, 2)}</pre>\n`;
+        debugMsg += `<b>Conversation State:</b>\n<pre>${JSON.stringify(debugState, null, 2)}</pre>`;
+        await this.sendMessage(chatId, debugMsg, { parse_mode: 'HTML' });
+        break;
+      }
+      case '/reset_registration': {
+        // Debug command: clear registration state and reset user registration
+        await this.conversationStateManager.clearState(userId);
+        const resetUser = await this.userManager.getUser(userId);
+        if (resetUser) {
+          await this.userManager.updateUser(userId, { isRegistrationComplete: false });
+        }
+        await this.sendMessage(chatId, '🧹 Registration state cleared. Please send /start to begin registration again.');
+        break;
+      }
+      // ...existing code for other cases...
       case '/help':
         await this.sendHelpMessage(chatId, userId);
         break;
