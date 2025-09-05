@@ -54,12 +54,36 @@ export default {
       }
 
       // Initialize services with error handling
-      const userManager = new UserManager(env.LEITNER_DB);
-      const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
-      const scheduleManager = new ScheduleManager(env.LEITNER_DB);
-      const adminService = new AdminService(env.LEITNER_DB, env);
-      const adminAPI = new AdminAPI(adminService, userManager);
-      const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB as any, env);
+      console.log('🔧 Initializing services...');
+      let userManager, wordExtractor, scheduleManager, adminService, adminAPI, bot;
+      
+      try {
+        userManager = new UserManager(env.LEITNER_DB);
+        console.log('✅ UserManager initialized');
+        
+        wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
+        console.log('✅ WordExtractor initialized');
+        
+        scheduleManager = new ScheduleManager(env.LEITNER_DB);
+        console.log('✅ ScheduleManager initialized');
+        
+        adminService = new AdminService(env.LEITNER_DB, env);
+        console.log('✅ AdminService initialized');
+        
+        adminAPI = new AdminAPI(adminService, userManager);
+        console.log('✅ AdminAPI initialized');
+        
+        console.log('🤖 Initializing LeitnerBot...');
+        bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB as any, env);
+        console.log('✅ LeitnerBot initialized successfully');
+      } catch (error) {
+        console.error('❌ Service initialization error:', error);
+        logEvent(env, 'INIT_ERROR', { 
+          error: error instanceof Error ? error.message : 'Unknown initialization error',
+          stack: error instanceof Error ? error.stack : undefined
+        });
+        return new Response('Service initialization error', { status: 500 });
+      }
 
       // Initialize admin account on first run
       await initializeAdmin(env.LEITNER_DB);
@@ -1123,8 +1147,30 @@ learning"
       }
       // Handle Telegram webhook
       else if (url.pathname === '/webhook' && request.method === 'POST') {
-        logEvent(env, 'WEBHOOK_RECEIVED', { contentType: request.headers.get('Content-Type') });
-        response = await bot.handleWebhook(request);
+        try {
+          logEvent(env, 'WEBHOOK_RECEIVED', { 
+            contentType: request.headers.get('Content-Type'),
+            timestamp: new Date().toISOString()
+          });
+          
+          console.log('🔄 Processing webhook request...');
+          console.log('Bot initialized:', !!bot);
+          console.log('Environment check:', {
+            botToken: !!env.TELEGRAM_BOT_TOKEN,
+            geminiKey: !!env.GEMINI_API_KEY,
+            kv: !!env.LEITNER_DB
+          });
+          
+          response = await bot.handleWebhook(request);
+          console.log('✅ Webhook processed successfully');
+        } catch (error) {
+          console.error('❌ Webhook processing error:', error);
+          logEvent(env, 'WEBHOOK_ERROR', { 
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+          });
+          response = new Response('Internal Server Error', { status: 500 });
+        }
       }
       // Handle cron triggers for daily reminders
       else if (url.pathname === '/cron') {
