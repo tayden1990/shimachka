@@ -29,7 +29,7 @@ export default {
         // Real admin API endpoints using AdminAPI class
         if (url.pathname.startsWith('/admin/') || url.pathname.startsWith('/api/admin/')) {
           const adminService = new AdminService(env.LEITNER_DB, env);
-          const userManager = new UserManager(env.LEITNER_DB, env);
+          const userManager = new UserManager(env.LEITNER_DB);
           const adminAPI = new AdminAPI(adminService, userManager);
           
           return await adminAPI.handleAdminRequest(request);
