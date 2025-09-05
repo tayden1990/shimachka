@@ -5,7 +5,7 @@ import { ScheduleManager } from './services/schedule-manager';
 import { AdminService } from './services/admin-service';
 import { AdminAPI } from './api/admin-api';
 import { initializeAdmin } from './init-admin';
-import { getAdminHTML } from './admin/admin-html';
+import { getSimpleAdminHTML } from './admin/simple-admin';
 import { HealthCheckService } from './services/health-check';
 import { Logger } from './services/logger';
 
@@ -112,7 +112,7 @@ export default {
       if (url.pathname.startsWith('/admin')) {
         if (url.pathname === '/admin' || url.pathname === '/admin/') {
           // Serve admin panel HTML interface
-          response = new Response(getAdminHTML(), {
+          response = new Response(getSimpleAdminHTML(), {
             headers: { 'Content-Type': 'text/html' }
           });
         } else {

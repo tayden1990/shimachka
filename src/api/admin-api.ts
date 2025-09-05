@@ -24,8 +24,8 @@ export class AdminAPI {
     }
 
     try {
-      // Authentication check (except for login)
-      if (!path.includes('/admin/login')) {
+      // Authentication check (except for login and create-admin)
+      if (!path.includes('/admin/login') && !path.includes('/admin/create-admin')) {
         const authHeader = request.headers.get('Authorization');
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
           return new Response(JSON.stringify({ error: 'Unauthorized' }), {
