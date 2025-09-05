@@ -101,6 +101,17 @@ jobs:
       - name: Set Telegram Webhook
         if: success()
         run: |
+          sleep 10  # Wait for deployment to propagate
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/setWebhook" \
                -H "Content-Type: application/json" \
-               -d "{\"url\": \"https://${{ secrets.WORKER_DOMAIN }}/webhook\"}"
+               -d "{\"url\": \"https://${{ secrets.WORKER_DOMAIN }}/webhook\", \"secret_token\": \"${{ secrets.WEBHOOK_SECRET }}\"}"
+          
+      - name: Verify Webhook Setup
+        if: success()
+        run: |
+          sleep 5
+          response=$(curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/getWebhookInfo")
+          echo "Webhook info: $response"
+          # Test health endpoint
+          health_response=$(curl -s "https://${{ secrets.WORKER_DOMAIN }}/health")
+          echo "Health check: $health_response"

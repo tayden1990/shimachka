@@ -194,7 +194,26 @@ export class LeitnerBot {
   async handleWebhook(request: Request): Promise<Response> {
     try {
       const update: TelegramUpdate = await request.json();
-      console.log('Received update:', JSON.stringify(update));
+      console.log('🔵 Received Telegram update:', JSON.stringify(update, null, 2));
+      
+      // Enhanced logging for debugging
+      if (update.message) {
+        console.log('📨 Message received:', {
+          userId: update.message.from?.id,
+          username: update.message.from?.username,
+          text: update.message.text,
+          chatId: update.message.chat.id,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      if (update.callback_query) {
+        console.log('🔘 Callback query received:', {
+          userId: update.callback_query.from?.id,
+          data: update.callback_query.data,
+          timestamp: new Date().toISOString()
+        });
+      }
       
       // Check and send pending notifications first
       await this.sendPendingNotifications();
@@ -204,14 +223,18 @@ export class LeitnerBot {
       } else if (update.callback_query) {
         await this.handleCallbackQuery(update.callback_query);
       }
+      
+      console.log('✅ Webhook processed successfully');
       return new Response('OK', { status: 200 });
     } catch (error) {
-      console.error('Webhook error:', error);
+      console.error('❌ Webhook error:', error);
       // Log request body for debugging
       try {
         const body = await request.text();
-        console.error('Request body:', body);
-      } catch (e) {}
+        console.error('Request body that caused error:', body);
+      } catch (e) {
+        console.error('Could not read request body for error logging');
+      }
       return new Response('Error', { status: 500 });
     }
   }
@@ -223,15 +246,21 @@ export class LeitnerBot {
   }
 
   private async handleMessage(message: TelegramMessage): Promise<void> {
-    if (!message.from || !message.text) return;
+    if (!message.from || !message.text) {
+      console.log('⚠️ Invalid message: missing from or text');
+      return;
+    }
 
     const userId = message.from.id;
     const chatId = message.chat.id;
     const text = message.text.trim();
 
+    console.log('🔄 Processing message:', { userId, chatId, text });
+
     // Get or create user
     let user = await this.userManager.getUser(userId);
     if (!user) {
+      console.log('👤 Creating new user for ID:', userId);
       user = await this.userManager.createUser({
         id: userId,
         username: message.from.username,
@@ -240,12 +269,14 @@ export class LeitnerBot {
         interfaceLanguage: message.from.language_code || 'en',
         isRegistrationComplete: false
       });
+      console.log('✅ New user created, starting registration');
       await this.startRegistrationFlow(chatId, userId);
       return;
     }
 
     // Check if registration is complete
     if (!user.isRegistrationComplete) {
+      console.log('📝 User registration incomplete, handling registration flow');
       await this.handleRegistrationFlow(chatId, userId, text);
       return;
     }
@@ -485,10 +516,15 @@ Choose what you'd like to do:
 
     switch (command) {
       case '/start':
+        console.log('🚀 /start command received for user:', userId);
         const user = await this.userManager.getUser(userId);
+        console.log('👤 User data:', user ? 'Found existing user' : 'New user');
+        
         if (user && user.isRegistrationComplete) {
+          console.log('✅ User is registered, sending welcome message');
           await this.sendWelcomeMessage(chatId);
         } else {
+          console.log('📝 Starting registration flow for user');
           await this.startRegistrationFlow(chatId, userId);
         }
         break;
@@ -2678,4 +2714,4 @@ Coming soon: Set custom reminder times for your daily study sessions.`;
 
     await this.sendMessage(chatId, message, keyboard);
   }
-}
+} 

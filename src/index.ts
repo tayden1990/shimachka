@@ -1141,9 +1141,82 @@ learning"
           environment: {
             botTokenSet: !!env.TELEGRAM_BOT_TOKEN,
             geminiKeySet: !!env.GEMINI_API_KEY,
-            kvSet: !!env.LEITNER_DB
-          }
+            kvSet: !!env.LEITNER_DB,
+            webhookSecretSet: !!env.WEBHOOK_SECRET
+          },
+          webhook_test: 'Send a message to your bot to test webhook functionality'
         }), { 
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      // Webhook info endpoint for debugging
+      else if (url.pathname === '/webhook-info') {
+        try {
+          const webhookResponse = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getWebhookInfo`);
+          const webhookData = await webhookResponse.json();
+          response = new Response(JSON.stringify({
+            webhook_info: webhookData,
+            current_time: new Date().toISOString(),
+            worker_url: `https://${url.hostname}/webhook`
+          }, null, 2), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } catch (error) {
+          response = new Response(JSON.stringify({
+            error: 'Failed to get webhook info',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      }
+      // Test webhook endpoint for debugging
+      else if (url.pathname === '/test-webhook' && request.method === 'POST') {
+        console.log('🧪 Test webhook endpoint called');
+        
+        // Create a test update that simulates a /start command
+        const testUpdate = {
+          update_id: Date.now(),
+          message: {
+            message_id: Date.now(),
+            from: {
+              id: 123456789, // Test user ID
+              is_bot: false,
+              first_name: "Test",
+              username: "testuser",
+              language_code: "en"
+            },
+            chat: {
+              id: 123456789,
+              first_name: "Test",
+              username: "testuser",
+              type: "private"
+            },
+            date: Math.floor(Date.now() / 1000),
+            text: "/start"
+          }
+        };
+        
+        console.log('🔄 Processing test update:', JSON.stringify(testUpdate, null, 2));
+        
+        // Process the test update through the bot
+        const testRequest = new Request(request.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(testUpdate)
+        });
+        
+        const result = await bot.handleWebhook(testRequest);
+        
+        response = new Response(JSON.stringify({
+          status: 'Test webhook processed',
+          result: result.status,
+          timestamp: new Date().toISOString(),
+          test_update: testUpdate
+        }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
