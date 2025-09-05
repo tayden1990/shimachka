@@ -7,3 +7,30 @@ dist/
 .DS_Store
 .vscode/settings.json
 helpcommands.txt
+
+# Build artifacts
+*.tsbuildinfo
+
+# Test files
+test-*.html
+test-*.js
+test-*.ps1
+test-*.sh
+
+# Debug files
+debug-*
+enhanced-debug.*
+simple-debug.*
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# IDE files
+.idea/
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
