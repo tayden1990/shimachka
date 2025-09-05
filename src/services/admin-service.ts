@@ -1,7 +1,7 @@
 import { AdminUser, SupportTicket, DirectMessage, BulkWordAssignment, UserActivity, AdminStats, User, Card } from '../types/index';
 
 export class AdminService {
-  constructor(private kv: any, private env: any) {}
+  constructor(private kv: any) {}
 
   // Admin Authentication
   async authenticateAdmin(username: string, password: string): Promise<AdminUser | null> {
@@ -723,20 +723,11 @@ export class AdminService {
   }
 
   // AI Bulk Word Processing
-  async processBulkWordsWithAI(words: string[] | string, meaningLanguage: string, definitionLanguage: string, assignUsers?: number[]): Promise<any> {
+  async processBulkWordsWithAI(words: string, meaningLanguage: string, definitionLanguage: string, assignUsers: string[]): Promise<any> {
     try {
       const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Handle both array and string inputs
-      const wordLines = Array.isArray(words) 
-        ? words.filter(word => word.trim()) 
-        : words.split('\n').filter(line => line.trim());
-      
+      const wordLines = words.split('\n').filter(line => line.trim());
       const totalWords = wordLines.length;
-
-      if (totalWords === 0) {
-        throw new Error('No valid words provided');
-      }
 
       // Initialize job progress
       const jobProgress = {
@@ -753,8 +744,8 @@ export class AdminService {
 
       await this.kv.put(`bulk_job:${jobId}`, JSON.stringify(jobProgress));
 
-      // Start processing asynchronously (mock processing for now since no real AI API)
-      this.processWordsAsync(jobId, wordLines, meaningLanguage, definitionLanguage, assignUsers || []);
+      // Start processing asynchronously
+      this.processWordsAsync(jobId, wordLines, meaningLanguage, definitionLanguage, assignUsers);
 
       return { jobId, totalWords };
     } catch (error) {
@@ -763,42 +754,25 @@ export class AdminService {
     }
   }
 
-  private async processWordsAsync(jobId: string, words: string[], meaningLanguage: string, definitionLanguage: string, assignUsers: number[]): Promise<void> {
+  private async processWordsAsync(jobId: string, words: string[], meaningLanguage: string, definitionLanguage: string, assignUsers: string[]): Promise<void> {
     try {
-      console.log(`Starting async processing for job ${jobId} with ${words.length} words`);
       const jobProgress = await this.kv.get(`bulk_job:${jobId}`, 'json');
-      
-      if (!jobProgress) {
-        console.error(`Job ${jobId} not found in KV store`);
-        return;
-      }
       
       for (let i = 0; i < words.length; i++) {
         const word = words[i].trim();
         if (!word) continue;
 
         try {
-          console.log(`Processing word ${i + 1}/${words.length}: "${word}"`);
           jobProgress.logs.push(`Processing word ${i + 1}/${words.length}: "${word}"`);
           
           // Here you would call your AI service to get meaning and definition
           // For now, using placeholder
           const aiResult = await this.getWordMeaningFromAI(word, meaningLanguage, definitionLanguage);
-          console.log(`AI result for "${word}":`, aiResult);
           
           if (aiResult.success) {
-            console.log(`Creating cards for "${word}" for ${assignUsers.length} users`);
-            
             // Create cards for assigned users
             for (const userId of assignUsers) {
-              try {
-                console.log(`Creating card for user ${userId} with word "${word}"`);
-                await this.createCardForUser(userId, word, aiResult.meaning, aiResult.definition);
-                console.log(`Successfully created card for user ${userId}`);
-              } catch (cardError) {
-                console.error(`Failed to create card for user ${userId}:`, cardError);
-                jobProgress.logs.push(`⚠ Warning: Failed to create card for user ${userId}: ${cardError}`);
-              }
+              await this.createCardForUser(userId, word, aiResult.meaning, aiResult.definition);
             }
             
             jobProgress.successCount++;
@@ -808,10 +782,8 @@ export class AdminService {
               meaning: aiResult.meaning,
               definition: aiResult.definition
             });
-            jobProgress.logs.push(`✓ Successfully processed "${word}" and created ${assignUsers.length} cards`);
-            console.log(`Successfully completed processing for "${word}"`);
+            jobProgress.logs.push(`✓ Successfully processed "${word}"`);
           } else {
-            console.error(`AI processing failed for "${word}":`, aiResult.error);
             jobProgress.errorCount++;
             jobProgress.results.push({
               word,
@@ -821,7 +793,6 @@ export class AdminService {
             jobProgress.logs.push(`✗ Failed to process "${word}": ${aiResult.error}`);
           }
         } catch (error) {
-          console.error(`Critical error processing word "${word}":`, error);
           jobProgress.errorCount++;
           jobProgress.results.push({
             word,
@@ -831,133 +802,95 @@ export class AdminService {
           jobProgress.logs.push(`✗ Error processing "${word}": ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
 
-        // Update progress after each word
         jobProgress.processedWords = i + 1;
-        try {
-          await this.kv.put(`bulk_job:${jobId}`, JSON.stringify(jobProgress));
-          console.log(`Updated job progress: ${jobProgress.processedWords}/${words.length} words processed`);
-        } catch (kvError) {
-          console.error(`Failed to update job progress for job ${jobId}:`, kvError);
-        }
+        await this.kv.put(`bulk_job:${jobId}`, JSON.stringify(jobProgress));
       }
 
       jobProgress.status = 'completed';
       jobProgress.endTime = new Date().toISOString();
       jobProgress.logs.push(`Job completed. Success: ${jobProgress.successCount}, Errors: ${jobProgress.errorCount}`);
       
-      console.log(`Job ${jobId} completed successfully. Success: ${jobProgress.successCount}, Errors: ${jobProgress.errorCount}`);
       await this.kv.put(`bulk_job:${jobId}`, JSON.stringify(jobProgress));
     } catch (error) {
-      console.error(`Critical error in async word processing for job ${jobId}:`, error);
-      try {
-        const jobProgress = await this.kv.get(`bulk_job:${jobId}`, 'json');
-        if (jobProgress) {
-          jobProgress.status = 'failed';
-          jobProgress.error = error instanceof Error ? error.message : 'Unknown error';
-          jobProgress.logs.push(`CRITICAL ERROR: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          await this.kv.put(`bulk_job:${jobId}`, JSON.stringify(jobProgress));
-        }
-      } catch (kvError) {
-        console.error(`Failed to update job status in KV for job ${jobId}:`, kvError);
+      console.error('Error in async word processing:', error);
+      const jobProgress = await this.kv.get(`bulk_job:${jobId}`, 'json');
+      if (jobProgress) {
+        jobProgress.status = 'failed';
+        jobProgress.error = error instanceof Error ? error.message : 'Unknown error';
+        await this.kv.put(`bulk_job:${jobId}`, JSON.stringify(jobProgress));
       }
     }
   }
 
   private async getWordMeaningFromAI(word: string, meaningLanguage: string, definitionLanguage: string): Promise<any> {
-    // Check if we have dummy keys (indicating local testing)
-    const geminiKey = this.env.GEMINI_API_KEY;
-    const isDemoMode = !geminiKey || geminiKey.includes('dummy') || 
-                      geminiKey === 'dummy_gemini_key_for_local_testing';
-    
     try {
-      // For demo purposes with dummy API keys, return mock data
-      // In production, this would call the real Gemini AI API
+      // Use Google Gemini AI to get word meaning and definition
+      const GEMINI_API_KEY = 'AIzaSyAtfLGAoR6jWJCWzgMPQK6HVxuQ2XLqIGM'; // You should move this to environment variables
       
-      console.log(`Processing word "${word}" - Demo mode: ${isDemoMode}`);
-      
-      if (isDemoMode) {
-        // Return mock AI response for testing
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
-        
-        const mockTranslations: { [key: string]: any } = {
-          'hello': { en: 'hello', fa: 'سلام', es: 'hola', fr: 'bonjour' },
-          'world': { en: 'world', fa: 'جهان', es: 'mundo', fr: 'monde' },
-          'computer': { en: 'computer', fa: 'کامپیوتر', es: 'computadora', fr: 'ordinateur' },
-          'learning': { en: 'learning', fa: 'یادگیری', es: 'aprendizaje', fr: 'apprentissage' },
-        };
-        
-        const meaning = mockTranslations[word.toLowerCase()]?.[meaningLanguage] || 
-                       `${word} translated to ${meaningLanguage}`;
-        const definition = `A comprehensive definition of "${word}" in ${definitionLanguage}. This is a mock definition for testing purposes.`;
-        
-        return {
-          success: true,
-          meaning,
-          definition
-        };
-      }
-      
-      // TEMPORARY: Force fallback mode for now since real API is hanging
-      // This ensures processing continues while we debug the real API issue
-      console.log(`Using fallback mode for "${word}" due to API reliability issues`);
-      
-      // Real AI API call for production
-      console.log(`API Key format check: ${geminiKey ? `Length: ${geminiKey.length}, Starts with: ${geminiKey.substring(0, 10)}...` : 'No API key'}`);
-      
-      // Validate API key format
-      if (!geminiKey || geminiKey.length < 20) {
-        throw new Error('Invalid or missing Gemini API key');
-      }
-      
-      // For now, provide intelligent fallback responses instead of hanging
-      const fallbackTranslations: { [key: string]: any } = {
-        'investigation': {
-          en: 'investigation',
-          fa: 'تحقیق', 
-          es: 'investigación',
-          fr: 'enquête',
-          definition: 'A systematic examination or inquiry to discover facts, especially one conducted officially'
+      const prompt = `
+Please provide the meaning and definition for the word "${word}":
+
+1. Meaning in ${meaningLanguage}: (provide a brief, clear meaning/translation)
+2. Definition in ${definitionLanguage}: (provide a comprehensive definition with context and usage)
+
+Please respond in this exact JSON format:
+{
+  "meaning": "meaning in ${meaningLanguage}",
+  "definition": "detailed definition in ${definitionLanguage}"
+}
+`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        'technology': {
-          en: 'technology',
-          fa: 'فناوری',
-          es: 'tecnología', 
-          fr: 'technologie',
-          definition: 'The application of scientific knowledge for practical purposes'
-        },
-        'education': {
-          en: 'education',
-          fa: 'آموزش',
-          es: 'educación',
-          fr: 'éducation', 
-          definition: 'The process of receiving or giving systematic instruction'
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
+
+      const data: any = await response.json();
+      const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (!aiResponse) {
+        throw new Error('No response from AI');
+      }
+
+      // Try to parse JSON response
+      try {
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsedResponse = JSON.parse(jsonMatch[0]);
+          return {
+            success: true,
+            meaning: parsedResponse.meaning || `Meaning of "${word}" in ${meaningLanguage}`,
+            definition: parsedResponse.definition || `Definition of "${word}" in ${definitionLanguage}`
+          };
         }
-      };
-      
-      const wordData = fallbackTranslations[word.toLowerCase()];
-      const meaning = wordData?.[meaningLanguage] || `${word} (translated to ${meaningLanguage})`;
-      const definition = wordData?.definition || `A comprehensive definition of "${word}" in ${definitionLanguage}. This word describes concepts related to ${word}.`;
-      
-      console.log(`Fallback result for "${word}": meaning="${meaning}", definition="${definition}"`);
+      } catch (parseError) {
+        console.log('Failed to parse JSON, using fallback extraction');
+      }
+
+      // Fallback: extract meaning and definition from text
+      const meaningMatch = aiResponse.match(/meaning[:\s]*(.+?)(?:\n|$)/i);
+      const definitionMatch = aiResponse.match(/definition[:\s]*(.+?)(?:\n|$)/i);
       
       return {
         success: true,
-        meaning,
-        definition
+        meaning: meaningMatch?.[1]?.trim() || `Meaning of "${word}" in ${meaningLanguage}`,
+        definition: definitionMatch?.[1]?.trim() || `Definition of "${word}" in ${definitionLanguage}`
       };
     } catch (error) {
-      console.error(`AI processing error for word "${word}":`, error);
-      
-      // If real API fails, provide a fallback response to keep processing going
-      if (!isDemoMode) {
-        console.log(`Real API failed for "${word}", providing fallback response`);
-        return {
-          success: true,
-          meaning: `${word} (fallback translation)`,
-          definition: `A definition for "${word}" in ${definitionLanguage}. (Generated due to API error: ${error instanceof Error ? error.message : 'Unknown error'})`
-        };
-      }
-      
+      console.error('AI processing error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'AI processing failed'
@@ -965,7 +898,7 @@ export class AdminService {
     }
   }
 
-  private async createCardForUser(userId: number | string, word: string, meaning: string, definition: string): Promise<void> {
+  private async createCardForUser(userId: string, word: string, meaning: string, definition: string): Promise<void> {
     try {
       const cards = await this.kv.get(`user_cards:${userId}`, 'json') || [];
       

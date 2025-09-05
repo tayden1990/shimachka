@@ -2,7 +2,7 @@ import { AdminService } from './services/admin-service';
 
 // Initialize admin account
 export async function initializeAdmin(kv: any): Promise<void> {
-  const adminService = new AdminService(kv, {});
+  const adminService = new AdminService(kv);
   
   // Check if admin already exists
   const existingAdmin = await adminService.authenticateAdmin('admin', 'admin123');
