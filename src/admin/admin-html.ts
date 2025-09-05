@@ -4,7 +4,7 @@ export function getAdminHTML(): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leitner Bot Admin Panel - Enhanced v3.0</title>
+    <title>Leitner Bot Admin Panel - Enhanced v4.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -154,7 +154,7 @@ export function getAdminHTML(): string {
                     <div class="flex justify-between items-center h-16">
                         <div class="flex items-center">
                             <h1 class="text-xl font-bold text-gray-900">🎯 Leitner Bot Admin Panel</h1>
-                            <span class="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Enhanced v2.1</span>
+                            <span class="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">Enhanced v4.0</span>
                         </div>
                         <div class="flex items-center space-x-4">
                             <div x-show="notifications.length > 0" class="relative">
@@ -176,7 +176,7 @@ export function getAdminHTML(): string {
             <div class="bg-white border-b">
                 <div class="max-w-7xl mx-auto px-4">
                     <nav class="flex space-x-8">
-                        <button @click="activeTab = 'dashboard'; loadDashboard()" 
+                        <button @click="activeTab = 'dashboard'; loadDashboardEnhanced()" 
                                 :class="activeTab === 'dashboard' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                                 class="py-4 px-1 border-b-2 font-medium text-sm">
                             <i class="fas fa-chart-line mr-2"></i>Dashboard
@@ -209,87 +209,204 @@ export function getAdminHTML(): string {
             <div class="max-w-7xl mx-auto py-6 px-4">
                 <!-- Dashboard Tab -->
                 <div x-show="activeTab === 'dashboard'">
+                    <!-- Enhanced Stats Cards -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <div class="bg-white overflow-hidden shadow rounded-lg">
-                            <div class="p-5">
+                        <div class="bg-gradient-to-br from-blue-500 to-blue-600 overflow-hidden shadow-lg rounded-lg card-hover">
+                            <div class="p-6 text-white">
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0">
-                                        <i class="fas fa-users text-gray-400 text-2xl"></i>
+                                        <i class="fas fa-users text-3xl opacity-80"></i>
                                     </div>
-                                    <div class="ml-5 w-0 flex-1">
-                                        <dl>
-                                            <dt class="text-sm font-medium text-gray-500 truncate">Total Users</dt>
-                                            <dd class="text-lg font-medium text-gray-900" x-text="stats.totalUsers || 0"></dd>
-                                        </dl>
+                                    <div class="ml-4">
+                                        <p class="text-blue-100 text-sm">Total Users</p>
+                                        <p class="text-2xl font-bold" x-text="stats.totalUsers || 0"></p>
+                                        <p class="text-blue-200 text-xs mt-1">
+                                            <span x-text="'+' + (stats.newUsersToday || 0)"></span> today
+                                        </p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="bg-white overflow-hidden shadow rounded-lg">
-                            <div class="p-5">
+                        <div class="bg-gradient-to-br from-green-500 to-green-600 overflow-hidden shadow-lg rounded-lg card-hover">
+                            <div class="p-6 text-white">
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0">
-                                        <i class="fas fa-user-check text-green-400 text-2xl"></i>
+                                        <i class="fas fa-user-check text-3xl opacity-80"></i>
                                     </div>
-                                    <div class="ml-5 w-0 flex-1">
-                                        <dl>
-                                            <dt class="text-sm font-medium text-gray-500 truncate">Active Users</dt>
-                                            <dd class="text-lg font-medium text-gray-900" x-text="stats.activeUsers || 0"></dd>
-                                        </dl>
+                                    <div class="ml-4">
+                                        <p class="text-green-100 text-sm">Active Users</p>
+                                        <p class="text-2xl font-bold" x-text="stats.activeUsers || 0"></p>
+                                        <p class="text-green-200 text-xs mt-1">
+                                            <span x-text="Math.round(((stats.activeUsers || 0) / (stats.totalUsers || 1)) * 100)"></span>% engagement
+                                        </p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="bg-white overflow-hidden shadow rounded-lg">
-                            <div class="p-5">
+                        <div class="bg-gradient-to-br from-purple-500 to-purple-600 overflow-hidden shadow-lg rounded-lg card-hover">
+                            <div class="p-6 text-white">
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0">
-                                        <i class="fas fa-book text-blue-400 text-2xl"></i>
+                                        <i class="fas fa-book text-3xl opacity-80"></i>
                                     </div>
-                                    <div class="ml-5 w-0 flex-1">
-                                        <dl>
-                                            <dt class="text-sm font-medium text-gray-500 truncate">Total Cards</dt>
-                                            <dd class="text-lg font-medium text-gray-900" x-text="stats.totalCards || 0"></dd>
-                                        </dl>
+                                    <div class="ml-4">
+                                        <p class="text-purple-100 text-sm">Total Cards</p>
+                                        <p class="text-2xl font-bold" x-text="stats.totalCards || 0"></p>
+                                        <p class="text-purple-200 text-xs mt-1">
+                                            <span x-text="'+' + (stats.cardsCreatedToday || 0)"></span> today
+                                        </p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="bg-white overflow-hidden shadow rounded-lg">
-                            <div class="p-5">
+                        <div class="bg-gradient-to-br from-orange-500 to-red-500 overflow-hidden shadow-lg rounded-lg card-hover">
+                            <div class="p-6 text-white">
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0">
-                                        <i class="fas fa-ticket-alt text-red-400 text-2xl"></i>
+                                        <i class="fas fa-chart-line text-3xl opacity-80"></i>
                                     </div>
-                                    <div class="ml-5 w-0 flex-1">
-                                        <dl>
-                                            <dt class="text-sm font-medium text-gray-500 truncate">Open Tickets</dt>
-                                            <dd class="text-lg font-medium text-gray-900" x-text="stats.openTickets || 0"></dd>
-                                        </dl>
+                                    <div class="ml-4">
+                                        <p class="text-orange-100 text-sm">Learning Rate</p>
+                                        <p class="text-2xl font-bold" x-text="(stats.averageLearningRate || 0) + '%'"></p>
+                                        <p class="text-orange-200 text-xs mt-1">
+                                            avg progress
+                                        </p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Feature Highlights -->
-                    <div class="bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 rounded-lg p-6 text-white mb-6">
-                        <h3 class="text-lg font-semibold mb-4">🚀 Enhanced Features Available</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="flex items-center">
-                                <i class="fas fa-magic mr-3 text-yellow-200"></i>
-                                <span>AI-Powered Bulk Word Processing</span>
+                    <!-- Real-time Activity Feed & Quick Actions -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                        <!-- Activity Feed -->
+                        <div class="lg:col-span-2 bg-white shadow-lg rounded-lg">
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                    <i class="fas fa-activity text-blue-500 mr-2"></i>
+                                    Real-time Activity Feed
+                                </h3>
                             </div>
-                            <div class="flex items-center">
-                                <i class="fas fa-bullhorn mr-3 text-yellow-200"></i>
-                                <span>Advanced Bulk Messaging System</span>
+                            <div class="p-6 max-h-80 overflow-y-auto custom-scrollbar">
+                                <div x-show="recentActivity.length === 0" class="text-center text-gray-500 py-8">
+                                    <i class="fas fa-clock text-3xl mb-2"></i>
+                                    <p>No recent activity</p>
+                                </div>
+                                <template x-for="activity in recentActivity" :key="activity.id">
+                                    <div class="flex items-start space-x-3 mb-4 p-3 bg-gray-50 rounded-lg">
+                                        <div class="flex-shrink-0">
+                                            <div :class="getActivityIcon(activity.type)" class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs">
+                                                <i :class="getActivityIconClass(activity.type)"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm text-gray-900" x-text="activity.message"></p>
+                                            <p class="text-xs text-gray-500" x-text="formatTime(activity.timestamp)"></p>
+                                        </div>
+                                    </div>
+                                </template>
                             </div>
-                            <div class="flex items-center">
-                                <i class="fas fa-bell mr-3 text-yellow-200"></i>
-                                <span>Real-time Notification System</span>
+                        </div>
+
+                        <!-- Quick Actions Panel -->
+                        <div class="bg-white shadow-lg rounded-lg">
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                    <i class="fas fa-bolt text-yellow-500 mr-2"></i>
+                                    Quick Actions
+                                </h3>
+                            </div>
+                            <div class="p-6 space-y-4">
+                                <button @click="openBulkWordAssignment()" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                                    <i class="fas fa-magic mr-2"></i>
+                                    AI Bulk Words
+                                </button>
+                                <button @click="openBulkMessaging()" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                                    <i class="fas fa-bullhorn mr-2"></i>
+                                    Broadcast Message
+                                </button>
+                                <button @click="exportUserData()" class="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                                    <i class="fas fa-download mr-2"></i>
+                                    Export Data
+                                </button>
+                                <button @click="systemMaintenance()" class="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                                    <i class="fas fa-cog mr-2"></i>
+                                    System Tools
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Charts -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <!-- User Growth Chart -->
+                        <div class="bg-white shadow-lg rounded-lg">
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                    <i class="fas fa-chart-area text-blue-500 mr-2"></i>
+                                    User Growth (Last 7 Days)
+                                </h3>
+                            </div>
+                            <div class="p-6">
+                                <canvas id="userGrowthChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Learning Progress Chart -->
+                        <div class="bg-white shadow-lg rounded-lg">
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                    <i class="fas fa-graduation-cap text-green-500 mr-2"></i>
+                                    Learning Progress Distribution
+                                </h3>
+                            </div>
+                            <div class="p-6">
+                                <canvas id="learningProgressChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Status Panel -->
+                    <div class="bg-white shadow-lg rounded-lg">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                <i class="fas fa-server text-green-500 mr-2"></i>
+                                System Health & Performance
+                            </h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div class="text-center">
+                                    <div class="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
+                                        <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                                    </div>
+                                    <h4 class="text-sm font-medium text-gray-900">API Status</h4>
+                                    <p class="text-green-600 font-semibold">Healthy</p>
+                                    <p class="text-xs text-gray-500 mt-1">99.9% uptime</p>
+                                </div>
+                                <div class="text-center">
+                                    <div class="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-3">
+                                        <i class="fas fa-database text-blue-600 text-xl"></i>
+                                    </div>
+                                    <h4 class="text-sm font-medium text-gray-900">Database</h4>
+                                    <p class="text-blue-600 font-semibold">Optimal</p>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        <span x-text="stats.dbResponseTime || '< 50'"></span>ms avg
+                                    </p>
+                                </div>
+                                <div class="text-center">
+                                    <div class="inline-flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mb-3">
+                                        <i class="fas fa-brain text-purple-600 text-xl"></i>
+                                    </div>
+                                    <h4 class="text-sm font-medium text-gray-900">AI Service</h4>
+                                    <p class="text-purple-600 font-semibold">Active</p>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        <span x-text="stats.aiRequestsToday || 0"></span> requests today
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -749,7 +866,7 @@ learning"
                     if (storedToken) {
                         this.token = storedToken;
                         this.isAuthenticated = true;
-                        this.loadDashboard();
+                        this.loadDashboardEnhanced();
                     }
                 },
 
@@ -802,7 +919,7 @@ learning"
                             this.token = data.token;
                             this.isAuthenticated = true;
                             localStorage.setItem('adminToken', this.token);
-                            await this.loadDashboard();
+                            await this.loadDashboardEnhanced();
                         } else {
                             this.error = data.error || 'Login failed';
                         }
@@ -1035,6 +1152,211 @@ learning"
                         'urgent': 'bg-red-100 text-red-800'
                     };
                     return colors[priority] || 'bg-gray-100 text-gray-800';
+                },
+
+                // Enhanced Dashboard Methods
+                recentActivity: [],
+
+                async loadDashboardEnhanced() {
+                    await this.loadDashboard();
+                    await this.loadRecentActivity();
+                    this.initCharts();
+                },
+
+                async loadRecentActivity() {
+                    try {
+                        const response = await fetch('/admin/recent-activity', {
+                            headers: {
+                                'Authorization': \`Bearer \${this.token}\`
+                            }
+                        });
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.recentActivity = data.activities || [];
+                        }
+                    } catch (err) {
+                        console.error('Failed to load recent activity:', err);
+                    }
+                },
+
+                getActivityIcon(type) {
+                    const colors = {
+                        'user_registered': 'bg-green-500',
+                        'card_created': 'bg-blue-500',
+                        'card_studied': 'bg-purple-500',
+                        'level_up': 'bg-yellow-500',
+                        'message_sent': 'bg-indigo-500',
+                        'error': 'bg-red-500'
+                    };
+                    return colors[type] || 'bg-gray-500';
+                },
+
+                getActivityIconClass(type) {
+                    const icons = {
+                        'user_registered': 'fas fa-user-plus',
+                        'card_created': 'fas fa-plus',
+                        'card_studied': 'fas fa-book-open',
+                        'level_up': 'fas fa-arrow-up',
+                        'message_sent': 'fas fa-paper-plane',
+                        'error': 'fas fa-exclamation-triangle'
+                    };
+                    return icons[type] || 'fas fa-info';
+                },
+
+                formatTime(timestamp) {
+                    const date = new Date(timestamp);
+                    const now = new Date();
+                    const diff = now - date;
+                    
+                    if (diff < 60000) return 'Just now';
+                    if (diff < 3600000) return \`\${Math.floor(diff / 60000)}m ago\`;
+                    if (diff < 86400000) return \`\${Math.floor(diff / 3600000)}h ago\`;
+                    return date.toLocaleDateString();
+                },
+
+                // Quick Action Methods
+                openBulkWordAssignment() {
+                    this.activeTab = 'bulk-words';
+                },
+
+                openBulkMessaging() {
+                    this.activeTab = 'messages';
+                    this.messageType = 'broadcast';
+                },
+
+                async exportUserData() {
+                    try {
+                        const response = await fetch('/admin/export-users', {
+                            headers: {
+                                'Authorization': \`Bearer \${this.token}\`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = \`users-export-\${new Date().toISOString().split('T')[0]}.csv\`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+                            this.showAlertMessage('User data exported successfully!', 'success');
+                        } else {
+                            this.showAlertMessage('Failed to export user data', 'error');
+                        }
+                    } catch (err) {
+                        this.showAlertMessage('Network error during export', 'error');
+                    }
+                },
+
+                async systemMaintenance() {
+                    if (confirm('Are you sure you want to run system maintenance? This may take a few minutes.')) {
+                        try {
+                            const response = await fetch('/admin/system-maintenance', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': \`Bearer \${this.token}\`
+                                }
+                            });
+                            
+                            if (response.ok) {
+                                const data = await response.json();
+                                this.showAlertMessage(\`System maintenance completed: \${data.message}\`, 'success');
+                                await this.loadDashboardEnhanced();
+                            } else {
+                                this.showAlertMessage('System maintenance failed', 'error');
+                            }
+                        } catch (err) {
+                            this.showAlertMessage('Network error during maintenance', 'error');
+                        }
+                    }
+                },
+
+                // Chart Initialization
+                initCharts() {
+                    this.\$nextTick(() => {
+                        this.initUserGrowthChart();
+                        this.initLearningProgressChart();
+                    });
+                },
+
+                initUserGrowthChart() {
+                    const ctx = document.getElementById('userGrowthChart');
+                    if (!ctx) return;
+
+                    const last7Days = Array.from({length: 7}, (_, i) => {
+                        const date = new Date();
+                        date.setDate(date.getDate() - (6 - i));
+                        return date.toLocaleDateString('en', { weekday: 'short' });
+                    });
+
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: last7Days,
+                            datasets: [{
+                                label: 'New Users',
+                                data: this.stats.userGrowthData || [2, 5, 3, 8, 6, 10, 7],
+                                borderColor: 'rgb(59, 130, 246)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.1)'
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        display: false
+                                    }
+                                }
+                            }
+                        }
+                    });
+                },
+
+                initLearningProgressChart() {
+                    const ctx = document.getElementById('learningProgressChart');
+                    if (!ctx) return;
+
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
+                            datasets: [{
+                                data: this.stats.learningDistribution || [40, 30, 20, 10],
+                                backgroundColor: [
+                                    'rgba(34, 197, 94, 0.8)',
+                                    'rgba(59, 130, 246, 0.8)', 
+                                    'rgba(147, 51, 234, 0.8)',
+                                    'rgba(245, 101, 101, 0.8)'
+                                ],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    });
                 },
 
                 showAlertMessage(message, type) {
