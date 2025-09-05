@@ -6,8 +6,21 @@ export function getSimpleAdminHTML(): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Admin Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .loading-fallback { display: none; }
+        body:not(.alpine-loaded) .loading-fallback { display: block; }
+    </style>
 </head>
 <body class="bg-gray-50">
+    <!-- Loading fallback -->
+    <div class="loading-fallback min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
+        <div class="max-w-md w-full bg-white rounded-lg shadow-xl p-8 text-center">
+            <h2 class="text-3xl font-bold text-gray-900 mb-4">Loading Admin Panel...</h2>
+            <p class="text-gray-600">Please wait while the interface loads.</p>
+        </div>
+    </div>
+
     <div x-data="simpleAdmin()" x-init="init()">
         <!-- Login Screen -->
         <div x-show="!isAuthenticated" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
@@ -621,6 +634,12 @@ export function getSimpleAdminHTML(): string {
     
     <!-- Load Alpine.js after our function is defined -->
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        // Mark body as alpine loaded
+        document.addEventListener('alpine:init', () => {
+            document.body.classList.add('alpine-loaded');
+        });
+    </script>
 </body>
 </html>`;
 }
