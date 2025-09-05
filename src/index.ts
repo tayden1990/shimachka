@@ -1,4 +1,6 @@
 import { AdminService } from './services/admin-service';
+import { AdminAPI } from './api/admin-api';
+import { UserManager } from './services/user-manager';
 import { getSimpleAdminHTML } from './admin/simple-admin';
 
 export interface Env {
@@ -24,197 +26,13 @@ export default {
           });
         }
         
-        // Enhanced admin API endpoints
-        if (url.pathname.startsWith('/api/admin/')) {
+        // Real admin API endpoints using AdminAPI class
+        if (url.pathname.startsWith('/admin/') || url.pathname.startsWith('/api/admin/')) {
           const adminService = new AdminService(env.LEITNER_DB, env);
+          const userManager = new UserManager(env.LEITNER_DB, env);
+          const adminAPI = new AdminAPI(adminService, userManager);
           
-          switch (url.pathname) {
-            case '/api/admin/stats':
-              try {
-                // Mock stats for now - replace with real data later
-                const stats = {
-                  totalUsers: Math.floor(Math.random() * 1000) + 50,
-                  totalCards: Math.floor(Math.random() * 5000) + 500,
-                  activeUsers: Math.floor(Math.random() * 100) + 10
-                };
-                return new Response(JSON.stringify(stats), {
-                  headers: { 'Content-Type': 'application/json' }
-                });
-              } catch (error) {
-                return new Response(JSON.stringify({ error: 'Failed to load stats' }), {
-                  status: 500,
-                  headers: { 'Content-Type': 'application/json' }
-                });
-              }
-
-            case '/api/admin/env-check':
-              const envStatus = {
-                telegram: env.TELEGRAM_BOT_TOKEN ? '✅ Configured' : '❌ Missing',
-                gemini: env.GEMINI_API_KEY ? '✅ Configured' : '❌ Missing',
-                webhook: env.WEBHOOK_SECRET ? '✅ Configured' : '❌ Missing'
-              };
-              return new Response(JSON.stringify(envStatus), {
-                headers: { 'Content-Type': 'application/json' }
-              });
-
-            case '/api/admin/test-telegram':
-              try {
-                if (!env.TELEGRAM_BOT_TOKEN) {
-                  return new Response(JSON.stringify({ success: false, error: 'No token' }), {
-                    headers: { 'Content-Type': 'application/json' }
-                  });
-                }
-                // Simple test - just check if token is present
-                return new Response(JSON.stringify({ success: true, message: 'Token configured' }), {
-                  headers: { 'Content-Type': 'application/json' }
-                });
-              } catch (error) {
-                return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }), {
-                  headers: { 'Content-Type': 'application/json' }
-                });
-              }
-
-            case '/api/admin/test-database':
-              try {
-                // Test KV access
-                await env.LEITNER_DB.put('test-key', 'test-value');
-                const value = await env.LEITNER_DB.get('test-key');
-                await env.LEITNER_DB.delete('test-key');
-                
-                return new Response(JSON.stringify({ 
-                  success: value === 'test-value', 
-                  message: 'KV storage test passed' 
-                }), {
-                  headers: { 'Content-Type': 'application/json' }
-                });
-              } catch (error) {
-                return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }), {
-                  headers: { 'Content-Type': 'application/json' }
-                });
-              }
-
-            case '/api/admin/test-ai':
-              try {
-                if (!env.GEMINI_API_KEY) {
-                  return new Response(JSON.stringify({ success: false, error: 'No API key' }), {
-                    headers: { 'Content-Type': 'application/json' }
-                  });
-                }
-                return new Response(JSON.stringify({ success: true, message: 'API key configured' }), {
-                  headers: { 'Content-Type': 'application/json' }
-                });
-              } catch (error) {
-                return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }), {
-                  headers: { 'Content-Type': 'application/json' }
-                });
-              }
-
-            case '/api/admin/export-users':
-              if (request.method === 'GET') {
-                try {
-                  // Mock CSV data for now
-                  const csvData = 'ID,Username,Email,Registration Date\n1,user1,user1@example.com,2025-01-01\n2,user2,user2@example.com,2025-01-02';
-                  return new Response(csvData, {
-                    headers: { 
-                      'Content-Type': 'text/csv',
-                      'Content-Disposition': 'attachment; filename="users.csv"'
-                    }
-                  });
-                } catch (error) {
-                  return new Response(JSON.stringify({ error: 'Export failed' }), {
-                    status: 500,
-                    headers: { 'Content-Type': 'application/json' }
-                  });
-                }
-              }
-              break;
-
-            case '/api/admin/clear-cache':
-              if (request.method === 'POST') {
-                try {
-                  // Implement cache clearing logic here
-                  return new Response(JSON.stringify({ success: true, message: 'Cache cleared' }), {
-                    headers: { 'Content-Type': 'application/json' }
-                  });
-                } catch (error) {
-                  return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }), {
-                    status: 500,
-                    headers: { 'Content-Type': 'application/json' }
-                  });
-                }
-              }
-              break;
-
-            case '/api/admin/reset-database':
-              if (request.method === 'POST') {
-                try {
-                  // DANGEROUS: Only for development
-                  // This would need proper authorization in production
-                  return new Response(JSON.stringify({ success: true, message: 'Database reset (simulation)' }), {
-                    headers: { 'Content-Type': 'application/json' }
-                  });
-                } catch (error) {
-                  return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }), {
-                    status: 500,
-                    headers: { 'Content-Type': 'application/json' }
-                  });
-                }
-              }
-              break;
-
-            case '/api/admin/restore-full-bot':
-              if (request.method === 'POST') {
-                try {
-                  // This would trigger a deployment of the full bot
-                  return new Response(JSON.stringify({ 
-                    success: true, 
-                    message: 'Full bot restoration would be triggered here' 
-                  }), {
-                    headers: { 'Content-Type': 'application/json' }
-                  });
-                } catch (error) {
-                  return new Response(JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }), {
-                    status: 500,
-                    headers: { 'Content-Type': 'application/json' }
-                  });
-                }
-              }
-              break;
-          }
-        }
-        
-        // Legacy admin endpoint
-        if (url.pathname === '/admin/create-admin' && request.method === 'POST') {
-          // Simple admin creation endpoint
-          try {
-            const adminService = new AdminService(env.LEITNER_DB, env);
-            const body = await request.json() as any;
-            
-            const admin = await adminService.createAdmin({
-              username: body.username,
-              password: body.password,
-              email: body.email,
-              fullName: body.fullName,
-              role: body.role,
-              isActive: body.isActive
-            });
-            
-            return new Response(JSON.stringify({ 
-              success: true, 
-              message: 'Admin created successfully',
-              admin: { id: admin.id, username: admin.username, email: admin.email }
-            }), {
-              headers: { 'Content-Type': 'application/json' }
-            });
-          } catch (error) {
-            return new Response(JSON.stringify({ 
-              success: false, 
-              error: error instanceof Error ? error.message : 'Failed to create admin'
-            }), {
-              status: 500,
-              headers: { 'Content-Type': 'application/json' }
-            });
-          }
+          return await adminAPI.handleAdminRequest(request);
         }
       }
       

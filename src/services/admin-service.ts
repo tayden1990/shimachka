@@ -6,6 +6,20 @@ export class AdminService {
   // Admin Authentication
   async authenticateAdmin(username: string, password: string): Promise<AdminUser | null> {
     try {
+      // Fallback hardcoded admin for initial setup
+      if (username === 'admin' && password === 'Taksa4522815') {
+        return {
+          id: 'admin_default',
+          username: 'admin',
+          email: 'admin@leitnerbot.com',
+          fullName: 'System Administrator',
+          role: 'admin',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString()
+        };
+      }
+      
       const adminKey = `admin:${username}`;
       const admin = await this.kv.get(adminKey, 'json');
       

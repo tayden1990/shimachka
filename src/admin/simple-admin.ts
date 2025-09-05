@@ -344,15 +344,32 @@ export function getSimpleAdminHTML(): string {
                     this.loading = true;
                     this.error = '';
                     
-                    // Simple hardcoded check for now
-                    if (this.loginForm.username === 'admin' && this.loginForm.password === 'Taksa4522815') {
-                        this.isAuthenticated = true;
-                        localStorage.setItem('adminToken', 'simple-token');
-                        this.showMessage('Login successful!', 'success');
-                        this.loadUserStats();
-                        this.checkEnvironment();
-                    } else {
-                        this.error = 'Invalid credentials';
+                    try {
+                        // Use real admin login API
+                        const response = await fetch('/admin/login', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                username: this.loginForm.username,
+                                password: this.loginForm.password
+                            })
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.isAuthenticated = true;
+                            localStorage.setItem('adminToken', data.token);
+                            this.showMessage('✅ Login successful!', 'success');
+                            this.loadUserStats();
+                            this.checkEnvironment();
+                        } else {
+                            const errorData = await response.json();
+                            this.error = errorData.error || 'Login failed';
+                        }
+                    } catch (err) {
+                        this.error = 'Network error: ' + err.message;
                     }
                     
                     this.loading = false;
@@ -360,16 +377,27 @@ export function getSimpleAdminHTML(): string {
 
                 async loadUserStats() {
                     try {
-                        const response = await fetch('/api/admin/stats');
+                        const token = localStorage.getItem('adminToken');
+                        const response = await fetch('/admin/dashboard', {
+                            headers: {
+                                'Authorization': \`Bearer \${token}\`
+                            }
+                        });
+                        
                         if (response.ok) {
                             const data = await response.json();
-                            this.stats = data;
+                            this.stats = {
+                                totalUsers: data.totalUsers || 0,
+                                totalCards: data.totalCards || 0,
+                                activeUsers: data.activeUsers || 0
+                            };
                         } else {
                             this.stats = {
-                                totalUsers: 'N/A',
-                                totalCards: 'N/A',
-                                activeUsers: 'N/A'
+                                totalUsers: 'Error loading',
+                                totalCards: 'Error loading',
+                                activeUsers: 'Error loading'
                             };
+                        }
                         }
                     } catch (error) {
                         this.stats = {
@@ -493,7 +521,13 @@ export function getSimpleAdminHTML(): string {
 
                 async exportUsers() {
                     try {
-                        const response = await fetch('/api/admin/export-users');
+                        const token = localStorage.getItem('adminToken');
+                        const response = await fetch('/admin/export-users', {
+                            headers: {
+                                'Authorization': \`Bearer \${token}\`
+                            }
+                        });
+                        
                         if (response.ok) {
                             const blob = await response.blob();
                             const url = window.URL.createObjectURL(blob);
