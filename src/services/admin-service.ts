@@ -341,7 +341,7 @@ export class AdminService {
             notificationMessage += `✅ Successfully processed: ${successCount}/${totalWords} words\n`;
             notificationMessage += `🎯 Your cards are ready for study!\n\n`;
             notificationMessage += `📖 Use /study to start reviewing your new cards\n`;
-            notificationMessage += `📊 Use /mycards to see all your cards\n`;
+            notificationMessage += `� Use /mycards to see all your cards\n`;
             notificationMessage += `📈 Use /stats to check your progress`;
           }
           

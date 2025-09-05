@@ -236,7 +236,9 @@ const TEXTS: Record<string, BotTexts> = {
 
 📊 **Progress & Stats:**
 /stats - View your learning statistics
-/mywords - See your vocabulary
+/progress - Check your learning progress
+/mycards - View your flashcard collection
+/mywords - See your vocabulary list
 /mytopics - View your topics
 
 ⚙️ **Settings:**
