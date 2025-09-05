@@ -3,6 +3,38 @@ import { UserManager } from '../services/user-manager';
 import { Logger } from '../services/logger';
 import { HealthCheckService } from '../services/health-check';
 
+// Input validation utilities
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
+
+function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function validateString(value: any, fieldName: string, minLength = 1, maxLength = 255): ValidationResult {
+  const errors: string[] = [];
+  
+  if (typeof value !== 'string') {
+    errors.push(`${fieldName} must be a string`);
+  } else {
+    if (value.length < minLength) {
+      errors.push(`${fieldName} must be at least ${minLength} characters`);
+    }
+    if (value.length > maxLength) {
+      errors.push(`${fieldName} must be at most ${maxLength} characters`);
+    }
+  }
+  
+  return { isValid: errors.length === 0, errors };
+}
+
+function sanitizeInput(input: string): string {
+  return input.trim().replace(/[<>\"'&]/g, '');
+}
+
 export class AdminAPI {
   private logger: Logger;
   private healthCheckService: HealthCheckService;
@@ -42,8 +74,8 @@ export class AdminAPI {
     }
 
     try {
-      // Authentication check (except for login and bulk-words-ai for now)
-      if (!path.includes('/admin/login') && !path.includes('/admin/bulk-words-ai')) {
+      // Authentication check - all admin endpoints require authentication except login
+      if (!path.includes('/admin/login')) {
         const authHeader = request.headers.get('Authorization');
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
           return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -82,6 +114,13 @@ export class AdminAPI {
       if (path.startsWith('/admin/users/') && method === 'GET') {
         const segments = path.split('/');
         const userId = segments[3];
+        if (!userId) {
+          return new Response(JSON.stringify({ error: 'User ID is required' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        
         if (segments[4] === 'stats') {
           return await this.handleGetUserStats(userId, corsHeaders);
         } else if (segments[4] === 'details') {

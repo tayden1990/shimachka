@@ -16,22 +16,51 @@ export class AdminService {
       
       if (!admin) return null;
       
-      // In production, use proper password hashing (bcrypt, etc.)
-      // For now, simple check - replace with secure implementation
-      if (admin.password === password) {
+      // Verify password using constant-time comparison
+      const isValidPassword = await this.verifyPassword(password, admin.passwordHash);
+      
+      if (isValidPassword) {
         await this.updateAdminLastLogin(admin.id);
-        delete admin.password; // Don't return password
+        delete admin.passwordHash; // Don't return password hash
         return admin;
       }
       
       return null;
     } catch (error) {
-      console.error('Admin authentication error:', error);
+      await this.logger.error('admin_auth_error', 'Admin authentication failed', { username, error: error instanceof Error ? error.message : String(error) });
       return null;
     }
   }
 
+  // Simple password hashing using Web Crypto API (better than plain text)
+  private async hashPassword(password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password + 'salt_' + password); // Simple salt
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  // Verify password using constant-time comparison
+  private async verifyPassword(password: string, hash: string): Promise<boolean> {
+    const passwordHash = await this.hashPassword(password);
+    
+    // Constant-time comparison to prevent timing attacks
+    if (passwordHash.length !== hash.length) {
+      return false;
+    }
+    
+    let result = 0;
+    for (let i = 0; i < passwordHash.length; i++) {
+      result |= passwordHash.charCodeAt(i) ^ hash.charCodeAt(i);
+    }
+    
+    return result === 0;
+  }
+
   async createAdmin(adminData: Omit<AdminUser, 'id' | 'createdAt'> & { password: string }): Promise<AdminUser> {
+    const passwordHash = await this.hashPassword(adminData.password);
+    
     const admin: AdminUser = {
       id: `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       username: adminData.username,
@@ -43,8 +72,8 @@ export class AdminService {
     };
 
     const adminKey = `admin:${admin.username}`;
-    await this.kv.put(adminKey, JSON.stringify({ ...admin, password: adminData.password }));
-    await this.kv.put(`admin_by_id:${admin.id}`, JSON.stringify({ ...admin, password: adminData.password }));
+    await this.kv.put(adminKey, JSON.stringify({ ...admin, passwordHash }));
+    await this.kv.put(`admin_by_id:${admin.id}`, JSON.stringify({ ...admin, passwordHash }));
     
     return admin;
   }
@@ -58,7 +87,7 @@ export class AdminService {
         await this.kv.put(`admin:${adminData.username}`, JSON.stringify(adminData));
       }
     } catch (error) {
-      console.error('Error updating admin last login:', error);
+      await this.logger.error('admin_last_login_update_error', 'Error updating admin last login', { adminId, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -79,7 +108,7 @@ export class AdminService {
 
       return { users: paginatedUsers, total, page };
     } catch (error) {
-      console.error('Error getting all users:', error);
+      await this.logger.error('get_all_users_error', 'Error getting all users', { error: error instanceof Error ? error.message : String(error) });
       return { users: [], total: 0, page };
     }
   }

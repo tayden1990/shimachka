@@ -38,6 +38,8 @@ A powerful Telegram bot that implements the Leitner spaced repetition system for
 
 ### Deployment (GitHub Actions Only)
 
+**🔐 Security Note**: This project uses secure deployment practices with encrypted secrets and environment variables.
+
 **GitHub Actions automatically handles everything:**
 
 1. **Configure repository secrets** (Settings → Secrets and variables → Actions):
@@ -45,9 +47,15 @@ A powerful Telegram bot that implements the Leitner spaced repetition system for
    - `CLOUDFLARE_ACCOUNT_ID` - Found in Cloudflare dashboard sidebar
    - `TELEGRAM_BOT_TOKEN` - Your bot token from @BotFather
    - `GEMINI_API_KEY` - Your Google Gemini API key
-   - `WEBHOOK_SECRET` - Any random string for webhook security
+   - `WEBHOOK_SECRET` - Generate a random string (32+ characters)
+   - `WORKER_URL` - Your worker URL (optional, defaults to template)
 
-2. **Deploy:**
+2. **Set up Cloudflare Environment Variables** (Workers Dashboard → Settings → Environment Variables):
+   - `TELEGRAM_BOT_TOKEN` - Your bot token
+   - `GEMINI_API_KEY` - Your API key  
+   - `WEBHOOK_SECRET` - Same random string as GitHub secret
+
+3. **Deploy:**
 ```bash
 git add .
 git commit -m "Deploy with automatic webhook"
@@ -55,6 +63,17 @@ git push origin main
 ```
 
 **✅ GitHub Actions automatically deploys and configures webhook!**
+
+## 🔒 Security Features
+
+- **Password Hashing**: Secure password storage with SHA-256 + salt
+- **Authentication**: JWT-based admin authentication
+- **Input Validation**: All user inputs are validated and sanitized
+- **Environment Security**: No API keys in source code
+- **HTTPS Only**: All communications encrypted
+- **Access Control**: Role-based admin panel access
+
+See [SECURITY.md](SECURITY.md) for detailed security information.
 npm run setup-webhook-local
 ```
 

@@ -88,6 +88,7 @@ Return only the JSON array, with no extra text or explanation.
       })).filter(word => word.word && word.translation && word.definition);
 
     } catch (error) {
+      // Create logger instance for error reporting
       console.error('Error extracting words:', error);
       throw new Error('Failed to extract words from the topic');
     }

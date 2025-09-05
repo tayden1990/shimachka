@@ -5,6 +5,7 @@ import { ScheduleManager } from './services/schedule-manager';
 import { AdminService } from './services/admin-service';
 import { AdminAPI } from './api/admin-api';
 import { Logger } from './services/logger';
+import { HealthCheckService } from './services/health-check';
 import { initializeAdmin } from './init-admin';
 
 export interface Env {
@@ -48,12 +49,18 @@ export default {
       // Validate environment variables
       if (!env.TELEGRAM_BOT_TOKEN) {
         await logger.error('config_error', 'TELEGRAM_BOT_TOKEN not set');
-        return new Response('Configuration Error: Bot token not set', { status: 500 });
+        return new Response(JSON.stringify({ error: 'Configuration Error: Bot token not set' }), { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
       
       if (!env.GEMINI_API_KEY) {
-        logEvent(env, 'ERROR', { error: 'GEMINI_API_KEY not set' });
-        return new Response('Configuration Error: Gemini API key not set', { status: 500 });
+        await logger.error('config_error', 'GEMINI_API_KEY not set');
+        return new Response(JSON.stringify({ error: 'Configuration Error: Gemini API key not set' }), { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
 
       // Initialize services with error handling
@@ -81,20 +88,32 @@ export default {
           contentLength: request.headers.get('Content-Length')
         });
         
-        // Log the webhook content for debugging
-        const webhookText = await request.text();
-        await logger.info('webhook_content', 'Webhook content received', {
-          body: webhookText.substring(0, 500) // Log first 500 chars for debugging
-        });
-        
-        // Recreate request with the body for bot processing
-        const webhookRequest = new Request(request.url, {
-          method: request.method,
-          headers: request.headers,
-          body: webhookText
-        });
-        
-        response = await bot.handleWebhook(webhookRequest);
+        // Read and log webhook content for debugging
+        try {
+          const webhookText = await request.text();
+          const logText = webhookText.length > 500 ? 
+            webhookText.substring(0, 500) + '...[truncated]' : 
+            webhookText;
+          
+          await logger.info('webhook_content', 'Webhook content received', {
+            bodyPreview: logText,
+            fullLength: webhookText.length
+          });
+          
+          // Recreate request with the body for bot processing
+          const webhookRequest = new Request(request.url, {
+            method: request.method,
+            headers: request.headers,
+            body: webhookText
+          });
+          
+          response = await bot.handleWebhook(webhookRequest);
+        } catch (error) {
+          await logger.error('webhook_processing_error', 'Error processing webhook', {
+            error: error instanceof Error ? error.message : String(error)
+          });
+          response = new Response('Webhook processing error', { status: 500 });
+        }
       }
       // Handle cron triggers for daily reminders
       else if (url.pathname === '/cron') {
@@ -102,22 +121,38 @@ export default {
         await bot.sendDailyReminders();
         response = new Response('OK', { status: 200 });
       }
-      // Health check
+      // Enhanced health check
       else if (url.pathname === '/health') {
-        await logger.debug('health_check_simple', 'Simple health check requested');
-        response = new Response(JSON.stringify({
-          status: 'OK',
-          timestamp: new Date().toISOString(),
-          version: '1.0.0',
-          environment: {
-            botTokenSet: !!env.TELEGRAM_BOT_TOKEN,
-            geminiKeySet: !!env.GEMINI_API_KEY,
-            kvSet: !!env.LEITNER_DB
-          }
-        }), { 
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        await logger.debug('health_check_comprehensive', 'Comprehensive health check requested');
+        
+        try {
+          const healthCheck = new HealthCheckService(env);
+          const healthStatus = await healthCheck.getFullHealthStatus();
+          
+          const statusCode = healthStatus.status === 'healthy' ? 200 : 503;
+          response = new Response(JSON.stringify(healthStatus), {
+            status: statusCode,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } catch (error) {
+          await logger.error('health_check_error', 'Health check failed', {
+            error: error instanceof Error ? error.message : String(error)
+          });
+          
+          response = new Response(JSON.stringify({
+            status: 'error',
+            timestamp: new Date().toISOString(),
+            error: 'Health check failed',
+            environment: {
+              botTokenSet: !!env.TELEGRAM_BOT_TOKEN,
+              geminiKeySet: !!env.GEMINI_API_KEY,
+              kvSet: !!env.LEITNER_DB
+            }
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
       }
       // Debug endpoint for logs
       else if (url.pathname === '/debug' && request.method === 'GET') {
