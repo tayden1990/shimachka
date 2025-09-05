@@ -141,14 +141,14 @@ export default {
           }
 
           // Process the update
-          await bot.handleUpdate(update);
+          const response = await bot.handleWebhook(request);
           
           logEvent(env, 'WEBHOOK_PROCESSED', {
             updateId: update.update_id,
             success: true
           });
 
-          response = new Response('OK');
+          return response;
         } catch (error) {
           logEvent(env, 'WEBHOOK_ERROR', {
             error: error instanceof Error ? error.message : String(error),
