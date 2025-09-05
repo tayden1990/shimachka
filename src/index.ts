@@ -1,7 +1,11 @@
 import { AdminService } from './services/admin-service';
 import { AdminAPI } from './api/admin-api';
 import { UserManager } from './services/user-manager';
+import { WordExtractor } from './services/word-extractor';
+import { ScheduleManager } from './services/schedule-manager';
 import { getSimpleAdminHTML } from './admin/simple-admin';
+import { LeitnerBot } from './bot/leitner-bot';
+import { TelegramUpdate } from './types';
 
 export interface Env {
   TELEGRAM_BOT_TOKEN: string;
@@ -17,6 +21,25 @@ export default {
     const url = new URL(request.url);
     
     try {
+      // Telegram webhook handler
+      if (url.pathname === '/webhook' && request.method === 'POST') {
+        console.log('Received Telegram webhook request');
+        
+        const userManager = new UserManager(env.LEITNER_DB);
+        const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
+        const scheduleManager = new ScheduleManager(env.LEITNER_DB);
+        
+        const bot = new LeitnerBot(
+          env.TELEGRAM_BOT_TOKEN,
+          userManager,
+          wordExtractor,
+          scheduleManager,
+          env.LEITNER_DB,
+          env
+        );
+        
+        return await bot.handleWebhook(request);
+      }
       // Admin panel and API routes
       if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/api/admin')) {
         if (url.pathname === '/admin' || url.pathname === '/admin/') {
