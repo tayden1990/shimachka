@@ -35,16 +35,21 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
 
-      - name: Set Telegram Webhook
+      - name: Setup Telegram Webhook
         if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          WORKER_URL: https://leitner-telegram-bot.t-ak-sa.workers.dev
+          GITHUB_ACTIONS: true
         run: |
-          sleep 10  # Wait for deployment to propagate
-          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/setWebhook" \
-               -H "Content-Type: application/json" \
-               -d "{\"url\": \"https://leitner-telegram-bot.t-ak-sa.workers.dev/webhook\", \"secret_token\": \"${{ secrets.WEBHOOK_SECRET }}\"}"
+          echo "🚀 Setting up Telegram webhook after deployment..."
+          sleep 5  # Wait for deployment to propagate
+          node scripts/setup-webhook.js
         
-      - name: Verify Webhook
-        if: success()
+      - name: Deployment Summary
+        if: always()
         run: |
-          response=$(curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/getWebhookInfo")
-          echo "Webhook info: $response"
+          echo "🎉 Deployment completed!"
+          echo "📱 Bot URL: https://leitner-telegram-bot.t-ak-sa.workers.dev"
+          echo "🔧 Admin Panel: https://leitner-telegram-bot.t-ak-sa.workers.dev/admin"
+          echo "📊 Health Check: https://leitner-telegram-bot.t-ak-sa.workers.dev/health"

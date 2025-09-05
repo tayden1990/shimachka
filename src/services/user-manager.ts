@@ -56,6 +56,26 @@ export class UserManager {
   }
 
   async getUserCards(userId: number, box?: number): Promise<Card[]> {
+    // First try the new format (used by admin bulk processing)
+    const newFormatKey = `user_cards:${userId}`;
+    const newFormatData = await this.kv.get(newFormatKey);
+    
+    if (newFormatData) {
+      try {
+        const cardsArray = JSON.parse(newFormatData) as Card[];
+        let cards = cardsArray;
+        
+        if (box) {
+          cards = cardsArray.filter(card => card.box === box);
+        }
+        
+        return cards.sort((a, b) => new Date(a.nextReviewAt).getTime() - new Date(b.nextReviewAt).getTime());
+      } catch (error) {
+        console.error('Error parsing new format cards:', error);
+      }
+    }
+    
+    // Fallback to old format (individual card keys)
     const prefix = `card:${userId}:`;
     const list = await this.kv.list({ prefix });
     const cards: Card[] = [];

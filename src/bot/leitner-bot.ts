@@ -475,7 +475,7 @@ Choose what you'd like to do:
     // Group cards by box
     const boxCounts = [1,2,3,4,5].map(box => cards.filter(c => c.box === box).length);
     const totalCards = cards.length;
-    const cardsDue = cards.filter(card => new Date(card.nextReviewAt) <= new Date()).length;
+    const cardsDue = cards.filter(card => new Date(card.nextReviewAt).getTime() <= new Date().getTime()).length;
 
     let message = `📚 **Your Flashcard Collection**\n\n`;
     message += `📊 **Total Cards:** ${totalCards}\n`;
@@ -495,8 +495,9 @@ Choose what you'd like to do:
       .slice(0, 5);
     
     recentCards.forEach(card => {
-      const status = new Date(card.nextReviewAt) <= new Date() ? '⏰' : '📅';
-      message += `${status} ${card.word} — ${card.translation}\n`;
+      const status = new Date(card.nextReviewAt).getTime() <= new Date().getTime() ? '⏰' : '📅';
+      const meaning = card.translation || card.definition;
+      message += `${status} ${card.word} — ${meaning}\n`;
     });
 
     if (cards.length > 5) {

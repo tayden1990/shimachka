@@ -1192,16 +1192,18 @@ export class AdminService {
       
       const newCard = {
         id: `card_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId: parseInt(userId.toString()),
         word,
-        meaning,
+        translation: meaning,
         definition,
+        sourceLanguage: 'en', // Default, could be dynamic
+        targetLanguage: 'en', // Default, could be dynamic
         box: 1,
-        nextReview: new Date().toISOString(),
+        nextReviewAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         reviewCount: 0,
-        correctCount: 0,
-        difficulty: 0.3,
-        interval: 1
+        correctCount: 0
       };
 
       cards.push(newCard);
@@ -1213,7 +1215,7 @@ export class AdminService {
       const schedule = await this.kv.get(`schedule:${userId}`, 'json') || { reviews: [] };
       schedule.reviews.push({
         cardId: newCard.id,
-        dueDate: newCard.nextReview,
+        dueDate: newCard.nextReviewAt,
         box: 1
       });
       await this.kv.put(`schedule:${userId}`, JSON.stringify(schedule));

@@ -99,9 +99,75 @@ npx wrangler kv:namespace create "LEITNER_DB" --preview
 4. **Update wrangler.toml with your KV namespace IDs**
 
 5. **Deploy to Cloudflare Workers:**
+
+#### For GitHub Actions (Recommended - Production)
 ```bash
-npm run deploy
+# Push to main branch for automatic deployment
+git add .
+git commit -m "Deploy with automatic webhook"
+git push origin main
 ```
+**✅ GitHub Actions automatically deploys and configures webhook!**
+
+#### For Local Development
+```bash
+# Deploy with automatic webhook (if token is set)
+npm run deploy
+
+# Deploy without webhook setup
+npm run deploy-only
+
+# Get help with local webhook setup
+npm run setup-webhook-local
+```
+
+### Webhook Management
+
+#### Automatic Setup in GitHub Actions
+- Set `TELEGRAM_BOT_TOKEN` in GitHub repository secrets
+- Push to main branch
+- GitHub Actions automatically deploys and configures webhook
+- Includes verification and error handling
+
+#### Local Development Setup
+```bash
+# Method 1: Export token temporarily (Quick testing)
+export TELEGRAM_BOT_TOKEN=your_bot_token_here  # Linux/Mac
+set TELEGRAM_BOT_TOKEN=your_bot_token_here     # Windows
+npm run setup-webhook
+
+# Method 2: Use wrangler secrets (Recommended for local dev)
+wrangler secret put TELEGRAM_BOT_TOKEN
+# Note: You'll still need to export for local webhook setup
+export TELEGRAM_BOT_TOKEN=your_bot_token_here
+npm run setup-webhook
+
+# Method 3: Get setup instructions
+npm run setup-webhook-local
+```
+
+#### Manual Webhook Management
+```bash
+# Setup webhook manually
+npm run setup-webhook
+
+# Remove webhook 
+npm run remove-webhook
+
+# Setup webhook with PowerShell (Windows)
+npm run setup-webhook-ps
+
+# Setup webhook with custom URL
+WORKER_URL=https://your-worker.workers.dev npm run setup-webhook
+```
+
+#### Webhook Verification
+The setup script automatically:
+- ✅ Tests worker endpoint accessibility
+- ✅ Gets current webhook configuration
+- ✅ Sets new webhook URL with proper settings
+- ✅ Verifies webhook was configured correctly
+- ✅ Provides troubleshooting information
 
 6. **Set up the webhook:**
 ```bash
@@ -260,7 +326,17 @@ npm run build
 
 ### Manual Deploy
 ```bash
+# Complete deployment with webhook setup
 npm run deploy
+
+# Deploy only (no webhook configuration)
+npm run deploy-only
+
+# Setup webhook after deployment
+npm run setup-webhook
+
+# Remove webhook
+npm run remove-webhook
 ```
 
 ## Configuration

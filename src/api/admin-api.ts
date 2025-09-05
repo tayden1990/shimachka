@@ -148,6 +148,20 @@ export class AdminAPI {
         return await this.handleGetUserMessages(path, corsHeaders);
       }
 
+      if (path.startsWith('/admin/users/') && path.includes('/cards') && method === 'GET') {
+        const userId = path.split('/')[3];
+        return await this.handleGetUserCards(userId, url, corsHeaders);
+      }
+
+      if (path.startsWith('/admin/users/') && path.includes('/words') && method === 'GET') {
+        const userId = path.split('/')[3];
+        return await this.handleGetUserWords(userId, url, corsHeaders);
+      }
+
+      if (path === '/admin/all-cards' && method === 'GET') {
+        return await this.handleGetAllCards(url, corsHeaders);
+      }
+
       return new Response(JSON.stringify({ error: 'Not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -537,6 +551,7 @@ export class AdminAPI {
             <button class="tab" onclick="showTab('logs')">📝 Logs</button>
             <button class="tab" onclick="showTab('bulk-words')">🔄 Bulk Words</button>
             <button class="tab" onclick="showTab('users')">👥 Users</button>
+            <button class="tab" onclick="showTab('cards')">🎴 All Cards</button>
             <button class="tab" onclick="showTab('health')">🏥 Health Check</button>
         </div>
 
@@ -635,6 +650,30 @@ export class AdminAPI {
                 <h4>👥 User Management <button class="refresh-btn" onclick="refreshUsers()">🔄 Refresh</button></h4>
                 <div id="usersTable">
                     <!-- Users table will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <div id="cards" class="tab-content">
+            <div class="monitoring-section">
+                <h4>🎴 All Cards Management <button class="refresh-btn" onclick="refreshCards()">🔄 Refresh</button></h4>
+                
+                <div style="margin-bottom: 15px;">
+                    <input type="text" id="cardSearch" placeholder="Search cards by word, meaning, or user..." style="width: 300px; padding: 8px; margin-right: 10px;">
+                    <button onclick="searchCards()" style="padding: 8px 15px;">🔍 Search</button>
+                    <button onclick="clearCardSearch()" style="padding: 8px 15px; margin-left: 10px;">✖ Clear</button>
+                </div>
+                
+                <div id="cardsStats" style="margin-bottom: 15px;">
+                    <!-- Cards statistics will be loaded here -->
+                </div>
+                
+                <div id="cardsTable">
+                    <!-- Cards table will be loaded here -->
+                </div>
+                
+                <div id="cardsPagination" style="margin-top: 15px; text-align: center;">
+                    <!-- Pagination will be loaded here -->
                 </div>
             </div>
         </div>
@@ -953,6 +992,202 @@ export class AdminAPI {
             
             // Refresh metrics every 30 seconds
             setInterval(refreshMetrics, 30000);
+        }
+
+        // Cards management functions
+        let currentCardsPage = 1;
+        let currentCardsSearch = '';
+
+        async function refreshCards() {
+            currentCardsPage = 1;
+            currentCardsSearch = '';
+            document.getElementById('cardSearch').value = '';
+            await loadCards();
+        }
+
+        async function searchCards() {
+            currentCardsSearch = document.getElementById('cardSearch').value;
+            currentCardsPage = 1;
+            await loadCards();
+        }
+
+        async function clearCardSearch() {
+            currentCardsSearch = '';
+            currentCardsPage = 1;
+            document.getElementById('cardSearch').value = '';
+            await loadCards();
+        }
+
+        async function loadCards(page = 1) {
+            try {
+                currentCardsPage = page;
+                let url = \`/admin/all-cards?page=\${page}&limit=20\`;
+                if (currentCardsSearch) {
+                    url += \`&search=\${encodeURIComponent(currentCardsSearch)}\`;
+                }
+
+                const response = await fetch(url, {
+                    headers: { 'Authorization': 'Bearer admin:password' }
+                });
+                const data = await response.json();
+
+                // Update statistics
+                const statsContainer = document.getElementById('cardsStats');
+                statsContainer.innerHTML = \`
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-value">\${data.stats.totalCards}</div>
+                            <div class="metric-label">Total Cards</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">\${data.stats.totalUsers}</div>
+                            <div class="metric-label">Active Users</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">\${Object.values(data.stats.boxDistribution).reduce((a, b) => a + b, 0)}</div>
+                            <div class="metric-label">Cards in System</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <strong>Box Distribution:</strong>
+                        \${Object.entries(data.stats.boxDistribution).map(([box, count]) => 
+                            \`Box \${box}: \${count} cards\`
+                        ).join(' | ')}
+                    </div>
+                \`;
+
+                // Update cards table
+                const container = document.getElementById('cardsTable');
+                let html = '<table style="width: 100%; border-collapse: collapse; font-size: 13px;">';
+                html += \`<tr style="background: #f3f4f6;">
+                    <th style="padding: 8px; border: 1px solid #d1d5db;">Word</th>
+                    <th style="padding: 8px; border: 1px solid #d1d5db;">Meaning</th>
+                    <th style="padding: 8px; border: 1px solid #d1d5db;">User</th>
+                    <th style="padding: 8px; border: 1px solid #d1d5db;">Box</th>
+                    <th style="padding: 8px; border: 1px solid #d1d5db;">Reviews</th>
+                    <th style="padding: 8px; border: 1px solid #d1d5db;">Accuracy</th>
+                    <th style="padding: 8px; border: 1px solid #d1d5db;">Created</th>
+                    <th style="padding: 8px; border: 1px solid #d1d5db;">Actions</th>
+                </tr>\`;
+
+                if (data.cards && data.cards.length > 0) {
+                    data.cards.forEach(card => {
+                        const accuracy = card.reviewCount > 0 ? Math.round((card.correctCount / card.reviewCount) * 100) : 0;
+                        const createdDate = new Date(card.createdAt).toLocaleDateString();
+                        html += \`<tr>
+                            <td style="padding: 8px; border: 1px solid #d1d5db; font-weight: bold;">\${card.word}</td>
+                            <td style="padding: 8px; border: 1px solid #d1d5db; max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="\${card.meaning}">\${card.meaning.substring(0, 50)}\${card.meaning.length > 50 ? '...' : ''}</td>
+                            <td style="padding: 8px; border: 1px solid #d1d5db;">\${card.username}</td>
+                            <td style="padding: 8px; border: 1px solid #d1d5db; text-align: center;">
+                                <span style="background: \${getBoxColor(card.box)}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">Box \${card.box}</span>
+                            </td>
+                            <td style="padding: 8px; border: 1px solid #d1d5db; text-align: center;">\${card.reviewCount || 0}</td>
+                            <td style="padding: 8px; border: 1px solid #d1d5db; text-align: center;">
+                                <span style="color: \${accuracy >= 70 ? 'green' : accuracy >= 50 ? 'orange' : 'red'}; font-weight: bold;">\${accuracy}%</span>
+                            </td>
+                            <td style="padding: 8px; border: 1px solid #d1d5db; text-align: center;">\${createdDate}</td>
+                            <td style="padding: 8px; border: 1px solid #d1d5db; text-align: center;">
+                                <button onclick="viewUserCards('\${card.userId}')" style="padding: 4px 8px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 3px; cursor: pointer;">View User Cards</button>
+                            </td>
+                        </tr>\`;
+                    });
+                } else {
+                    html += '<tr><td colspan="8" style="padding: 20px; text-align: center;">No cards found</td></tr>';
+                }
+
+                html += '</table>';
+                container.innerHTML = html;
+
+                // Update pagination
+                const paginationContainer = document.getElementById('cardsPagination');
+                let paginationHtml = '';
+                
+                if (data.pagination.totalPages > 1) {
+                    // Previous button
+                    if (data.pagination.page > 1) {
+                        paginationHtml += \`<button onclick="loadCards(\${data.pagination.page - 1})" style="margin: 0 5px; padding: 5px 10px;">← Previous</button>\`;
+                    }
+                    
+                    // Page numbers
+                    for (let i = Math.max(1, data.pagination.page - 2); i <= Math.min(data.pagination.totalPages, data.pagination.page + 2); i++) {
+                        if (i === data.pagination.page) {
+                            paginationHtml += \`<button style="margin: 0 2px; padding: 5px 10px; background: #3b82f6; color: white;">\${i}</button>\`;
+                        } else {
+                            paginationHtml += \`<button onclick="loadCards(\${i})" style="margin: 0 2px; padding: 5px 10px;">\${i}</button>\`;
+                        }
+                    }
+                    
+                    // Next button
+                    if (data.pagination.page < data.pagination.totalPages) {
+                        paginationHtml += \`<button onclick="loadCards(\${data.pagination.page + 1})" style="margin: 0 5px; padding: 5px 10px;">Next →</button>\`;
+                    }
+                    
+                    paginationHtml += \`<span style="margin-left: 15px;">Page \${data.pagination.page} of \${data.pagination.totalPages} (Total: \${data.pagination.total} cards)</span>\`;
+                }
+                
+                paginationContainer.innerHTML = paginationHtml;
+
+            } catch (error) {
+                console.error('Error loading cards:', error);
+                document.getElementById('cardsTable').innerHTML = '<div class="alert alert-error">❌ Failed to load cards</div>';
+            }
+        }
+
+        function getBoxColor(box) {
+            const colors = {
+                1: '#ef4444', // red
+                2: '#f97316', // orange  
+                3: '#eab308', // yellow
+                4: '#22c55e', // green
+                5: '#3b82f6'  // blue
+            };
+            return colors[box] || '#6b7280';
+        }
+
+        async function viewUserCards(userId) {
+            try {
+                const response = await fetch(\`/admin/users/\${userId}/cards\`, {
+                    headers: { 'Authorization': 'Bearer admin:password' }
+                });
+                const data = await response.json();
+                
+                // Create a modal or new window to display user cards
+                const popup = window.open('', 'UserCards', 'width=800,height=600,scrollbars=yes');
+                popup.document.write(\`
+                    <html>
+                    <head><title>User \${userId} Cards</title></head>
+                    <body style="font-family: Arial, sans-serif; padding: 20px;">
+                        <h2>Cards for User \${userId}</h2>
+                        <p><strong>Total Cards:</strong> \${data.stats.totalCards}</p>
+                        <p><strong>Due Cards:</strong> \${data.stats.dueCards}</p>
+                        <p><strong>Box Distribution:</strong> \${Object.entries(data.stats.boxDistribution).map(([box, count]) => \`Box \${box}: \${count}\`).join(', ')}</p>
+                        <hr>
+                        <table border="1" style="width: 100%; border-collapse: collapse;">
+                            <tr style="background: #f0f0f0;">
+                                <th style="padding: 10px;">Word</th>
+                                <th style="padding: 10px;">Meaning</th>
+                                <th style="padding: 10px;">Box</th>
+                                <th style="padding: 10px;">Reviews</th>
+                                <th style="padding: 10px;">Accuracy</th>
+                            </tr>
+                            \${data.cards.map(card => {
+                                const accuracy = card.reviewCount > 0 ? Math.round((card.correctCount / card.reviewCount) * 100) : 0;
+                                return \`<tr>
+                                    <td style="padding: 8px;">\${card.word}</td>
+                                    <td style="padding: 8px;">\${card.meaning}</td>
+                                    <td style="padding: 8px; text-align: center;">Box \${card.box}</td>
+                                    <td style="padding: 8px; text-align: center;">\${card.reviewCount || 0}</td>
+                                    <td style="padding: 8px; text-align: center;">\${accuracy}%</td>
+                                </tr>\`;
+                            }).join('')}
+                        </table>
+                    </body>
+                    </html>
+                \`);
+            } catch (error) {
+                console.error('Error viewing user cards:', error);
+                alert('Failed to load user cards');
+            }
         }
 
         // Cleanup intervals when page unloads
@@ -1495,6 +1730,215 @@ export class AdminAPI {
       await this.logger.error('get_metrics_failed', 'Failed to retrieve metrics', error);
       
       return new Response(JSON.stringify({ error: 'Failed to retrieve metrics' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleGetUserCards(userId: string, url: URL, corsHeaders: any): Promise<Response> {
+    try {
+      await this.logger.info('get_user_cards_start', `Getting cards for user ${userId}`);
+      
+      const page = parseInt(url.searchParams.get('page') || '1');
+      const limit = parseInt(url.searchParams.get('limit') || '50');
+      const search = url.searchParams.get('search') || '';
+      const box = url.searchParams.get('box');
+      
+      // Get user cards from KV store
+      const cards = await this.env.LEITNER_DB.get(`user_cards:${userId}`, 'json') || [];
+      
+      // Filter cards based on search and box
+      let filteredCards = cards;
+      if (search) {
+        filteredCards = cards.filter((card: any) => 
+          card.word.toLowerCase().includes(search.toLowerCase()) ||
+          card.meaning.toLowerCase().includes(search.toLowerCase()) ||
+          card.definition.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+      
+      if (box) {
+        filteredCards = filteredCards.filter((card: any) => card.box === parseInt(box));
+      }
+      
+      // Pagination
+      const total = filteredCards.length;
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedCards = filteredCards.slice(startIndex, endIndex);
+      
+      // Calculate statistics
+      const boxStats = cards.reduce((acc: any, card: any) => {
+        acc[card.box] = (acc[card.box] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const dueCards = cards.filter((card: any) => new Date(card.nextReview) <= new Date()).length;
+      
+      const response = {
+        cards: paginatedCards,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        },
+        stats: {
+          totalCards: cards.length,
+          dueCards,
+          boxDistribution: boxStats
+        },
+        filters: { search, box }
+      };
+      
+      return new Response(JSON.stringify(response), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      await this.logger.error('get_user_cards_failed', `Failed to get cards for user ${userId}`, error);
+      
+      return new Response(JSON.stringify({ error: 'Failed to retrieve user cards' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleGetUserWords(userId: string, url: URL, corsHeaders: any): Promise<Response> {
+    try {
+      await this.logger.info('get_user_words_start', `Getting words for user ${userId}`);
+      
+      const cards = await this.env.LEITNER_DB.get(`user_cards:${userId}`, 'json') || [];
+      
+      // Extract just the words with basic info
+      const words = cards.map((card: any) => ({
+        id: card.id,
+        word: card.word,
+        meaning: card.meaning,
+        box: card.box,
+        createdAt: card.createdAt,
+        reviewCount: card.reviewCount,
+        correctCount: card.correctCount,
+        accuracy: card.reviewCount > 0 ? Math.round((card.correctCount / card.reviewCount) * 100) : 0
+      }));
+      
+      const response = {
+        words,
+        count: words.length,
+        stats: {
+          totalWords: words.length,
+          averageAccuracy: words.reduce((sum: number, w: any) => sum + w.accuracy, 0) / words.length || 0,
+          boxDistribution: words.reduce((acc: any, w: any) => {
+            acc[w.box] = (acc[w.box] || 0) + 1;
+            return acc;
+          }, {})
+        }
+      };
+      
+      return new Response(JSON.stringify(response), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      await this.logger.error('get_user_words_failed', `Failed to get words for user ${userId}`, error);
+      
+      return new Response(JSON.stringify({ error: 'Failed to retrieve user words' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleGetAllCards(url: URL, corsHeaders: any): Promise<Response> {
+    try {
+      await this.logger.info('get_all_cards_start', 'Getting all cards across all users');
+      
+      const page = parseInt(url.searchParams.get('page') || '1');
+      const limit = parseInt(url.searchParams.get('limit') || '50');
+      const search = url.searchParams.get('search') || '';
+      
+      // Get all users first
+      const usersResult = await this.adminService.getAllUsers();
+      const allCards: any[] = [];
+      
+      // Collect cards from all users
+      for (const user of usersResult.users) {
+        try {
+          const userCards = await this.env.LEITNER_DB.get(`user_cards:${user.id}`, 'json') || [];
+          userCards.forEach((card: any) => {
+            allCards.push({
+              ...card,
+              userId: user.id,
+              username: user.username || `User ${user.id}`,
+              userFullName: user.fullName || user.firstName || `User ${user.id}`
+            });
+          });
+        } catch (error) {
+          console.warn(`Failed to get cards for user ${user.id}:`, error);
+        }
+      }
+      
+      // Filter by search
+      let filteredCards = allCards;
+      if (search) {
+        filteredCards = allCards.filter((card: any) => 
+          card.word.toLowerCase().includes(search.toLowerCase()) ||
+          card.meaning.toLowerCase().includes(search.toLowerCase()) ||
+          card.username.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+      
+      // Sort by creation date (newest first)
+      filteredCards.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      // Pagination
+      const total = filteredCards.length;
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedCards = filteredCards.slice(startIndex, endIndex);
+      
+      // Calculate statistics
+      const boxStats = allCards.reduce((acc: any, card: any) => {
+        acc[card.box] = (acc[card.box] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const userStats = allCards.reduce((acc: any, card: any) => {
+        acc[card.userId] = (acc[card.userId] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const response = {
+        cards: paginatedCards,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        },
+        stats: {
+          totalCards: allCards.length,
+          totalUsers: Object.keys(userStats).length,
+          boxDistribution: boxStats,
+          topUsers: Object.entries(userStats)
+            .sort(([,a]: any, [,b]: any) => b - a)
+            .slice(0, 10)
+            .map(([userId, count]) => ({
+              userId,
+              username: usersResult.users.find((u: any) => u.id.toString() === userId)?.username || `User ${userId}`,
+              cardCount: count
+            }))
+        },
+        filters: { search }
+      };
+      
+      return new Response(JSON.stringify(response), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      await this.logger.error('get_all_cards_failed', 'Failed to get all cards', error);
+      
+      return new Response(JSON.stringify({ error: 'Failed to retrieve all cards' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
