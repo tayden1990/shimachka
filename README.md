@@ -36,65 +36,80 @@ A powerful Telegram bot that implements the Leitner spaced repetition system for
 4. **Node.js**: Version 18+ installed locally
 5. **GitHub Repository**: For automatic deployment
 
-### Deployment (GitHub Actions Only)
+### Installation & Deployment
 
-**🔐 Security Note**: This project uses secure deployment practices with encrypted secrets and environment variables.
+#### Option 1: Automatic Deployment with GitHub Actions (Recommended)
 
-**GitHub Actions automatically handles everything:**
+1. **Fork or clone this repository to GitHub**
 
-1. **Configure repository secrets** (Settings → Secrets and variables → Actions):
+2. **Run the setup script:**
+   ```bash
+   # On Windows
+   ./setup-github-actions.bat
+   
+   # On macOS/Linux
+   chmod +x setup-github-actions.sh
+   ./setup-github-actions.sh
+   ```
+
+3. **Set up GitHub Secrets:**
+   Go to your GitHub repository → Settings → Secrets and variables → Actions
+   
+   Add these secrets:
    - `CLOUDFLARE_API_TOKEN` - [Get from Cloudflare dashboard](https://dash.cloudflare.com/profile/api-tokens)
-   - `CLOUDFLARE_ACCOUNT_ID` - Found in Cloudflare dashboard sidebar
-   - `TELEGRAM_BOT_TOKEN` - Your bot token from @BotFather
+   - `CLOUDFLARE_ACCOUNT_ID` - Your Cloudflare account ID
+   - `TELEGRAM_BOT_TOKEN` - Your Telegram bot token
    - `GEMINI_API_KEY` - Your Google Gemini API key
-   - `WEBHOOK_SECRET` - Generate a random string (32+ characters)
-   - `WORKER_URL` - Your worker URL (optional, defaults to template)
+   - `WEBHOOK_SECRET` - Any random string
+   - `WORKER_DOMAIN` - Your worker domain (e.g., `leitner-telegram-bot.your-subdomain.workers.dev`)
 
-2. **Set up Cloudflare Environment Variables** (Workers Dashboard → Settings → Environment Variables):
-   - `TELEGRAM_BOT_TOKEN` - Your bot token
-   - `GEMINI_API_KEY` - Your API key  
-   - `WEBHOOK_SECRET` - Same random string as GitHub secret
+4. **Set up Cloudflare Environment Variables:**
+   In Cloudflare dashboard → Workers & Pages → Your Worker → Settings → Variables:
+   - `TELEGRAM_BOT_TOKEN`
+   - `GEMINI_API_KEY`
+   - `WEBHOOK_SECRET`
 
-3. **Deploy:**
+5. **Push to GitHub:**
+   ```bash
+   git add .
+   git commit -m "Initial deployment"
+   git push origin main
+   ```
+
+   Your bot will automatically deploy! 🚀
+
+#### Option 2: Manual Deployment
+
+1. **Clone and setup the project:**
 ```bash
-git add .
-git commit -m "Deploy with automatic webhook"
-git push origin main
+npm install
 ```
 
-**✅ GitHub Actions automatically deploys and configures webhook!**
+2. **Configure environment variables in Cloudflare:**
+   - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token
+   - `GEMINI_API_KEY`: Your Google Gemini API key
+   - `WEBHOOK_SECRET`: A random secret for webhook security
 
-## 🔒 Security Features
-
-- **Password Hashing**: Secure password storage with SHA-256 + salt
-- **Authentication**: JWT-based admin authentication
-- **Input Validation**: All user inputs are validated and sanitized
-- **Environment Security**: No API keys in source code
-- **HTTPS Only**: All communications encrypted
-- **Access Control**: Role-based admin panel access
-
-See [SECURITY.md](SECURITY.md) for detailed security information.
-npm run setup-webhook-local
+3. **Create KV namespace:**
+```bash
+npx wrangler kv:namespace create "LEITNER_DB"
+npx wrangler kv:namespace create "LEITNER_DB" --preview
 ```
 
-### Webhook Management
+4. **Update wrangler.toml with your KV namespace IDs**
 
-#### Automatic Setup in GitHub Actions
-- Set `TELEGRAM_BOT_TOKEN` in GitHub repository secrets
-- Push to main branch
-- GitHub Actions automatically deploys and configures webhook
-- Includes verification and error handling
-
-#### Local Development Setup
+5. **Deploy to Cloudflare Workers:**
 ```bash
-# Method 1: Export token temporarily (Quick testing)
-export TELEGRAM_BOT_TOKEN=your_bot_token_here  # Linux/Mac
-set TELEGRAM_BOT_TOKEN=your_bot_token_here     # Windows
-npm run setup-webhook
+npm run deploy
+```
 
-# Method 2: Use wrangler secrets (Recommended for local dev)
-wrangler secret put TELEGRAM_BOT_TOKEN
-# Note: You'll still need to export for local webhook setup
+6. **Set up the webhook:**
+```bash
+curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
+     -H "Content-Type: application/json" \
+     -d '{"url": "https://your-worker.your-subdomain.workers.dev/webhook"}'
+```
+
 ## Usage
 
 ### Basic Commands
@@ -245,17 +260,7 @@ npm run build
 
 ### Manual Deploy
 ```bash
-# Complete deployment with webhook setup
 npm run deploy
-
-# Deploy only (no webhook configuration)
-npm run deploy-only
-
-# Setup webhook after deployment
-npm run setup-webhook
-
-# Remove webhook
-npm run remove-webhook
 ```
 
 ## Configuration

@@ -1,28 +1,9 @@
-# Dependencies
 node_modules/
 dist/
-
-# Environment files
 .env
-.env.*
-!.env.example
-
-# Build and deployment
+.env.local
 .wrangler/
 *.log
-
-# IDE files
 .DS_Store
 .vscode/settings.json
-.vscode/launch.json
-*.swp
-*.swo
-
-# Temporary files
-*.tmp
-*.temp
 helpcommands.txt
-
-# API keys and secrets (double protection)
-**/secrets.json
-**/*-credentials.json

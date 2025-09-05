@@ -4,21 +4,16 @@
   "description": "Telegram bot for Leitner system language learning with Cloudflare Workers",
   "main": "src/index.ts",
   "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
     "build": "tsc",
-    "type-check": "tsc --noEmit",
-    "deploy": "node scripts/deploy-with-webhook.js",
-    "deploy-only": "wrangler deploy",
-    "setup-webhook": "node scripts/setup-webhook.js",
-    "quick-setup": "node scripts/quick-setup.js",
-    "remove-webhook": "node scripts/setup-webhook.js remove",
-    "remove-webhook-quick": "node scripts/quick-setup.js remove",
+    "start": "wrangler dev --local",
     "logs": "wrangler tail",
     "logs:live": "wrangler tail --format=pretty",
+    "logs:search": "wrangler tail --search",
+    "debug": "wrangler dev --log-level debug",
     "analytics": "wrangler analytics",
-    "test": "echo \"No tests yet\" && exit 0",
-    "lint": "echo \"No linting configured yet\" && exit 0",
-    "format": "echo \"No formatting configured yet\" && exit 0",
-    "clean": "rimraf dist"
+    "health": "curl https://leitner-telegram-bot.t-ak-sa.workers.dev/health"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240925.0",

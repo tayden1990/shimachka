@@ -1,12 +1,7 @@
 import { AdminUser, SupportTicket, DirectMessage, BulkWordAssignment, UserActivity, AdminStats, User, Card } from '../types/index';
-import { Logger } from './logger';
 
 export class AdminService {
-  private logger: Logger;
-  
-  constructor(private kv: any, private env: any) {
-    this.logger = new Logger(env, 'ADMIN_SERVICE');
-  }
+  constructor(private kv: any, private env: any) {}
 
   // Admin Authentication
   async authenticateAdmin(username: string, password: string): Promise<AdminUser | null> {
@@ -16,51 +11,22 @@ export class AdminService {
       
       if (!admin) return null;
       
-      // Verify password using constant-time comparison
-      const isValidPassword = await this.verifyPassword(password, admin.passwordHash);
-      
-      if (isValidPassword) {
+      // In production, use proper password hashing (bcrypt, etc.)
+      // For now, simple check - replace with secure implementation
+      if (admin.password === password) {
         await this.updateAdminLastLogin(admin.id);
-        delete admin.passwordHash; // Don't return password hash
+        delete admin.password; // Don't return password
         return admin;
       }
       
       return null;
     } catch (error) {
-      await this.logger.error('admin_auth_error', 'Admin authentication failed', { username, error: error instanceof Error ? error.message : String(error) });
+      console.error('Admin authentication error:', error);
       return null;
     }
   }
 
-  // Simple password hashing using Web Crypto API (better than plain text)
-  private async hashPassword(password: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password + 'salt_' + password); // Simple salt
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  }
-
-  // Verify password using constant-time comparison
-  private async verifyPassword(password: string, hash: string): Promise<boolean> {
-    const passwordHash = await this.hashPassword(password);
-    
-    // Constant-time comparison to prevent timing attacks
-    if (passwordHash.length !== hash.length) {
-      return false;
-    }
-    
-    let result = 0;
-    for (let i = 0; i < passwordHash.length; i++) {
-      result |= passwordHash.charCodeAt(i) ^ hash.charCodeAt(i);
-    }
-    
-    return result === 0;
-  }
-
   async createAdmin(adminData: Omit<AdminUser, 'id' | 'createdAt'> & { password: string }): Promise<AdminUser> {
-    const passwordHash = await this.hashPassword(adminData.password);
-    
     const admin: AdminUser = {
       id: `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       username: adminData.username,
@@ -72,8 +38,8 @@ export class AdminService {
     };
 
     const adminKey = `admin:${admin.username}`;
-    await this.kv.put(adminKey, JSON.stringify({ ...admin, passwordHash }));
-    await this.kv.put(`admin_by_id:${admin.id}`, JSON.stringify({ ...admin, passwordHash }));
+    await this.kv.put(adminKey, JSON.stringify({ ...admin, password: adminData.password }));
+    await this.kv.put(`admin_by_id:${admin.id}`, JSON.stringify({ ...admin, password: adminData.password }));
     
     return admin;
   }
@@ -87,7 +53,7 @@ export class AdminService {
         await this.kv.put(`admin:${adminData.username}`, JSON.stringify(adminData));
       }
     } catch (error) {
-      await this.logger.error('admin_last_login_update_error', 'Error updating admin last login', { adminId, error: error instanceof Error ? error.message : String(error) });
+      console.error('Error updating admin last login:', error);
     }
   }
 
@@ -108,7 +74,7 @@ export class AdminService {
 
       return { users: paginatedUsers, total, page };
     } catch (error) {
-      await this.logger.error('get_all_users_error', 'Error getting all users', { error: error instanceof Error ? error.message : String(error) });
+      console.error('Error getting all users:', error);
       return { users: [], total: 0, page };
     }
   }
@@ -347,65 +313,6 @@ export class AdminService {
       await this.kv.put(`telegram_notification:${userId}:${Date.now()}`, JSON.stringify(telegramNotification));
     } catch (error) {
       console.error('Error queuing Telegram notification:', error);
-    }
-  }
-
-  private async sendBulkProcessingNotifications(userIds: number[], successCount: number, errorCount: number, totalWords: number): Promise<void> {
-    try {
-      await this.logger.info('bulk_notification_start', `Sending bulk processing notifications to ${userIds.length} users`, {
-        userCount: userIds.length,
-        successCount,
-        errorCount,
-        totalWords
-      });
-
-      for (const userId of userIds) {
-        try {
-          const cardsCreatedForUser = successCount; // This could be more specific per user if needed
-          
-          let notificationMessage = `🎉 **New Cards Added!**\n\n`;
-          notificationMessage += `📚 **${cardsCreatedForUser} new flashcards** have been added to your collection!\n\n`;
-          
-          if (cardsCreatedForUser > 0) {
-            notificationMessage += `✅ Successfully processed: ${successCount}/${totalWords} words\n`;
-            notificationMessage += `🎯 Your cards are ready for study!\n\n`;
-            notificationMessage += `📖 Use /study to start reviewing your new cards\n`;
-            notificationMessage += `� Use /mycards to see all your cards\n`;
-            notificationMessage += `📈 Use /stats to check your progress`;
-          }
-          
-          if (errorCount > 0) {
-            notificationMessage += `\n\n⚠️ ${errorCount} words couldn't be processed due to errors.`;
-          }
-
-          await this.sendTelegramNotification(userId, notificationMessage, 'bulk_cards_added', {
-            cardsAdded: cardsCreatedForUser,
-            successCount,
-            errorCount,
-            totalWords
-          });
-          
-          await this.logger.debug('bulk_notification_sent', `Notification sent to user ${userId}`, {
-            userId,
-            cardsAdded: cardsCreatedForUser
-          });
-          
-        } catch (userError) {
-          await this.logger.warn('bulk_notification_user_failed', `Failed to send notification to user ${userId}`, {
-            userId,
-            error: userError instanceof Error ? userError.message : userError
-          });
-        }
-      }
-      
-      await this.logger.info('bulk_notification_completed', `Bulk processing notifications completed`, {
-        userCount: userIds.length,
-        successCount,
-        errorCount
-      });
-      
-    } catch (error) {
-      await this.logger.error('bulk_notification_error', 'Error sending bulk processing notifications', error, undefined);
     }
   }
 
@@ -816,18 +723,9 @@ export class AdminService {
   }
 
   // AI Bulk Word Processing
-  async processBulkWordsWithAI(words: string[] | string, meaningLanguage: string, definitionLanguage: string, assignUsers?: number[], ctx?: ExecutionContext): Promise<any> {
-    const startTime = Date.now();
-    const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+  async processBulkWordsWithAI(words: string[] | string, meaningLanguage: string, definitionLanguage: string, assignUsers?: number[]): Promise<any> {
     try {
-      await this.logger.info('bulk_processing_start', `Starting bulk words processing`, {
-        jobId,
-        wordsType: Array.isArray(words) ? 'array' : 'string',
-        meaningLanguage,
-        definitionLanguage,
-        assignUsersCount: assignUsers?.length || 0
-      });
+      const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       // Handle both array and string inputs
       const wordLines = Array.isArray(words) 
@@ -837,15 +735,8 @@ export class AdminService {
       const totalWords = wordLines.length;
 
       if (totalWords === 0) {
-        await this.logger.error('bulk_processing_validation_failed', 'No valid words provided', { jobId });
         throw new Error('No valid words provided');
       }
-
-      await this.logger.info('bulk_processing_validated', `Validated ${totalWords} words for processing`, {
-        jobId,
-        totalWords,
-        sampleWords: wordLines.slice(0, 5)
-      });
 
       // Initialize job progress
       const jobProgress = {
@@ -861,137 +752,51 @@ export class AdminService {
       };
 
       await this.kv.put(`bulk_job:${jobId}`, JSON.stringify(jobProgress));
-      await this.logger.debug('bulk_processing_job_created', `Created job progress entry in KV`, { jobId });
 
-      // Start processing with proper background handling for Cloudflare Workers
-      const processingPromise = this.processWordsAsync(jobId, wordLines, meaningLanguage, definitionLanguage, assignUsers || [])
-        .catch(error => {
-          this.logger.error('bulk_processing_background_error', `Background processing failed for job ${jobId}`, error);
-        });
-      
-      // Use ctx.waitUntil() if available to ensure background processing completes
-      if (ctx && ctx.waitUntil) {
-        await this.logger.debug('bulk_processing_background_scheduled', `Scheduled background processing with ctx.waitUntil`, { jobId });
-        ctx.waitUntil(processingPromise);
-      } else {
-        await this.logger.warn('bulk_processing_background_fallback', `No execution context available, using fallback processing`, { jobId });
-        // Fallback - start processing but don't wait
-        processingPromise;
-      }
+      // Start processing asynchronously (mock processing for now since no real AI API)
+      this.processWordsAsync(jobId, wordLines, meaningLanguage, definitionLanguage, assignUsers || []);
 
-      await this.logger.logPerformance('bulk_processing_setup_complete', startTime, { jobId, totalWords });
       return { jobId, totalWords };
-      
     } catch (error) {
-      await this.logger.error('bulk_processing_setup_failed', 'Error starting bulk words processing', error, undefined);
+      console.error('Error starting bulk words processing:', error);
       throw error;
     }
   }
 
   private async processWordsAsync(jobId: string, words: string[], meaningLanguage: string, definitionLanguage: string, assignUsers: number[]): Promise<void> {
-    const startTime = Date.now();
-    
     try {
-      await this.logger.info('async_processing_start', `Starting async processing for job ${jobId}`, {
-        jobId,
-        wordsCount: words.length,
-        meaningLanguage,
-        definitionLanguage,
-        assignUsersCount: assignUsers.length
-      });
-
+      console.log(`Starting async processing for job ${jobId} with ${words.length} words`);
       const jobProgress = await this.kv.get(`bulk_job:${jobId}`, 'json');
       
       if (!jobProgress) {
-        await this.logger.error('async_processing_job_not_found', `Job ${jobId} not found in KV store`, { jobId });
+        console.error(`Job ${jobId} not found in KV store`);
         return;
-      }
-      
-      // If no users are specified, assign to all users in the system
-      let targetUsers = assignUsers;
-      if (!assignUsers || assignUsers.length === 0) {
-        await this.logger.info('async_processing_get_all_users', 'No users specified, getting all users in the system', { jobId });
-        
-        try {
-          const allUsersResult = await this.getAllUsers();
-          targetUsers = allUsersResult.users.map(user => {
-            const userId = typeof user.id === 'string' ? parseInt(user.id) : user.id;
-            return userId;
-          });
-          
-          await this.logger.info('async_processing_users_found', `Found ${targetUsers.length} users in the system`, {
-            jobId,
-            userCount: targetUsers.length,
-            userIds: targetUsers
-          });
-          
-          jobProgress.logs.push(`No users specified - assigning to all ${targetUsers.length} users in the system`);
-        } catch (error) {
-          await this.logger.error('async_processing_get_users_failed', 'Failed to get all users', error, undefined);
-          jobProgress.logs.push('Warning: Failed to get user list, no cards will be created');
-          targetUsers = [];
-        }
-      } else {
-        await this.logger.info('async_processing_users_specified', `Assigning to ${targetUsers.length} specified users`, {
-          jobId,
-          userCount: targetUsers.length,
-          userIds: targetUsers
-        });
-        jobProgress.logs.push(`Assigning to ${targetUsers.length} specified users`);
       }
       
       for (let i = 0; i < words.length; i++) {
         const word = words[i].trim();
         if (!word) continue;
 
-        const wordStartTime = Date.now();
-        
         try {
-          await this.logger.debug('async_processing_word_start', `Processing word ${i + 1}/${words.length}: "${word}"`, {
-            jobId,
-            wordIndex: i + 1,
-            totalWords: words.length,
-            word
-          });
-          
+          console.log(`Processing word ${i + 1}/${words.length}: "${word}"`);
           jobProgress.logs.push(`Processing word ${i + 1}/${words.length}: "${word}"`);
           
           // Here you would call your AI service to get meaning and definition
+          // For now, using placeholder
           const aiResult = await this.getWordMeaningFromAI(word, meaningLanguage, definitionLanguage);
-          
-          await this.logger.debug('async_processing_ai_result', `AI processing completed for "${word}"`, {
-            jobId,
-            word,
-            success: aiResult.success,
-            hasError: !!aiResult.error
-          });
+          console.log(`AI result for "${word}":`, aiResult);
           
           if (aiResult.success) {
-            await this.logger.info('async_processing_creating_cards', `Creating cards for "${word}" for ${targetUsers.length} users`, {
-              jobId,
-              word,
-              userCount: targetUsers.length,
-              meaning: aiResult.meaning?.substring(0, 100),
-              definition: aiResult.definition?.substring(0, 100)
-            });
-            
-            let cardsCreated = 0;
-            let cardErrors = 0;
+            console.log(`Creating cards for "${word}" for ${assignUsers.length} users`);
             
             // Create cards for assigned users
-            for (const userId of targetUsers) {
+            for (const userId of assignUsers) {
               try {
+                console.log(`Creating card for user ${userId} with word "${word}"`);
                 await this.createCardForUser(userId, word, aiResult.meaning, aiResult.definition);
-                cardsCreated++;
-                jobProgress.logs.push(`✓ Created card for user ${userId}: "${word}"`);
+                console.log(`Successfully created card for user ${userId}`);
               } catch (cardError) {
-                cardErrors++;
-                await this.logger.warn('async_processing_card_creation_failed', `Failed to create card for user ${userId}`, {
-                  jobId,
-                  word,
-                  userId,
-                  error: cardError instanceof Error ? cardError.message : cardError
-                });
+                console.error(`Failed to create card for user ${userId}:`, cardError);
                 jobProgress.logs.push(`⚠ Warning: Failed to create card for user ${userId}: ${cardError}`);
               }
             }
@@ -1001,27 +806,12 @@ export class AdminService {
               word,
               status: 'success',
               meaning: aiResult.meaning,
-              definition: aiResult.definition,
-              cardsCreated,
-              cardErrors
+              definition: aiResult.definition
             });
-            
-            await this.logger.info('async_processing_word_success', `Successfully processed "${word}"`, {
-              jobId,
-              word,
-              cardsCreated,
-              cardErrors,
-              processingTime: Date.now() - wordStartTime
-            });
-            
-            jobProgress.logs.push(`✓ Successfully processed "${word}" and created ${cardsCreated} cards`);
+            jobProgress.logs.push(`✓ Successfully processed "${word}" and created ${assignUsers.length} cards`);
+            console.log(`Successfully completed processing for "${word}"`);
           } else {
-            await this.logger.error('async_processing_ai_failed', `AI processing failed for "${word}"`, {
-              jobId,
-              word,
-              error: aiResult.error
-            });
-            
+            console.error(`AI processing failed for "${word}":`, aiResult.error);
             jobProgress.errorCount++;
             jobProgress.results.push({
               word,
@@ -1031,8 +821,7 @@ export class AdminService {
             jobProgress.logs.push(`✗ Failed to process "${word}": ${aiResult.error}`);
           }
         } catch (error) {
-          await this.logger.error('async_processing_word_error', `Critical error processing word "${word}"`, error, undefined);
-          
+          console.error(`Critical error processing word "${word}":`, error);
           jobProgress.errorCount++;
           jobProgress.results.push({
             word,
@@ -1046,18 +835,9 @@ export class AdminService {
         jobProgress.processedWords = i + 1;
         try {
           await this.kv.put(`bulk_job:${jobId}`, JSON.stringify(jobProgress));
-          
-          if (i % 10 === 0 || i === words.length - 1) { // Log every 10 words
-            await this.logger.debug('async_processing_progress_update', `Updated job progress`, {
-              jobId,
-              processedWords: jobProgress.processedWords,
-              totalWords: words.length,
-              successCount: jobProgress.successCount,
-              errorCount: jobProgress.errorCount
-            });
-          }
+          console.log(`Updated job progress: ${jobProgress.processedWords}/${words.length} words processed`);
         } catch (kvError) {
-          await this.logger.error('async_processing_kv_update_failed', `Failed to update job progress for job ${jobId}`, kvError, undefined);
+          console.error(`Failed to update job progress for job ${jobId}:`, kvError);
         }
       }
 
@@ -1065,21 +845,10 @@ export class AdminService {
       jobProgress.endTime = new Date().toISOString();
       jobProgress.logs.push(`Job completed. Success: ${jobProgress.successCount}, Errors: ${jobProgress.errorCount}`);
       
-      await this.logger.info('async_processing_completed', `Job ${jobId} completed successfully`, {
-        jobId,
-        successCount: jobProgress.successCount,
-        errorCount: jobProgress.errorCount,
-        totalProcessingTime: Date.now() - startTime
-      });
-      
-      // Send Telegram notifications to users about their new cards
-      await this.sendBulkProcessingNotifications(targetUsers, jobProgress.successCount, jobProgress.errorCount, words.length);
-      
+      console.log(`Job ${jobId} completed successfully. Success: ${jobProgress.successCount}, Errors: ${jobProgress.errorCount}`);
       await this.kv.put(`bulk_job:${jobId}`, JSON.stringify(jobProgress));
-      
     } catch (error) {
-      await this.logger.critical('async_processing_critical_error', `Critical error in async word processing for job ${jobId}`, error, undefined);
-      
+      console.error(`Critical error in async word processing for job ${jobId}:`, error);
       try {
         const jobProgress = await this.kv.get(`bulk_job:${jobId}`, 'json');
         if (jobProgress) {
@@ -1089,31 +858,24 @@ export class AdminService {
           await this.kv.put(`bulk_job:${jobId}`, JSON.stringify(jobProgress));
         }
       } catch (kvError) {
-        await this.logger.error('async_processing_error_update_failed', `Failed to update job status after critical error`, kvError, undefined);
+        console.error(`Failed to update job status in KV for job ${jobId}:`, kvError);
       }
     }
   }
 
   private async getWordMeaningFromAI(word: string, meaningLanguage: string, definitionLanguage: string): Promise<any> {
-    const startTime = Date.now();
-    
     // Check if we have dummy keys (indicating local testing)
     const geminiKey = this.env.GEMINI_API_KEY;
     const isDemoMode = !geminiKey || geminiKey.includes('dummy') || 
                       geminiKey === 'dummy_gemini_key_for_local_testing';
     
     try {
-      await this.logger.debug('ai_processing_start', `Processing word "${word}" with AI`, {
-        word,
-        meaningLanguage,
-        definitionLanguage,
-        isDemoMode,
-        hasApiKey: !!geminiKey
-      });
+      // For demo purposes with dummy API keys, return mock data
+      // In production, this would call the real Gemini AI API
+      
+      console.log(`Processing word "${word}" - Demo mode: ${isDemoMode}`);
       
       if (isDemoMode) {
-        await this.logger.info('ai_processing_demo_mode', `Using demo mode for word "${word}"`, { word });
-        
         // Return mock AI response for testing
         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
         
@@ -1128,12 +890,6 @@ export class AdminService {
                        `${word} translated to ${meaningLanguage}`;
         const definition = `A comprehensive definition of "${word}" in ${definitionLanguage}. This is a mock definition for testing purposes.`;
         
-        await this.logger.logPerformance('ai_processing_demo_complete', startTime, {
-          word,
-          meaning: meaning.substring(0, 50),
-          definition: definition.substring(0, 50)
-        });
-        
         return {
           success: true,
           meaning,
@@ -1142,14 +898,14 @@ export class AdminService {
       }
       
       // TEMPORARY: Force fallback mode for now since real API is hanging
-      await this.logger.warn('ai_processing_fallback_mode', `Using fallback mode for "${word}" due to API reliability issues`, { word });
+      // This ensures processing continues while we debug the real API issue
+      console.log(`Using fallback mode for "${word}" due to API reliability issues`);
+      
+      // Real AI API call for production
+      console.log(`API Key format check: ${geminiKey ? `Length: ${geminiKey.length}, Starts with: ${geminiKey.substring(0, 10)}...` : 'No API key'}`);
       
       // Validate API key format
       if (!geminiKey || geminiKey.length < 20) {
-        await this.logger.error('ai_processing_invalid_key', 'Invalid or missing Gemini API key', {
-          hasKey: !!geminiKey,
-          keyLength: geminiKey?.length || 0
-        });
         throw new Error('Invalid or missing Gemini API key');
       }
       
@@ -1182,11 +938,7 @@ export class AdminService {
       const meaning = wordData?.[meaningLanguage] || `${word} (translated to ${meaningLanguage})`;
       const definition = wordData?.definition || `A comprehensive definition of "${word}" in ${definitionLanguage}. This word describes concepts related to ${word}.`;
       
-      await this.logger.logPerformance('ai_processing_fallback_complete', startTime, {
-        word,
-        meaning: meaning.substring(0, 50),
-        definition: definition.substring(0, 50)
-      });
+      console.log(`Fallback result for "${word}": meaning="${meaning}", definition="${definition}"`);
       
       return {
         success: true,
@@ -1194,7 +946,7 @@ export class AdminService {
         definition
       };
     } catch (error) {
-      await this.logger.error('ai_processing_failed', `AI processing error for word "${word}"`, error, undefined);
+      console.error(`AI processing error for word "${word}":`, error);
       
       // If real API fails, provide a fallback response to keep processing going
       if (!isDemoMode) {
@@ -1215,40 +967,33 @@ export class AdminService {
 
   private async createCardForUser(userId: number | string, word: string, meaning: string, definition: string): Promise<void> {
     try {
-      console.log(`createCardForUser called: userId=${userId} (${typeof userId}), word="${word}"`);
       const cards = await this.kv.get(`user_cards:${userId}`, 'json') || [];
-      console.log(`Retrieved ${cards.length} existing cards for user ${userId}`);
       
       const newCard = {
         id: `card_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        userId: parseInt(userId.toString()),
         word,
-        translation: meaning,
+        meaning,
         definition,
-        sourceLanguage: 'en', // Default, could be dynamic
-        targetLanguage: 'en', // Default, could be dynamic
         box: 1,
-        nextReviewAt: new Date().toISOString(),
+        nextReview: new Date().toISOString(),
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
         reviewCount: 0,
-        correctCount: 0
+        correctCount: 0,
+        difficulty: 0.3,
+        interval: 1
       };
 
       cards.push(newCard);
-      console.log(`Adding new card, total cards will be: ${cards.length}`);
       await this.kv.put(`user_cards:${userId}`, JSON.stringify(cards));
-      console.log(`Saved cards to KV: user_cards:${userId}`);
       
       // Update user's schedule
       const schedule = await this.kv.get(`schedule:${userId}`, 'json') || { reviews: [] };
       schedule.reviews.push({
         cardId: newCard.id,
-        dueDate: newCard.nextReviewAt,
+        dueDate: newCard.nextReview,
         box: 1
       });
       await this.kv.put(`schedule:${userId}`, JSON.stringify(schedule));
-      console.log(`Updated schedule for user ${userId}`);
     } catch (error) {
       console.error('Error creating card for user:', error);
       throw error;

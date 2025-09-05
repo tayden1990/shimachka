@@ -3,22 +3,14 @@ import { WordExtractionRequest, ExtractedWord, LanguageCode, LANGUAGES } from '.
 
 export class WordExtractor {
   private genAI: GoogleGenerativeAI;
-  private apiKey: string;
-  private isAvailable: boolean = true;
 
   constructor(apiKey: string) {
-    this.apiKey = apiKey;
     this.genAI = new GoogleGenerativeAI(apiKey);
   }
 
   async extractWords(request: WordExtractionRequest): Promise<ExtractedWord[]> {
-    // Check if Gemini is available in this region
-    if (!this.isAvailable) {
-      return this.fallbackWordExtraction(request);
-    }
-
-    // Use the stable Gemini 1.5 Flash model
-    const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  // Use the stable Gemini 1.5 Flash model
+  const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const sourceLanguageName = LANGUAGES[request.sourceLanguage as LanguageCode] || request.sourceLanguage;
     const targetLanguageName = LANGUAGES[request.targetLanguage as LanguageCode] || request.targetLanguage;
@@ -96,21 +88,12 @@ Return only the JSON array, with no extra text or explanation.
       })).filter(word => word.word && word.translation && word.definition);
 
     } catch (error) {
-      // Check if it's a geographic restriction error
-      if (error instanceof Error && 
-          (error.message.includes('location is not supported') || 
-           error.message.includes('User location') ||
-           error.message.includes('not available in your region'))) {
-        this.isAvailable = false;
-        console.log('Gemini API not available in this region, using fallback method');
-        return this.fallbackWordExtraction(request);
-      }
-      
-      // Create logger instance for error reporting
       console.error('Error extracting words:', error);
       throw new Error('Failed to extract words from the topic');
     }
-  }  async translateWord(word: string, sourceLanguage: string, targetLanguage: string): Promise<ExtractedWord> {
+  }
+
+  async translateWord(word: string, sourceLanguage: string, targetLanguage: string): Promise<ExtractedWord> {
   const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const sourceLanguageName = LANGUAGES[sourceLanguage as LanguageCode] || sourceLanguage;
@@ -212,89 +195,5 @@ Return only the language code, no additional text.
       console.error('Error detecting language:', error);
       return 'en'; // Default to English
     }
-  }
-
-  // Fallback method when Gemini API is not available
-  private fallbackWordExtraction(request: WordExtractionRequest): ExtractedWord[] {
-    const wordCount = request.count || 15;
-    const sourceLanguageName = LANGUAGES[request.sourceLanguage as LanguageCode] || request.sourceLanguage;
-    const targetLanguageName = LANGUAGES[request.targetLanguage as LanguageCode] || request.targetLanguage;
-    
-    // Predefined vocabulary banks for common topics
-    const vocabularyBanks: { [key: string]: { [lang: string]: ExtractedWord[] } } = {
-      'food': {
-        'en': [
-          { word: 'bread', translation: 'pan', definition: 'A staple food made from flour and water', context: 'I eat bread for breakfast.' },
-          { word: 'water', translation: 'agua', definition: 'A clear liquid essential for life', context: 'Please give me water.' },
-          { word: 'apple', translation: 'manzana', definition: 'A red or green fruit', context: 'An apple a day keeps the doctor away.' },
-          { word: 'chicken', translation: 'pollo', definition: 'A type of bird commonly eaten', context: 'We had chicken for dinner.' },
-          { word: 'rice', translation: 'arroz', definition: 'A grain used as a staple food', context: 'Rice is popular in Asia.' }
-        ],
-        'es': [
-          { word: 'pan', translation: 'bread', definition: 'Alimento básico hecho de harina y agua', context: 'Como pan en el desayuno.' },
-          { word: 'agua', translation: 'water', definition: 'Líquido transparente esencial para la vida', context: 'Por favor, dame agua.' },
-          { word: 'manzana', translation: 'apple', definition: 'Una fruta roja o verde', context: 'Una manzana al día mantiene alejado al médico.' }
-        ]
-      },
-      'travel': {
-        'en': [
-          { word: 'hotel', translation: 'hotel', definition: 'A place where travelers stay', context: 'We booked a hotel for our vacation.' },
-          { word: 'airport', translation: 'aeropuerto', definition: 'A place where planes take off and land', context: 'The airport is very busy today.' },
-          { word: 'ticket', translation: 'boleto', definition: 'A document for transportation', context: 'I need to buy a train ticket.' },
-          { word: 'passport', translation: 'pasaporte', definition: 'An official document for international travel', context: 'Don\'t forget your passport.' }
-        ]
-      },
-      'family': {
-        'en': [
-          { word: 'mother', translation: 'madre', definition: 'A female parent', context: 'My mother is very kind.' },
-          { word: 'father', translation: 'padre', definition: 'A male parent', context: 'My father works in an office.' },
-          { word: 'sister', translation: 'hermana', definition: 'A female sibling', context: 'I have one sister.' },
-          { word: 'brother', translation: 'hermano', definition: 'A male sibling', context: 'My brother is older than me.' }
-        ]
-      }
-    };
-
-    // Find matching vocabulary bank
-    const topic = request.topic.toLowerCase();
-    let matchedWords: ExtractedWord[] = [];
-
-    // Look for topic matches
-    for (const [bankTopic, languages] of Object.entries(vocabularyBanks)) {
-      if (topic.includes(bankTopic) || bankTopic.includes(topic)) {
-        const langWords = languages[request.sourceLanguage] || languages['en'];
-        if (langWords) {
-          matchedWords = langWords.slice(0, wordCount);
-          break;
-        }
-      }
-    }
-
-    // If no specific match, use general vocabulary
-    if (matchedWords.length === 0) {
-      const generalWords = vocabularyBanks['food'][request.sourceLanguage] || vocabularyBanks['food']['en'];
-      matchedWords = generalWords.slice(0, Math.min(5, wordCount));
-    }
-
-    // Pad with basic words if needed
-    while (matchedWords.length < wordCount && matchedWords.length < 10) {
-      const basicWords = [
-        { word: 'hello', translation: 'hola', definition: 'A greeting', context: 'Hello, how are you?' },
-        { word: 'goodbye', translation: 'adiós', definition: 'A farewell', context: 'Goodbye, see you tomorrow.' },
-        { word: 'please', translation: 'por favor', definition: 'A polite request word', context: 'Please help me.' },
-        { word: 'thank you', translation: 'gracias', definition: 'An expression of gratitude', context: 'Thank you for your help.' },
-        { word: 'yes', translation: 'sí', definition: 'An affirmative response', context: 'Yes, I agree.' },
-        { word: 'no', translation: 'no', definition: 'A negative response', context: 'No, I don\'t want that.' }
-      ];
-      
-      for (const word of basicWords) {
-        if (!matchedWords.find(w => w.word === word.word) && matchedWords.length < wordCount) {
-          matchedWords.push(word);
-        }
-      }
-      break;
-    }
-
-    console.log(`Fallback word extraction: Generated ${matchedWords.length} words for topic "${request.topic}"`);
-    return matchedWords.slice(0, wordCount);
   }
 }

@@ -7,39 +7,10 @@ on:
       - master
   workflow_dispatch: # Allow manual deployment
 
-env:
-  NODE_VERSION: '18'
-
 jobs:
-  test-and-build:
-    runs-on: ubuntu-latest
-    name: Test and Build
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: TypeScript type check
-        run: npx tsc --noEmit
-
-      - name: Build TypeScript
-        run: npm run build
-
   deploy:
     runs-on: ubuntu-latest
-    name: Deploy to Production
-    needs: test-and-build
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    environment: production
+    name: Deploy to Cloudflare Workers
     
     steps:
       - name: Checkout code
@@ -48,7 +19,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '18'
           cache: 'npm'
 
       - name: Install dependencies
@@ -63,34 +34,17 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
 
-      - name: Wait for deployment to propagate
-        run: sleep 10
-
-      - name: Setup Telegram Webhook
+      - name: Set Telegram Webhook
         if: success()
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          WORKER_URL: ${{ secrets.WORKER_URL || 'https://leitner-telegram-bot.t-ak-sa.workers.dev' }}
-          GITHUB_ACTIONS: true
         run: |
-          echo "🚀 Setting up Telegram webhook after deployment..."
-          node scripts/setup-webhook.js
+          sleep 10  # Wait for deployment to propagate
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/setWebhook" \
+               -H "Content-Type: application/json" \
+               -d "{\"url\": \"https://${{ secrets.WORKER_DOMAIN }}/webhook\", \"secret_token\": \"${{ secrets.WEBHOOK_SECRET }}\"}"
         
-      - name: Deployment Summary
-        if: always()
+      - name: Verify Webhook
+        if: success()
         run: |
-          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Worker URL**: ${{ secrets.WORKER_URL || 'https://leitner-telegram-bot.t-ak-sa.workers.dev' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo ""
-          echo "🎉 Deployment completed!"
-          echo "📱 Bot URL: https://leitner-telegram-bot.t-ak-sa.workers.dev"
-          echo "🔧 Admin Panel: https://leitner-telegram-bot.t-ak-sa.workers.dev/admin"
-          echo "📊 Health Check: https://leitner-telegram-bot.t-ak-sa.workers.dev/health"
+          response=$(curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/getWebhookInfo")
+          echo "Webhook info: $response"

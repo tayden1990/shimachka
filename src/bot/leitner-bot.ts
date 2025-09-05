@@ -64,7 +64,6 @@ export class LeitnerBot {
       }
     }
   }
-
   // --- Notification System ---
   async sendPendingNotifications(): Promise<void> {
     try {
@@ -460,68 +459,6 @@ Choose what you'd like to do:
     await this.sendMessage(chatId, `🗂️ Your Words:\n${lines.join('\n')}${cards.length > 10 ? '\n...and more' : ''}`);
   }
 
-  // Show user's cards with detailed information
-  private async sendUserCards(chatId: number, userId: number): Promise<void> {
-    const cards = await this.userManager.getUserCards(userId);
-    const userLang = await this.getUserInterfaceLanguage(userId);
-    const texts = languageManager.getTexts(userLang);
-    
-    if (!cards.length) {
-      await this.sendMessage(chatId, 
-        `You have no flashcards yet! 📚\n\n✨ Get started:\n• Use /topic to generate vocabulary\n• Use /add to add cards manually\n\n🎯 Start learning today!`
-      );
-      return;
-    }
-
-    // Group cards by box
-    const boxCounts = [1,2,3,4,5].map(box => cards.filter(c => c.box === box).length);
-    const totalCards = cards.length;
-    const cardsDue = cards.filter(card => new Date(card.nextReviewAt).getTime() <= new Date().getTime()).length;
-
-    let message = `📚 **Your Flashcard Collection**\n\n`;
-    message += `📊 **Total Cards:** ${totalCards}\n`;
-    message += `⏰ **Due for Review:** ${cardsDue}\n\n`;
-    
-    message += `📦 **Cards by Box:**\n`;
-    for (let i = 0; i < 5; i++) {
-      const boxNum = i + 1;
-      const count = boxCounts[i];
-      const emoji = count > 0 ? '📦' : '📭';
-      message += `${emoji} Box ${boxNum}: ${count} cards\n`;
-    }
-
-    message += `\n🔥 **Recent Cards:**\n`;
-    const recentCards = cards
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 5);
-    
-    recentCards.forEach(card => {
-      const status = new Date(card.nextReviewAt).getTime() <= new Date().getTime() ? '⏰' : '📅';
-      const meaning = card.translation || card.definition;
-      message += `${status} ${card.word} — ${meaning}\n`;
-    });
-
-    if (cards.length > 5) {
-      message += `\n...and ${cards.length - 5} more cards`;
-    }
-
-    // Add action buttons
-    const keyboard: TelegramInlineKeyboard = {
-      inline_keyboard: [
-        [
-          { text: '📚 Study Now', callback_data: 'start_study' },
-          { text: '📊 Stats', callback_data: 'view_stats' }
-        ],
-        [
-          { text: '➕ Add Card', callback_data: 'add_card' },
-          { text: '🎯 Add Topic', callback_data: 'add_topic' }
-        ]
-      ]
-    };
-
-    await this.sendMessage(chatId, message, keyboard);
-  }
-
   // Show user's topics (first 10 for now)
   private async sendUserTopics(chatId: number, userId: number): Promise<void> {
     const topics = await this.userManager.getUserTopics(userId);
@@ -564,9 +501,6 @@ Choose what you'd like to do:
       case '/mywords':
         await this.sendUserWords(chatId, userId);
         break;
-      case '/mycards':
-        await this.sendUserCards(chatId, userId);
-        break;
       case '/mytopics':
         await this.sendUserTopics(chatId, userId);
         break;
@@ -604,9 +538,6 @@ Choose what you'd like to do:
         }
         break;
       case '/stats':
-        await this.sendUserStatistics(chatId, userId);
-        break;
-      case '/progress':
         await this.sendUserStatistics(chatId, userId);
         break;
       case '/settings':

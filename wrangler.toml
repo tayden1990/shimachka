@@ -11,8 +11,10 @@ minify = true
 binding = "AE"
 
 [vars]
-# Environment variables will be set as secrets via wrangler secret put
-# No dummy values needed - secrets will override
+# Environment variables - set these in your Cloudflare dashboard
+TELEGRAM_BOT_TOKEN = "dummy_token_for_local_testing"
+GEMINI_API_KEY = "dummy_gemini_key_for_local_testing"
+WEBHOOK_SECRET = "dummy_webhook_secret_for_local_testing"
 
 [[kv_namespaces]]
 binding = "LEITNER_DB"
@@ -21,3 +23,16 @@ id = "60580ee076484bd284f092cb5c6c1f79"
 
 [triggers]
 crons = ["0 8,14,20 * * *"]  # Daily reminders at 8 AM, 2 PM, and 8 PM
+
+# Staging environment
+[env.staging]
+name = "leitner-telegram-bot-staging"
+compatibility_flags = ["nodejs_compat"]
+minify = false  # Keep unminified for easier debugging in staging
+
+[[env.staging.kv_namespaces]]
+binding = "LEITNER_DB"
+id = "60580ee076484bd284f092cb5c6c1f79"
+
+[env.staging.triggers]
+crons = ["0 9,15,21 * * *"]  # Staging reminders at different times
