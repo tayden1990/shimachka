@@ -64,7 +64,7 @@ export default {
       }
 
       // Initialize services with error handling
-      const userManager = new UserManager(env.LEITNER_DB);
+      const userManager = new UserManager(env.LEITNER_DB, env);
       const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
       const scheduleManager = new ScheduleManager(env.LEITNER_DB);
       const adminService = new AdminService(env.LEITNER_DB, env);

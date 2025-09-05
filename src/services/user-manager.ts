@@ -1,11 +1,16 @@
 import { User, Card, Topic, ReviewSession } from '../types';
+import { KVOptimizer } from './kv-optimizer';
 
 export class UserManager {
-  constructor(private kv: KVNamespace) {}
+  private kvOptimizer: KVOptimizer;
+
+  constructor(private kv: KVNamespace, env?: any) {
+    this.kvOptimizer = new KVOptimizer(kv, env);
+  }
 
   async getUser(userId: number): Promise<User | null> {
     const userKey = `user:${userId}`;
-    const userData = await this.kv.get(userKey);
+    const userData = await this.kvOptimizer.get(userKey);
     return userData ? JSON.parse(userData) : null;
   }
 
@@ -24,7 +29,7 @@ export class UserManager {
     };
 
     const userKey = `user:${user.id}`;
-    await this.kv.put(userKey, JSON.stringify(user));
+    await this.kvOptimizer.put(userKey, JSON.stringify(user));
     return user;
   }
 
@@ -34,7 +39,7 @@ export class UserManager {
 
     const updatedUser = { ...user, ...updates, lastActiveAt: new Date().toISOString() };
     const userKey = `user:${userId}`;
-    await this.kv.put(userKey, JSON.stringify(updatedUser));
+    await this.kvOptimizer.put(userKey, JSON.stringify(updatedUser));
     return updatedUser;
   }
 
