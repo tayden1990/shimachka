@@ -6,7 +6,6 @@ export function getSimpleAdminHTML(): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Admin Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
 <body class="bg-gray-50">
     <div x-data="simpleAdmin()" x-init="init()">
@@ -398,7 +397,6 @@ export function getSimpleAdminHTML(): string {
                                 activeUsers: 'Error loading'
                             };
                         }
-                        }
                     } catch (error) {
                         this.stats = {
                             totalUsers: 'Error',
@@ -620,6 +618,9 @@ export function getSimpleAdminHTML(): string {
             };
         }
     </script>
+    
+    <!-- Load Alpine.js after our function is defined -->
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </body>
 </html>`;
 }
