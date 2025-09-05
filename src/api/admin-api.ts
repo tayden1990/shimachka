@@ -1,16 +1,34 @@
 import { AdminService } from '../services/admin-service';
 import { UserManager } from '../services/user-manager';
+import { Logger } from '../services/logger';
+import { HealthCheckService } from '../services/health-check';
 
 export class AdminAPI {
+  private logger: Logger;
+  private healthCheckService: HealthCheckService;
+  
   constructor(
     private adminService: AdminService,
-    private userManager: UserManager
-  ) {}
+    private userManager: UserManager,
+    private env: any
+  ) {
+    this.logger = new Logger(env, 'ADMIN_API');
+    this.healthCheckService = new HealthCheckService(env);
+  }
 
   async handleAdminRequest(request: Request, ctx?: ExecutionContext): Promise<Response> {
+    const startTime = Date.now();
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
+    
+    await this.logger.info('admin_request_start', `Admin request received`, {
+      method,
+      path,
+      userAgent: request.headers.get('User-Agent'),
+      ip: request.headers.get('CF-Connecting-IP'),
+      referer: request.headers.get('Referer')
+    });
 
     // CORS headers for admin panel
     const corsHeaders = {
@@ -108,6 +126,18 @@ export class AdminAPI {
       if (path.startsWith('/admin/bulk-words-progress/') && method === 'GET') {
         const jobId = path.split('/')[3];
         return await this.handleBulkWordsProgress(jobId, corsHeaders);
+      }
+      
+      if (path === '/admin/health' && method === 'GET') {
+        return await this.handleHealthCheck(corsHeaders);
+      }
+      
+      if (path === '/admin/logs' && method === 'GET') {
+        return await this.handleGetLogs(url, corsHeaders);
+      }
+      
+      if (path === '/admin/metrics' && method === 'GET') {
+        return await this.handleGetMetrics(corsHeaders);
       }
       
       if (path.startsWith('/admin/user-messages/')) {
@@ -496,12 +526,27 @@ export class AdminAPI {
   }
 
   private async handleBulkWordsAI(request: Request, corsHeaders: any, ctx?: ExecutionContext): Promise<Response> {
+    const startTime = Date.now();
+    
     try {
       const body: any = await request.json();
       const { words, meaningLanguage, definitionLanguage, assignUsers } = body;
       
+      await this.logger.info('bulk_words_ai_request', 'Processing bulk words AI request', {
+        wordsType: Array.isArray(words) ? 'array' : 'string',
+        wordsCount: Array.isArray(words) ? words.length : words.split('\n').length,
+        meaningLanguage,
+        definitionLanguage,
+        assignUsersCount: assignUsers?.length || 0
+      });
+      
       // Start the AI processing job
       const jobResult = await this.adminService.processBulkWordsWithAI(words, meaningLanguage, definitionLanguage, assignUsers, ctx);
+      
+      await this.logger.logPerformance('bulk_words_ai_started', startTime, {
+        jobId: jobResult.jobId,
+        totalWords: jobResult.totalWords
+      });
       
       return new Response(JSON.stringify({ 
         jobId: jobResult.jobId,
@@ -511,7 +556,8 @@ export class AdminAPI {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } catch (error) {
-      console.error('Error processing bulk words with AI:', error);
+      await this.logger.error('bulk_words_ai_failed', 'Error processing bulk words with AI', error);
+      
       return new Response(JSON.stringify({ error: 'Failed to start AI processing' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -521,13 +567,143 @@ export class AdminAPI {
 
   private async handleBulkWordsProgress(jobId: string, corsHeaders: any): Promise<Response> {
     try {
+      await this.logger.debug('bulk_words_progress_request', `Getting progress for job ${jobId}`, { jobId });
+      
       const progress = await this.adminService.getBulkWordsProgress(jobId);
       return new Response(JSON.stringify(progress), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } catch (error) {
-      console.error('Error getting bulk words progress:', error);
+      await this.logger.error('bulk_words_progress_failed', 'Error getting bulk words progress', error);
+      
       return new Response(JSON.stringify({ error: 'Failed to get progress' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleHealthCheck(corsHeaders: any): Promise<Response> {
+    try {
+      await this.logger.debug('health_check_request', 'Health check requested');
+      
+      const healthStatus = await this.healthCheckService.getFullHealthStatus();
+      
+      const statusCode = healthStatus.status === 'healthy' ? 200 : 
+                        healthStatus.status === 'degraded' ? 200 : 503;
+      
+      return new Response(JSON.stringify(healthStatus), {
+        status: statusCode,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      await this.logger.error('health_check_failed', 'Health check failed', error);
+      
+      return new Response(JSON.stringify({ 
+        status: 'unhealthy',
+        error: 'Health check service failed',
+        timestamp: new Date().toISOString()
+      }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleGetLogs(url: URL, corsHeaders: any): Promise<Response> {
+    try {
+      const limit = parseInt(url.searchParams.get('limit') || '100');
+      const level = url.searchParams.get('level') || '';
+      const component = url.searchParams.get('component') || '';
+      const startDate = url.searchParams.get('startDate') || '';
+      const endDate = url.searchParams.get('endDate') || '';
+      
+      await this.logger.debug('logs_request', 'Logs requested', {
+        limit,
+        level,
+        component,
+        startDate,
+        endDate
+      });
+      
+      // Get logs from KV store
+      const logsResult = await this.env.LEITNER_DB.list({ prefix: 'log:' });
+      const logs: any[] = [];
+      
+      for (const key of logsResult.keys.slice(0, limit)) {
+        try {
+          const logEntry = await this.env.LEITNER_DB.get(key.name, 'json') as any;
+          if (logEntry) {
+            // Apply filters
+            if (level && logEntry.level !== level) continue;
+            if (component && logEntry.component !== component) continue;
+            if (startDate && new Date(logEntry.timestamp) < new Date(startDate)) continue;
+            if (endDate && new Date(logEntry.timestamp) > new Date(endDate)) continue;
+            
+            logs.push(logEntry);
+          }
+        } catch (error) {
+          // Skip invalid log entries
+        }
+      }
+      
+      // Sort by timestamp (newest first)
+      logs.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      
+      return new Response(JSON.stringify({
+        logs: logs.slice(0, limit),
+        total: logs.length,
+        filters: { limit, level, component, startDate, endDate }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      await this.logger.error('get_logs_failed', 'Failed to retrieve logs', error);
+      
+      return new Response(JSON.stringify({ error: 'Failed to retrieve logs' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleGetMetrics(corsHeaders: any): Promise<Response> {
+    try {
+      await this.logger.debug('metrics_request', 'Metrics requested');
+      
+      const today = new Date().toISOString().split('T')[0];
+      const metricsKey = `metrics:${today}`;
+      const metrics = await this.env.LEITNER_DB.get(metricsKey, 'json');
+      
+      // Get additional metrics
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const yesterdayMetrics = await this.env.LEITNER_DB.get(`metrics:${yesterday}`, 'json');
+      
+      const response = {
+        today: metrics || {
+          timestamp: new Date().toISOString(),
+          requests: { total: 0, webhook: 0, admin: 0, health: 0 },
+          errors: { total: 0, byComponent: {}, byLevel: {} },
+          performance: { avgResponseTime: 0, slowestEndpoint: '', fastestEndpoint: '' },
+          users: { active: 0, total: 0, newToday: 0 },
+          storage: { kvOperations: 0, kvErrors: 0 }
+        },
+        yesterday: yesterdayMetrics,
+        trends: {
+          requestGrowth: metrics && yesterdayMetrics ? 
+            ((metrics.requests.total - yesterdayMetrics.requests.total) / yesterdayMetrics.requests.total * 100).toFixed(2) + '%' : 'N/A',
+          errorRateChange: metrics && yesterdayMetrics ?
+            ((metrics.errors.total - yesterdayMetrics.errors.total) / Math.max(yesterdayMetrics.errors.total, 1) * 100).toFixed(2) + '%' : 'N/A'
+        }
+      };
+      
+      return new Response(JSON.stringify(response), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      await this.logger.error('get_metrics_failed', 'Failed to retrieve metrics', error);
+      
+      return new Response(JSON.stringify({ error: 'Failed to retrieve metrics' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });

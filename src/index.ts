@@ -4,6 +4,7 @@ import { WordExtractor } from './services/word-extractor';
 import { ScheduleManager } from './services/schedule-manager';
 import { AdminService } from './services/admin-service';
 import { AdminAPI } from './api/admin-api';
+import { Logger } from './services/logger';
 import { initializeAdmin } from './init-admin';
 
 export interface Env {
@@ -33,18 +34,20 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const startTime = Date.now();
+    const logger = new Logger(env, 'MAIN_HANDLER');
     
     try {
-      logEvent(env, 'REQUEST_START', {
+      await logger.info('request_start', `${request.method} ${url.pathname}`, {
         method: request.method,
         url: url.pathname,
         userAgent: request.headers.get('User-Agent'),
-        cf: request.cf
+        cf: request.cf,
+        ip: request.headers.get('CF-Connecting-IP')
       });
 
       // Validate environment variables
       if (!env.TELEGRAM_BOT_TOKEN) {
-        logEvent(env, 'ERROR', { error: 'TELEGRAM_BOT_TOKEN not set' });
+        await logger.error('config_error', 'TELEGRAM_BOT_TOKEN not set');
         return new Response('Configuration Error: Bot token not set', { status: 500 });
       }
       
@@ -58,7 +61,7 @@ export default {
       const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
       const scheduleManager = new ScheduleManager(env.LEITNER_DB);
       const adminService = new AdminService(env.LEITNER_DB, env);
-      const adminAPI = new AdminAPI(adminService, userManager);
+      const adminAPI = new AdminAPI(adminService, userManager, env);
       const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB as any, env);
 
       // Initialize admin account on first run
@@ -1123,17 +1126,21 @@ learning"
       }
       // Handle Telegram webhook
       else if (url.pathname === '/webhook' && request.method === 'POST') {
-        logEvent(env, 'WEBHOOK_RECEIVED', { contentType: request.headers.get('Content-Type') });
+        await logger.info('webhook_received', 'Telegram webhook received', { 
+          contentType: request.headers.get('Content-Type'),
+          contentLength: request.headers.get('Content-Length')
+        });
         response = await bot.handleWebhook(request);
       }
       // Handle cron triggers for daily reminders
       else if (url.pathname === '/cron') {
-        logEvent(env, 'CRON_TRIGGERED', { timestamp: new Date().toISOString() });
+        await logger.info('cron_triggered', 'Daily reminder cron triggered');
         await bot.sendDailyReminders();
         response = new Response('OK', { status: 200 });
       }
       // Health check
       else if (url.pathname === '/health') {
+        await logger.debug('health_check_simple', 'Simple health check requested');
         response = new Response(JSON.stringify({
           status: 'OK',
           timestamp: new Date().toISOString(),
@@ -1171,26 +1178,22 @@ learning"
         });
       }
       else {
+        await logger.warn('not_found', `Path not found: ${url.pathname}`);
         response = new Response('Not Found', { status: 404 });
       }
 
       const duration = Date.now() - startTime;
-      logEvent(env, 'REQUEST_COMPLETE', {
+      await logger.logPerformance('request_complete', startTime, {
         status: response.status,
-        duration: `${duration}ms`,
-        path: url.pathname
+        path: url.pathname,
+        method: request.method
       });
 
       return response;
 
     } catch (error) {
       const duration = Date.now() - startTime;
-      logEvent(env, 'REQUEST_ERROR', {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        duration: `${duration}ms`,
-        path: url.pathname
-      });
+      await logger.critical('request_error', 'Unhandled request error', error, undefined);
 
       return new Response(`Internal Server Error: ${error instanceof Error ? error.message : String(error)}`, { 
         status: 500 
@@ -1199,8 +1202,10 @@ learning"
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    const logger = new Logger(env, 'SCHEDULED_HANDLER');
+    
     try {
-      logEvent(env, 'SCHEDULED_START', {
+      await logger.info('scheduled_start', 'Scheduled event triggered', {
         cron: event.cron,
         scheduledTime: new Date(event.scheduledTime).toISOString()
       });
