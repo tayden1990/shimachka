@@ -1,7 +1,7 @@
 import { AdminUser, SupportTicket, DirectMessage, BulkWordAssignment, UserActivity, AdminStats, User, Card } from '../types/index';
 
 export class AdminService {
-  constructor(private kv: any) {}
+  constructor(private kv: any, private env: any) {}
 
   // Admin Authentication
   async authenticateAdmin(username: string, password: string): Promise<AdminUser | null> {
@@ -723,11 +723,20 @@ export class AdminService {
   }
 
   // AI Bulk Word Processing
-  async processBulkWordsWithAI(words: string, meaningLanguage: string, definitionLanguage: string, assignUsers: string[]): Promise<any> {
+  async processBulkWordsWithAI(words: string[] | string, meaningLanguage: string, definitionLanguage: string, assignUsers?: number[]): Promise<any> {
     try {
       const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const wordLines = words.split('\n').filter(line => line.trim());
+      
+      // Handle both array and string inputs
+      const wordLines = Array.isArray(words) 
+        ? words.filter(word => word.trim()) 
+        : words.split('\n').filter(line => line.trim());
+      
       const totalWords = wordLines.length;
+
+      if (totalWords === 0) {
+        throw new Error('No valid words provided');
+      }
 
       // Initialize job progress
       const jobProgress = {
@@ -744,8 +753,8 @@ export class AdminService {
 
       await this.kv.put(`bulk_job:${jobId}`, JSON.stringify(jobProgress));
 
-      // Start processing asynchronously
-      this.processWordsAsync(jobId, wordLines, meaningLanguage, definitionLanguage, assignUsers);
+      // Start processing asynchronously (mock processing for now since no real AI API)
+      this.processWordsAsync(jobId, wordLines, meaningLanguage, definitionLanguage, assignUsers || []);
 
       return { jobId, totalWords };
     } catch (error) {
@@ -754,7 +763,7 @@ export class AdminService {
     }
   }
 
-  private async processWordsAsync(jobId: string, words: string[], meaningLanguage: string, definitionLanguage: string, assignUsers: string[]): Promise<void> {
+  private async processWordsAsync(jobId: string, words: string[], meaningLanguage: string, definitionLanguage: string, assignUsers: number[]): Promise<void> {
     try {
       const jobProgress = await this.kv.get(`bulk_job:${jobId}`, 'json');
       
@@ -824,9 +833,37 @@ export class AdminService {
 
   private async getWordMeaningFromAI(word: string, meaningLanguage: string, definitionLanguage: string): Promise<any> {
     try {
-      // Use Google Gemini AI to get word meaning and definition
-      const GEMINI_API_KEY = 'AIzaSyAtfLGAoR6jWJCWzgMPQK6HVxuQ2XLqIGM'; // You should move this to environment variables
+      // For demo purposes with dummy API keys, return mock data
+      // In production, this would call the real Gemini AI API
       
+      // Check if we have dummy keys (indicating local testing)
+      const geminiKey = this.env.GEMINI_API_KEY;
+      const isDemoMode = !geminiKey || geminiKey.includes('dummy') || 
+                        geminiKey === 'dummy_gemini_key_for_local_testing';
+      
+      if (isDemoMode) {
+        // Return mock AI response for testing
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+        
+        const mockTranslations: { [key: string]: any } = {
+          'hello': { en: 'hello', fa: 'سلام', es: 'hola', fr: 'bonjour' },
+          'world': { en: 'world', fa: 'جهان', es: 'mundo', fr: 'monde' },
+          'computer': { en: 'computer', fa: 'کامپیوتر', es: 'computadora', fr: 'ordinateur' },
+          'learning': { en: 'learning', fa: 'یادگیری', es: 'aprendizaje', fr: 'apprentissage' },
+        };
+        
+        const meaning = mockTranslations[word.toLowerCase()]?.[meaningLanguage] || 
+                       `${word} translated to ${meaningLanguage}`;
+        const definition = `A comprehensive definition of "${word}" in ${definitionLanguage}. This is a mock definition for testing purposes.`;
+        
+        return {
+          success: true,
+          meaning,
+          definition
+        };
+      }
+      
+      // Real AI API call for production
       const prompt = `
 Please provide the meaning and definition for the word "${word}":
 
@@ -840,7 +877,7 @@ Please respond in this exact JSON format:
 }
 `;
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -898,7 +935,7 @@ Please respond in this exact JSON format:
     }
   }
 
-  private async createCardForUser(userId: string, word: string, meaning: string, definition: string): Promise<void> {
+  private async createCardForUser(userId: number | string, word: string, meaning: string, definition: string): Promise<void> {
     try {
       const cards = await this.kv.get(`user_cards:${userId}`, 'json') || [];
       

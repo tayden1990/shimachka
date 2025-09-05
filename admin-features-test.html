@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Features Test</title>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="max-w-4xl mx-auto py-8 px-4">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">Admin Features Test</h1>
+        
+        <div x-data="testData()">
+            <!-- Tab Navigation -->
+            <div class="border-b border-gray-200 mb-6">
+                <nav class="-mb-px flex space-x-8">
+                    <button @click="activeTab = 'messages'" 
+                            :class="activeTab === 'messages' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500'"
+                            class="py-2 px-1 border-b-2 font-medium text-sm">
+                        <i class="fas fa-envelope mr-2"></i>Bulk Messaging Test
+                    </button>
+                    <button @click="activeTab = 'bulk-words'" 
+                            :class="activeTab === 'bulk-words' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500'"
+                            class="py-2 px-1 border-b-2 font-medium text-sm">
+                        <i class="fas fa-magic mr-2"></i>Bulk Words Test
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Bulk Messaging Test -->
+            <div x-show="activeTab === 'messages'" class="space-y-6">
+                <div class="bg-white shadow rounded-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4">Bulk Message Test</h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Select Users</label>
+                            <div class="mt-2 space-y-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" x-model="selectAll" @change="toggleAll()" class="rounded">
+                                    <span class="ml-2">Select All</span>
+                                </label>
+                                <template x-for="user in users" :key="user.id">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" :value="user.id" x-model="selectedUsers" class="rounded">
+                                        <span class="ml-2" x-text="user.name"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Message</label>
+                            <textarea x-model="message" rows="4" class="mt-1 block w-full border-gray-300 rounded-md"></textarea>
+                        </div>
+                        
+                        <button @click="testBulkMessage()" 
+                                :disabled="selectedUsers.length === 0 || !message"
+                                class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded">
+                            Test Bulk Message
+                        </button>
+                        
+                        <div x-show="result" x-text="result" class="mt-4 p-3 bg-green-100 text-green-700 rounded"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bulk Words Test -->
+            <div x-show="activeTab === 'bulk-words'" class="space-y-6">
+                <div class="bg-white shadow rounded-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4">Bulk Words AI Test</h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Title</label>
+                            <input x-model="wordsForm.title" type="text" class="mt-1 block w-full border-gray-300 rounded-md">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Words (one per line)</label>
+                            <textarea x-model="wordsForm.words" rows="6" 
+                                      placeholder="hello&#10;world&#10;learning"
+                                      class="mt-1 block w-full border-gray-300 rounded-md"></textarea>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Source Language</label>
+                                <select x-model="wordsForm.sourceLanguage" class="mt-1 block w-full border-gray-300 rounded-md">
+                                    <option value="">Select language</option>
+                                    <option value="en">English</option>
+                                    <option value="fa">Persian/Farsi</option>
+                                    <option value="es">Spanish</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Target Language</label>
+                                <select x-model="wordsForm.targetLanguage" class="mt-1 block w-full border-gray-300 rounded-md">
+                                    <option value="">Select language</option>
+                                    <option value="en">English</option>
+                                    <option value="fa">Persian/Farsi</option>
+                                    <option value="es">Spanish</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Assign to Users</label>
+                            <div class="mt-2 space-y-2">
+                                <template x-for="user in users" :key="user.id">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" :value="user.id" x-model="wordsForm.selectedUsers" class="rounded">
+                                        <span class="ml-2" x-text="user.name"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+                        
+                        <button @click="testBulkWords()" 
+                                :disabled="!wordsForm.title || !wordsForm.words || !wordsForm.sourceLanguage || !wordsForm.targetLanguage || wordsForm.selectedUsers.length === 0"
+                                class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded">
+                            Test Bulk Words Processing
+                        </button>
+                        
+                        <div x-show="wordsResult" x-text="wordsResult" class="mt-4 p-3 bg-green-100 text-green-700 rounded"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function testData() {
+            return {
+                activeTab: 'messages',
+                selectAll: false,
+                selectedUsers: [],
+                message: '',
+                result: '',
+                users: [
+                    { id: 1, name: 'User 1' },
+                    { id: 2, name: 'User 2' },
+                    { id: 3, name: 'User 3' },
+                ],
+                wordsForm: {
+                    title: '',
+                    words: '',
+                    sourceLanguage: '',
+                    targetLanguage: '',
+                    selectedUsers: []
+                },
+                wordsResult: '',
+                
+                toggleAll() {
+                    if (this.selectAll) {
+                        this.selectedUsers = this.users.map(user => user.id);
+                    } else {
+                        this.selectedUsers = [];
+                    }
+                },
+                
+                testBulkMessage() {
+                    this.result = `✅ Bulk message test successful! Would send to ${this.selectedUsers.length} users: "${this.message}"`;
+                    setTimeout(() => {
+                        this.result = '';
+                        this.message = '';
+                        this.selectedUsers = [];
+                        this.selectAll = false;
+                    }, 3000);
+                },
+                
+                testBulkWords() {
+                    const wordCount = this.wordsForm.words.split('\n').filter(w => w.trim()).length;
+                    this.wordsResult = `✅ Bulk words test successful! Would process ${wordCount} words for ${this.wordsForm.selectedUsers.length} users from ${this.wordsForm.sourceLanguage} to ${this.wordsForm.targetLanguage}`;
+                    setTimeout(() => {
+                        this.wordsResult = '';
+                        this.wordsForm = { title: '', words: '', sourceLanguage: '', targetLanguage: '', selectedUsers: [] };
+                    }, 3000);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

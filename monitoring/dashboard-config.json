@@ -1,0 +1,88 @@
+{
+  "dashboard": {
+    "name": "Leitner Telegram Bot Monitoring",
+    "description": "Comprehensive monitoring for the Leitner system Telegram bot",
+    "widgets": [
+      {
+        "title": "Request Rate",
+        "type": "timeseries",
+        "metrics": ["requests_per_minute", "webhook_requests", "health_checks"],
+        "timeframe": "1h"
+      },
+      {
+        "title": "Error Rate",
+        "type": "timeseries", 
+        "metrics": ["error_4xx", "error_5xx", "vocabulary_extraction_errors"],
+        "timeframe": "1h"
+      },
+      {
+        "title": "Response Times",
+        "type": "histogram",
+        "metrics": ["response_duration_ms"],
+        "timeframe": "1h"
+      },
+      {
+        "title": "Bot Activity",
+        "type": "counter",
+        "metrics": ["commands_processed", "words_extracted", "daily_reminders_sent"],
+        "timeframe": "24h"
+      },
+      {
+        "title": "User Engagement",
+        "type": "gauge",
+        "metrics": ["active_users", "total_words_learned", "conversations_active"],
+        "timeframe": "24h"
+      },
+      {
+        "title": "System Health",
+        "type": "status",
+        "metrics": ["service_uptime", "kv_operations", "gemini_api_status"],
+        "timeframe": "1h"
+      }
+    ]
+  },
+  "alerts": [
+    {
+      "name": "High Error Rate",
+      "condition": "error_rate > 5%",
+      "notification": "email",
+      "severity": "warning"
+    },
+    {
+      "name": "Service Down",
+      "condition": "uptime < 99%",
+      "notification": "email",
+      "severity": "critical"
+    },
+    {
+      "name": "Slow Response Times",
+      "condition": "avg_response_time > 5000ms",
+      "notification": "email", 
+      "severity": "warning"
+    },
+    {
+      "name": "Vocabulary Extraction Failures",
+      "condition": "vocabulary_extraction_errors > 10/hour",
+      "notification": "email",
+      "severity": "warning"
+    }
+  ],
+  "log_queries": [
+    {
+      "name": "Recent Errors",
+      "query": "fields @timestamp, @message | filter @message like /ERROR/ | sort @timestamp desc | limit 100"
+    },
+    {
+      "name": "Vocabulary Extraction Issues", 
+      "query": "fields @timestamp, @message | filter @message like /vocabulary.*extraction.*error/i | sort @timestamp desc | limit 50"
+    },
+    {
+      "name": "Bot Commands",
+      "query": "fields @timestamp, @message | filter @message like /COMMAND_RECEIVED/ | sort @timestamp desc | limit 100"
+    },
+    {
+      "name": "Performance Metrics",
+      "query": "fields @timestamp, @message | filter @message like /REQUEST_COMPLETE/ | sort @timestamp desc | limit 100"
+    }
+  ]
+}
