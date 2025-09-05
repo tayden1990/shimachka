@@ -723,7 +723,7 @@ export class AdminService {
   }
 
   // AI Bulk Word Processing
-  async processBulkWordsWithAI(words: string[] | string, meaningLanguage: string, definitionLanguage: string, assignUsers?: number[]): Promise<any> {
+  async processBulkWordsWithAI(words: string[] | string, meaningLanguage: string, definitionLanguage: string, assignUsers?: number[], ctx?: ExecutionContext): Promise<any> {
     try {
       const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
@@ -753,8 +753,19 @@ export class AdminService {
 
       await this.kv.put(`bulk_job:${jobId}`, JSON.stringify(jobProgress));
 
-      // Start processing asynchronously (mock processing for now since no real AI API)
-      this.processWordsAsync(jobId, wordLines, meaningLanguage, definitionLanguage, assignUsers || []);
+      // Start processing with proper background handling for Cloudflare Workers
+      const processingPromise = this.processWordsAsync(jobId, wordLines, meaningLanguage, definitionLanguage, assignUsers || [])
+        .catch(error => {
+          console.error(`Processing failed for job ${jobId}:`, error);
+        });
+      
+      // Use ctx.waitUntil() if available to ensure background processing completes
+      if (ctx && ctx.waitUntil) {
+        ctx.waitUntil(processingPromise);
+      } else {
+        // Fallback - start processing but don't wait
+        processingPromise;
+      }
 
       return { jobId, totalWords };
     } catch (error) {
@@ -779,7 +790,11 @@ export class AdminService {
         console.log('No users specified, getting all users in the system...');
         try {
           const allUsersResult = await this.getAllUsers();
-          targetUsers = allUsersResult.users.map(user => parseInt(user.id.toString()));
+          targetUsers = allUsersResult.users.map(user => {
+            const userId = typeof user.id === 'string' ? parseInt(user.id) : user.id;
+            console.log(`Converting user ID: ${user.id} (${typeof user.id}) -> ${userId} (${typeof userId})`);
+            return userId;
+          });
           console.log(`Found ${targetUsers.length} users in the system: ${targetUsers.join(', ')}`);
           jobProgress.logs.push(`No users specified - assigning to all ${targetUsers.length} users in the system`);
         } catch (error) {
@@ -811,9 +826,10 @@ export class AdminService {
             // Create cards for assigned users
             for (const userId of targetUsers) {
               try {
-                console.log(`Creating card for user ${userId} with word "${word}"`);
+                console.log(`Creating card for user ${userId} (type: ${typeof userId}) with word "${word}"`);
                 await this.createCardForUser(userId, word, aiResult.meaning, aiResult.definition);
                 console.log(`Successfully created card for user ${userId}`);
+                jobProgress.logs.push(`✓ Created card for user ${userId}: "${word}"`);
               } catch (cardError) {
                 console.error(`Failed to create card for user ${userId}:`, cardError);
                 jobProgress.logs.push(`⚠ Warning: Failed to create card for user ${userId}: ${cardError}`);
@@ -986,7 +1002,9 @@ export class AdminService {
 
   private async createCardForUser(userId: number | string, word: string, meaning: string, definition: string): Promise<void> {
     try {
+      console.log(`createCardForUser called: userId=${userId} (${typeof userId}), word="${word}"`);
       const cards = await this.kv.get(`user_cards:${userId}`, 'json') || [];
+      console.log(`Retrieved ${cards.length} existing cards for user ${userId}`);
       
       const newCard = {
         id: `card_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -1003,7 +1021,9 @@ export class AdminService {
       };
 
       cards.push(newCard);
+      console.log(`Adding new card, total cards will be: ${cards.length}`);
       await this.kv.put(`user_cards:${userId}`, JSON.stringify(cards));
+      console.log(`Saved cards to KV: user_cards:${userId}`);
       
       // Update user's schedule
       const schedule = await this.kv.get(`schedule:${userId}`, 'json') || { reviews: [] };
@@ -1013,6 +1033,7 @@ export class AdminService {
         box: 1
       });
       await this.kv.put(`schedule:${userId}`, JSON.stringify(schedule));
+      console.log(`Updated schedule for user ${userId}`);
     } catch (error) {
       console.error('Error creating card for user:', error);
       throw error;

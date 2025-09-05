@@ -7,7 +7,7 @@ export class AdminAPI {
     private userManager: UserManager
   ) {}
 
-  async handleAdminRequest(request: Request): Promise<Response> {
+  async handleAdminRequest(request: Request, ctx?: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
@@ -102,7 +102,7 @@ export class AdminAPI {
       }
 
       if (path === '/admin/bulk-words-ai' && method === 'POST') {
-        return await this.handleBulkWordsAI(request, corsHeaders);
+        return await this.handleBulkWordsAI(request, corsHeaders, ctx);
       }
 
       if (path.startsWith('/admin/bulk-words-progress/') && method === 'GET') {
@@ -495,13 +495,13 @@ export class AdminAPI {
     }
   }
 
-  private async handleBulkWordsAI(request: Request, corsHeaders: any): Promise<Response> {
+  private async handleBulkWordsAI(request: Request, corsHeaders: any, ctx?: ExecutionContext): Promise<Response> {
     try {
       const body: any = await request.json();
       const { words, meaningLanguage, definitionLanguage, assignUsers } = body;
       
       // Start the AI processing job
-      const jobResult = await this.adminService.processBulkWordsWithAI(words, meaningLanguage, definitionLanguage, assignUsers);
+      const jobResult = await this.adminService.processBulkWordsWithAI(words, meaningLanguage, definitionLanguage, assignUsers, ctx);
       
       return new Response(JSON.stringify({ 
         jobId: jobResult.jobId,

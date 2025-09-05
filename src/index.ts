@@ -1118,7 +1118,7 @@ learning"
           });
         } else {
           // Handle admin API routes
-          response = await adminAPI.handleAdminRequest(request);
+          response = await adminAPI.handleAdminRequest(request, ctx);
         }
       }
       // Handle Telegram webhook
