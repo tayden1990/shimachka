@@ -6,6 +6,7 @@ export function getSimpleAdminHTML(): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Admin Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
 <body class="bg-gray-50">
     <div x-data="simpleAdmin()" x-init="init()">
@@ -335,7 +336,7 @@ export function getSimpleAdminHTML(): string {
                     if (token) {
                         this.isAuthenticated = true;
                         this.loadUserStats();
-                        // Skip checkEnvironment for now since endpoint doesn't exist
+                        this.checkEnvironment();
                     }
                 },
 
@@ -362,7 +363,7 @@ export function getSimpleAdminHTML(): string {
                             localStorage.setItem('adminToken', data.token);
                             this.showMessage('✅ Login successful!', 'success');
                             this.loadUserStats();
-                            // Skip checkEnvironment for now since endpoint doesn't exist
+                            this.checkEnvironment();
                         } else {
                             const errorData = await response.json();
                             this.error = errorData.error || 'Login failed';
@@ -408,13 +409,25 @@ export function getSimpleAdminHTML(): string {
                 },
 
                 async checkEnvironment() {
-                    // Simplified environment check - just show configured status
-                    this.envStatus = {
-                        telegram: '✅ Configured',
-                        gemini: '✅ Configured', 
-                        webhook: '✅ Configured'
-                    };
-                    this.showMessage('✅ Environment status updated', 'success');
+                    try {
+                        const response = await fetch('/api/admin/env-check');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.envStatus = data;
+                        } else {
+                            this.envStatus = {
+                                telegram: '❌ Not checked',
+                                gemini: '❌ Not checked',
+                                webhook: '❌ Not checked'
+                            };
+                        }
+                    } catch (error) {
+                        this.envStatus = {
+                            telegram: '❌ Error',
+                            gemini: '❌ Error',
+                            webhook: '❌ Error'
+                        };
+                    }
                 },
 
                 async createAdminUser() {
@@ -604,12 +617,9 @@ export function getSimpleAdminHTML(): string {
                         this.message = '';
                     }, 5000);
                 }
-            }
+            };
         }
     </script>
-    
-    <!-- Load Alpine.js after our function is defined -->
-    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </body>
 </html>`;
 }
