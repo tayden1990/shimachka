@@ -10,6 +10,14 @@ export function getSimpleAdminHTML(): string {
         [x-cloak] { display: none !important; }
         .loading-fallback { display: none; }
         body:not(.alpine-loaded) .loading-fallback { display: block; }
+        
+        /* Ensure login form is visible by default */
+        .login-container { display: block; }
+        .dashboard-container { display: none; }
+        
+        /* Alpine.js will override these when loaded */
+        [x-data] .login-container[x-show] { display: block !important; }
+        [x-data] .dashboard-container[x-show] { display: none !important; }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -23,7 +31,7 @@ export function getSimpleAdminHTML(): string {
 
     <div x-data="simpleAdmin()" x-init="init()">
         <!-- Login Screen -->
-        <div x-show="!isAuthenticated" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
+        <div x-show="!isAuthenticated" x-cloak class="login-container min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600" style="display: block;">
             <div class="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
                 <div class="text-center mb-8">
                     <h2 class="text-3xl font-bold text-gray-900">Admin Login</h2>
@@ -59,7 +67,7 @@ export function getSimpleAdminHTML(): string {
         </div>
 
         <!-- Dashboard -->
-        <div x-show="isAuthenticated" class="min-h-screen bg-gray-100">
+        <div x-show="isAuthenticated" x-cloak class="dashboard-container min-h-screen bg-gray-100" style="display: none;">
             <nav class="bg-white shadow">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between h-16">
