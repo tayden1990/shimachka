@@ -4,11 +4,12 @@ export function getAdminHTML(): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leitner Bot Admin Panel - Enhanced v2.1</title>
+    <title>Leitner Bot Admin Panel - Enhanced v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Cache Buster - Updated: 2025-01-05 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Cache Buster - Updated: 2025-09-05 -->
     <style>
         .notification-badge {
             animation: pulse 2s infinite;
@@ -17,37 +18,84 @@ export function getAdminHTML(): string {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e0 #f7fafc;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f7fafc;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #cbd5e0;
+            border-radius: 3px;
+        }
+        .sidebar-transition {
+            transition: transform 0.3s ease-in-out;
+        }
+        @media (max-width: 768px) {
+            .sidebar-hidden {
+                transform: translateX(-100%);
+            }
+        }
     </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-50">
     <div x-data="adminApp()" x-init="init()">
         <!-- Login Screen -->
-        <div x-show="!isAuthenticated" class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div x-show="!isAuthenticated" class="min-h-screen flex items-center justify-center gradient-bg py-12 px-4 sm:px-6 lg:px-8">
             <div class="max-w-md w-full space-y-8">
-                <div>
-                    <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                        🎯 Leitner Bot Admin Panel
+                <div class="text-center">
+                    <div class="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-brain text-indigo-600 text-3xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-extrabold text-white">
+                        🎯 Leitner Bot Admin
                     </h2>
-                    <p class="mt-2 text-center text-sm text-gray-600">
-                        Sign in to access the admin dashboard
+                    <p class="mt-2 text-indigo-100">
+                        Advanced Learning Management System
                     </p>
                 </div>
-                <form @submit.prevent="login()" class="mt-8 space-y-6">
-                    <div class="rounded-md shadow-sm -space-y-px">
+                <div class="bg-white rounded-lg shadow-xl p-8">
+                    <form @submit.prevent="login()" class="space-y-6">
                         <div>
+                            <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
                             <input x-model="loginForm.username" type="text" required
-                                   class="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                   placeholder="Username">
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                   placeholder="Enter your username">
                         </div>
                         <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
                             <input x-model="loginForm.password" type="password" required
-                                   class="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                   placeholder="Password">
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                   placeholder="Enter your password">
                         </div>
-                    </div>
-                    <div>
-                        <button type="submit" :disabled="loading"
-                                class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
+                        <div>
+                            <button type="submit" :disabled="loading"
+                                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white gradient-bg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition duration-200">
+                                <span x-show="!loading">Sign in</span>
+                                <span x-show="loading" class="flex items-center">
+                                    <i class="fas fa-spinner fa-spin mr-2"></i>
+                                    Signing in...
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
                             <span x-show="!loading">Sign in</span>
                             <span x-show="loading">Signing in...</span>
                         </button>
