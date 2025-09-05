@@ -8,17 +8,27 @@ export function getSimpleAdminHTML(): string {
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         [x-cloak] { display: none !important; }
-        .loading-fallback { display: none; }
-        body:not(.alpine-loaded) .loading-fallback { display: block; }
-        
-        /* Ensure login form is visible by default */
-        .login-container { display: block; }
-        .dashboard-container { display: none; }
-        
-        /* Alpine.js will override these when loaded */
-        [x-data] .login-container[x-show] { display: block !important; }
-        [x-data] .dashboard-container[x-show] { display: none !important; }
+        .loading-fallback { 
+            display: block; 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        body.alpine-ready .loading-fallback { display: none !important; }
     </style>
+    <script>
+        // Add a timeout fallback in case Alpine.js doesn't load
+        setTimeout(() => {
+            if (!window.Alpine) {
+                console.warn('Alpine.js failed to load, removing loading screen');
+                document.body.classList.add('alpine-ready');
+            }
+        }, 5000);
+    </script>
 </head>
 <body class="bg-gray-50">
     <!-- Loading fallback -->
@@ -29,9 +39,9 @@ export function getSimpleAdminHTML(): string {
         </div>
     </div>
 
-    <div x-data="simpleAdmin()" x-init="init()">
+    <div x-data="simpleAdmin()" x-init="init(); document.body.classList.add('alpine-ready');">
         <!-- Login Screen -->
-        <div x-show="!isAuthenticated" x-cloak class="login-container min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600" style="display: block;">
+        <div x-show="!isAuthenticated" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
             <div class="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
                 <div class="text-center mb-8">
                     <h2 class="text-3xl font-bold text-gray-900">Admin Login</h2>
@@ -67,7 +77,7 @@ export function getSimpleAdminHTML(): string {
         </div>
 
         <!-- Dashboard -->
-        <div x-show="isAuthenticated" x-cloak class="dashboard-container min-h-screen bg-gray-100" style="display: none;">
+        <div x-show="isAuthenticated" class="min-h-screen bg-gray-100">
             <nav class="bg-white shadow">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between h-16">
@@ -642,6 +652,23 @@ export function getSimpleAdminHTML(): string {
     
     <!-- Load Alpine.js after our function is defined -->
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        // Initialize Alpine.js and hide loading screen when ready
+        document.addEventListener('alpine:init', () => {
+            console.log('Alpine.js initialized');
+            document.body.classList.add('alpine-ready');
+        });
+        
+        // Additional fallback
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (!document.body.classList.contains('alpine-ready')) {
+                    console.warn('Alpine.js initialization timeout, showing content anyway');
+                    document.body.classList.add('alpine-ready');
+                }
+            }, 3000);
+        });
+    </script>
     <script>
         // Mark body as alpine loaded
         document.addEventListener('alpine:init', () => {

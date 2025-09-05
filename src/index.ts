@@ -25,20 +25,27 @@ export default {
       if (url.pathname === '/webhook' && request.method === 'POST') {
         console.log('Received Telegram webhook request');
         
-        const userManager = new UserManager(env.LEITNER_DB);
-        const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
-        const scheduleManager = new ScheduleManager(env.LEITNER_DB);
-        
-        const bot = new LeitnerBot(
-          env.TELEGRAM_BOT_TOKEN,
-          userManager,
-          wordExtractor,
-          scheduleManager,
-          env.LEITNER_DB,
-          env
-        );
-        
-        return await bot.handleWebhook(request);
+        try {
+          const userManager = new UserManager(env.LEITNER_DB);
+          const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
+          const scheduleManager = new ScheduleManager(env.LEITNER_DB);
+          
+          const bot = new LeitnerBot(
+            env.TELEGRAM_BOT_TOKEN,
+            userManager,
+            wordExtractor,
+            scheduleManager,
+            env.LEITNER_DB,
+            env
+          );
+          
+          return await bot.handleWebhook(request);
+        } catch (error) {
+          console.error('Bot webhook error:', error);
+          return new Response(`Bot Error: ${error instanceof Error ? error.message : String(error)}`, { 
+            status: 500 
+          });
+        }
       }
       // Admin panel and API routes
       if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/api/admin')) {
