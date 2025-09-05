@@ -80,7 +80,21 @@ export default {
           contentType: request.headers.get('Content-Type'),
           contentLength: request.headers.get('Content-Length')
         });
-        response = await bot.handleWebhook(request);
+        
+        // Log the webhook content for debugging
+        const webhookText = await request.text();
+        await logger.info('webhook_content', 'Webhook content received', {
+          body: webhookText.substring(0, 500) // Log first 500 chars for debugging
+        });
+        
+        // Recreate request with the body for bot processing
+        const webhookRequest = new Request(request.url, {
+          method: request.method,
+          headers: request.headers,
+          body: webhookText
+        });
+        
+        response = await bot.handleWebhook(webhookRequest);
       }
       // Handle cron triggers for daily reminders
       else if (url.pathname === '/cron') {
@@ -126,6 +140,32 @@ export default {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
+      }
+      // Test bot endpoint
+      else if (url.pathname === '/test-bot' && request.method === 'GET') {
+        try {
+          // Test if bot can send a message
+          const testChatId = url.searchParams.get('chat_id');
+          if (testChatId) {
+            await bot.testSendMessage(parseInt(testChatId), 'Test message from bot - /start should work now!');
+            response = new Response(JSON.stringify({ success: true, message: 'Test message sent' }), {
+              headers: { 'Content-Type': 'application/json' }
+            });
+          } else {
+            response = new Response(JSON.stringify({ error: 'Please provide chat_id parameter' }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+        } catch (error) {
+          response = new Response(JSON.stringify({ 
+            error: 'Bot test failed', 
+            details: error instanceof Error ? error.message : String(error) 
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
       }
       else {
         await logger.warn('not_found', `Path not found: ${url.pathname}`);

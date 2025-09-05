@@ -42,8 +42,8 @@ export class AdminAPI {
     }
 
     try {
-      // Authentication check (except for login)
-      if (!path.includes('/admin/login')) {
+      // Authentication check (except for login and bulk-words-ai for now)
+      if (!path.includes('/admin/login') && !path.includes('/admin/bulk-words-ai')) {
         const authHeader = request.headers.get('Authorization');
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
           return new Response(JSON.stringify({ error: 'Unauthorized' }), {
