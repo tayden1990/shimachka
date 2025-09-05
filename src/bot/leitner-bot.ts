@@ -65,10 +65,6 @@ export class LeitnerBot {
     }
   }
 
-  // Test method for debugging
-  public async testSendMessage(chatId: number, message: string): Promise<void> {
-    await this.sendMessage(chatId, message);
-  }
   // --- Notification System ---
   async sendPendingNotifications(): Promise<void> {
     try {

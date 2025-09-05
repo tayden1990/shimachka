@@ -141,32 +141,6 @@ export default {
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      // Test bot endpoint
-      else if (url.pathname === '/test-bot' && request.method === 'GET') {
-        try {
-          // Test if bot can send a message
-          const testChatId = url.searchParams.get('chat_id');
-          if (testChatId) {
-            await bot.testSendMessage(parseInt(testChatId), 'Test message from bot - /start should work now!');
-            response = new Response(JSON.stringify({ success: true, message: 'Test message sent' }), {
-              headers: { 'Content-Type': 'application/json' }
-            });
-          } else {
-            response = new Response(JSON.stringify({ error: 'Please provide chat_id parameter' }), {
-              status: 400,
-              headers: { 'Content-Type': 'application/json' }
-            });
-          }
-        } catch (error) {
-          response = new Response(JSON.stringify({ 
-            error: 'Bot test failed', 
-            details: error instanceof Error ? error.message : String(error) 
-          }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        }
-      }
       else {
         await logger.warn('not_found', `Path not found: ${url.pathname}`);
         response = new Response('Not Found', { status: 404 });

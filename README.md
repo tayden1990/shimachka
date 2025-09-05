@@ -36,88 +36,25 @@ A powerful Telegram bot that implements the Leitner spaced repetition system for
 4. **Node.js**: Version 18+ installed locally
 5. **GitHub Repository**: For automatic deployment
 
-### Installation & Deployment
+### Deployment (GitHub Actions Only)
 
-#### Option 1: Automatic Deployment with GitHub Actions (Recommended)
+**GitHub Actions automatically handles everything:**
 
-1. **Fork or clone this repository to GitHub**
-
-2. **Run the setup script:**
-   ```bash
-   # On Windows
-   ./setup-github-actions.bat
-   
-   # On macOS/Linux
-   chmod +x setup-github-actions.sh
-   ./setup-github-actions.sh
-   ```
-
-3. **Set up GitHub Secrets:**
-   Go to your GitHub repository → Settings → Secrets and variables → Actions
-   
-   Add these secrets:
+1. **Configure repository secrets** (Settings → Secrets and variables → Actions):
    - `CLOUDFLARE_API_TOKEN` - [Get from Cloudflare dashboard](https://dash.cloudflare.com/profile/api-tokens)
-   - `CLOUDFLARE_ACCOUNT_ID` - Your Cloudflare account ID
-   - `TELEGRAM_BOT_TOKEN` - Your Telegram bot token
+   - `CLOUDFLARE_ACCOUNT_ID` - Found in Cloudflare dashboard sidebar
+   - `TELEGRAM_BOT_TOKEN` - Your bot token from @BotFather
    - `GEMINI_API_KEY` - Your Google Gemini API key
-   - `WEBHOOK_SECRET` - Any random string
-   - `WORKER_DOMAIN` - Your worker domain (e.g., `leitner-telegram-bot.your-subdomain.workers.dev`)
+   - `WEBHOOK_SECRET` - Any random string for webhook security
 
-4. **Set up Cloudflare Environment Variables:**
-   In Cloudflare dashboard → Workers & Pages → Your Worker → Settings → Variables:
-   - `TELEGRAM_BOT_TOKEN`
-   - `GEMINI_API_KEY`
-   - `WEBHOOK_SECRET`
-
-5. **Push to GitHub:**
-   ```bash
-   git add .
-   git commit -m "Initial deployment"
-   git push origin main
-   ```
-
-   Your bot will automatically deploy! 🚀
-
-#### Option 2: Manual Deployment
-
-1. **Clone and setup the project:**
+2. **Deploy:**
 ```bash
-npm install
-```
-
-2. **Configure environment variables in Cloudflare:**
-   - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token
-   - `GEMINI_API_KEY`: Your Google Gemini API key
-   - `WEBHOOK_SECRET`: A random secret for webhook security
-
-3. **Create KV namespace:**
-```bash
-npx wrangler kv:namespace create "LEITNER_DB"
-npx wrangler kv:namespace create "LEITNER_DB" --preview
-```
-
-4. **Update wrangler.toml with your KV namespace IDs**
-
-5. **Deploy to Cloudflare Workers:**
-
-#### For GitHub Actions (Recommended - Production)
-```bash
-# Push to main branch for automatic deployment
 git add .
 git commit -m "Deploy with automatic webhook"
 git push origin main
 ```
+
 **✅ GitHub Actions automatically deploys and configures webhook!**
-
-#### For Local Development
-```bash
-# Deploy with automatic webhook (if token is set)
-npm run deploy
-
-# Deploy without webhook setup
-npm run deploy-only
-
-# Get help with local webhook setup
 npm run setup-webhook-local
 ```
 
@@ -139,43 +76,6 @@ npm run setup-webhook
 # Method 2: Use wrangler secrets (Recommended for local dev)
 wrangler secret put TELEGRAM_BOT_TOKEN
 # Note: You'll still need to export for local webhook setup
-export TELEGRAM_BOT_TOKEN=your_bot_token_here
-npm run setup-webhook
-
-# Method 3: Get setup instructions
-npm run setup-webhook-local
-```
-
-#### Manual Webhook Management
-```bash
-# Setup webhook manually
-npm run setup-webhook
-
-# Remove webhook 
-npm run remove-webhook
-
-# Setup webhook with PowerShell (Windows)
-npm run setup-webhook-ps
-
-# Setup webhook with custom URL
-WORKER_URL=https://your-worker.workers.dev npm run setup-webhook
-```
-
-#### Webhook Verification
-The setup script automatically:
-- ✅ Tests worker endpoint accessibility
-- ✅ Gets current webhook configuration
-- ✅ Sets new webhook URL with proper settings
-- ✅ Verifies webhook was configured correctly
-- ✅ Provides troubleshooting information
-
-6. **Set up the webhook:**
-```bash
-curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
-     -H "Content-Type: application/json" \
-     -d '{"url": "https://your-worker.your-subdomain.workers.dev/webhook"}'
-```
-
 ## Usage
 
 ### Basic Commands
