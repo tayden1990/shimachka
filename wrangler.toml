@@ -12,9 +12,9 @@ binding = "AE"
 
 [vars]
 # Environment variables - set these in your Cloudflare dashboard
-# TELEGRAM_BOT_TOKEN = "your_telegram_bot_token"
-# GEMINI_API_KEY = "your_gemini_api_key"
-# WEBHOOK_SECRET = "your_webhook_secret"
+TELEGRAM_BOT_TOKEN = "dummy_token_for_local_testing"
+GEMINI_API_KEY = "dummy_gemini_key_for_local_testing"
+WEBHOOK_SECRET = "dummy_webhook_secret_for_local_testing"
 
 [[kv_namespaces]]
 binding = "LEITNER_DB"

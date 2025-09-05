@@ -183,11 +183,12 @@ export class LeitnerBot {
     private userManager: UserManager,
     private wordExtractor: WordExtractor,
     private scheduleManager: ScheduleManager,
-    kv: any // Accept any type for KVNamespace to avoid TS2345 errors
+    kv: any, // Accept any type for KVNamespace to avoid TS2345 errors
+    private env: any
   ) {
     this.baseUrl = `https://api.telegram.org/bot${token}`;
     this.conversationStateManager = new ConversationStateManager(kv);
-    this.adminService = new AdminService(kv);
+    this.adminService = new AdminService(kv, env);
   }
 
   async handleWebhook(request: Request): Promise<Response> {

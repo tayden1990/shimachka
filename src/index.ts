@@ -57,9 +57,9 @@ export default {
       const userManager = new UserManager(env.LEITNER_DB);
       const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
       const scheduleManager = new ScheduleManager(env.LEITNER_DB);
-      const adminService = new AdminService(env.LEITNER_DB);
+      const adminService = new AdminService(env.LEITNER_DB, env);
       const adminAPI = new AdminAPI(adminService, userManager);
-      const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB as any);
+      const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB as any, env);
 
       // Initialize admin account on first run
       await initializeAdmin(env.LEITNER_DB);
@@ -904,9 +904,9 @@ learning"
                             },
                             body: JSON.stringify({
                                 words: words,
-                                sourceLanguage: this.bulkWordsForm.sourceLanguage,
-                                targetLanguage: this.bulkWordsForm.targetLanguage,
-                                userIds: userIds
+                                meaningLanguage: this.bulkWordsForm.targetLanguage,
+                                definitionLanguage: this.bulkWordsForm.targetLanguage,
+                                assignUsers: userIds.length > 0 ? userIds : undefined
                             })
                         });
 
@@ -943,8 +943,7 @@ learning"
                                 'Authorization': \`Bearer \${this.token}\`
                             },
                             body: JSON.stringify({
-                                fromAdminId: this.admin.id,
-                                toUserId: parseInt(this.directMessageForm.userId),
+                                userId: parseInt(this.directMessageForm.userId),
                                 message: this.directMessageForm.message
                             })
                         });
@@ -974,7 +973,6 @@ learning"
                                 'Authorization': \`Bearer \${this.token}\`
                             },
                             body: JSON.stringify({
-                                fromAdminId: this.admin.id,
                                 userIds: userIds,
                                 message: this.bulkMessageForm.message
                             })
@@ -982,7 +980,7 @@ learning"
 
                         if (response.ok) {
                             const data = await response.json();
-                            this.showAlertMessage(\`Bulk message sent to \${data.sentCount} users successfully!\`, 'success');
+                            this.showAlertMessage(\`Bulk message sent to \${data.total || userIds.length} users successfully!\`, 'success');
                             this.bulkMessageForm = { userIds: '', message: '' };
                         } else {
                             const error = await response.json();
@@ -1004,14 +1002,13 @@ learning"
                                 'Authorization': \`Bearer \${this.token}\`
                             },
                             body: JSON.stringify({
-                                fromAdminId: this.admin.id,
                                 message: this.broadcastMessageForm.message
                             })
                         });
 
                         if (response.ok) {
                             const data = await response.json();
-                            this.showAlertMessage(\`Broadcast message sent to \${data.sentCount} users successfully!\`, 'success');
+                            this.showAlertMessage(\`Broadcast message sent to \${data.total || 'all'} users successfully!\`, 'success');
                             this.broadcastMessageForm = { message: '', confirmed: false };
                         } else {
                             const error = await response.json();
@@ -1211,7 +1208,7 @@ learning"
       const userManager = new UserManager(env.LEITNER_DB);
       const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
       const scheduleManager = new ScheduleManager(env.LEITNER_DB);
-      const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB as any);
+      const bot = new LeitnerBot(env.TELEGRAM_BOT_TOKEN, userManager, wordExtractor, scheduleManager, env.LEITNER_DB as any, env);
       
       await bot.sendDailyReminders();
 
