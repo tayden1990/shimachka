@@ -51,7 +51,7 @@ jobs:
           sleep 10  # Wait for deployment to propagate
           curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/setWebhook" \
                -H "Content-Type: application/json" \
-               -d "{\"url\": \"https://${{ secrets.WORKER_DOMAIN }}/webhook\", \"secret_token\": \"${{ secrets.WEBHOOK_SECRET }}\"}"
+               -d "{\"url\": \"https://leitner-telegram-bot.t-ak-sa.workers.dev/webhook\", \"secret_token\": \"${{ secrets.WEBHOOK_SECRET }}\"}"
         
       - name: Verify Webhook
         if: success()
