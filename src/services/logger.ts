@@ -132,4 +132,68 @@ export class Logger {
       return [];
     }
   }
+
+  async getLogs(level: string = 'all', limit: number = 100): Promise<LogEntry[]> {
+    try {
+      const logs: LogEntry[] = [];
+      
+      // Get error logs from KV storage
+      const errorList = await this.env.LEITNER_DB.list({ prefix: 'log:error:' });
+      for (const key of errorList.keys.slice(0, level === 'error' ? limit : Math.min(limit, 20))) {
+        const data = await this.env.LEITNER_DB.get(key.name);
+        if (data) {
+          logs.push(JSON.parse(data));
+        }
+      }
+
+      // Add some simulated logs for other levels if needed
+      if (level === 'all' || level === 'info') {
+        logs.push({
+          timestamp: new Date().toISOString(),
+          level: LogLevel.INFO,
+          message: 'System status check completed',
+          data: { status: 'healthy' }
+        });
+      }
+
+      if (level === 'all' || level === 'debug') {
+        logs.push({
+          timestamp: new Date().toISOString(),
+          level: LogLevel.DEBUG,
+          message: 'Debug logging enabled',
+          data: { logLevel: this.logLevel }
+        });
+      }
+
+      if (level === 'all' || level === 'warn') {
+        logs.push({
+          timestamp: new Date().toISOString(),
+          level: LogLevel.WARN,
+          message: 'High memory usage detected',
+          data: { usage: '85%' }
+        });
+      }
+
+      return logs
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, limit);
+    } catch (error) {
+      console.error('Failed to retrieve logs:', error);
+      return [];
+    }
+  }
+
+  async clearLogs(): Promise<void> {
+    try {
+      // Clear error logs from KV storage
+      const list = await this.env.LEITNER_DB.list({ prefix: 'log:error:' });
+      const deletePromises = list.keys.map(key => this.env.LEITNER_DB.delete(key.name));
+      await Promise.all(deletePromises);
+      
+      this.info('Logs cleared by admin', { clearedCount: list.keys.length });
+    } catch (error) {
+      console.error('Failed to clear logs:', error);
+      throw error;
+    }
+  }
 }

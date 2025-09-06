@@ -5,7 +5,7 @@ import { AdminAPI } from './api/admin-api';
 import { UserManager } from './services/user-manager';
 import { WordExtractor } from './services/word-extractor';
 import { ScheduleManager } from './services/schedule-manager';
-import { getEnhancedAdminHTML } from './admin/enhanced-admin';
+import { getPremiumAdminHTML } from './admin/premium-admin';
 import { LeitnerBot } from './bot/leitner-bot';
 import { TelegramUpdate } from './types';
 
@@ -55,7 +55,7 @@ export default {
       if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/api/admin')) {
         if (url.pathname === '/admin' || url.pathname === '/admin/') {
           // Serve new comprehensive admin panel HTML interface
-          return new Response(getEnhancedAdminHTML(), {
+          return new Response(getPremiumAdminHTML(), {
             headers: { 'Content-Type': 'text/html' }
           });
         }
