@@ -1752,7 +1752,7 @@ export function getAdminPanelHTML(): string {
                 async loadAnalytics() {
                     try {
                         const response = await fetch('/admin/analytics', {
-                            headers: { 'Authorization': \`Bearer \${this.token}\` }
+                            headers: { 'Authorization': 'Bearer ' + this.token }
                         });
                         if (response.ok) {
                             const data = await response.json();
@@ -1776,7 +1776,7 @@ export function getAdminPanelHTML(): string {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'Authorization': \`Bearer \${this.token}\`
+                                'Authorization': 'Bearer ' + this.token
                             },
                             body: JSON.stringify({
                                 type: this.messaging.type,
