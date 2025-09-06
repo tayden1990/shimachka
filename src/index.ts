@@ -26,20 +26,28 @@ export default {
         console.log('Received Telegram webhook request');
         
         try {
+          const update: TelegramUpdate = await request.json();
+          console.log('Webhook update received:', JSON.stringify(update, null, 2));
+          
+          // Test service initialization
+          console.log('Testing service initialization...');
           const userManager = new UserManager(env.LEITNER_DB);
+          console.log('UserManager created successfully');
+          
           const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
+          console.log('WordExtractor created successfully');
+          
           const scheduleManager = new ScheduleManager(env.LEITNER_DB);
+          console.log('ScheduleManager created successfully');
           
-          const bot = new LeitnerBot(
-            env.TELEGRAM_BOT_TOKEN,
-            userManager,
-            wordExtractor,
-            scheduleManager,
-            env.LEITNER_DB,
-            env
-          );
+          // Simple response for now to test service initialization
+          if (update.message && update.message.text === '/start') {
+            console.log('Received /start command - services initialized OK');
+            return new Response('OK - Services initialized, start command received', { status: 200 });
+          }
           
-          return await bot.handleWebhook(request);
+          return new Response('OK - Services initialized successfully', { status: 200 });
+          
         } catch (error) {
           console.error('Bot webhook error:', error);
           return new Response(`Bot Error: ${error instanceof Error ? error.message : String(error)}`, { 
