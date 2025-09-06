@@ -70,7 +70,7 @@ export default {
           const adminService = new AdminService(env.LEITNER_DB, env);
           const userManager = new UserManager(env.LEITNER_DB);
           const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
-          const adminAPI = new AdminAPI(adminService, userManager, wordExtractor);
+          const adminAPI = new AdminAPI(adminService, userManager, wordExtractor, env);
           
           return await adminAPI.handleAdminRequest(request);
         }

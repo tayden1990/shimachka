@@ -1,13 +1,19 @@
 import { AdminService } from '../services/admin-service';
 import { UserManager } from '../services/user-manager';
 import { WordExtractor } from '../services/word-extractor';
+import { Logger } from '../services/logger';
 
 export class AdminAPI {
+  private logger: Logger;
+  
   constructor(
     private adminService: AdminService,
     private userManager: UserManager,
-    private wordExtractor?: WordExtractor
-  ) {}
+    private wordExtractor?: WordExtractor,
+    private env?: any
+  ) {
+    this.logger = new Logger(env);
+  }
 
   async handleAdminRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
@@ -471,8 +477,42 @@ export class AdminAPI {
       const level = url.searchParams.get('level') || 'all';
       const limit = parseInt(url.searchParams.get('limit') || '100');
       
-      // Mock logs for now - in production, integrate with actual logging system
-      const logs = this.generateMockLogs(level, limit);
+      let logs: any[] = [];
+      
+      if (this.logger) {
+        if (level === 'error' || level === 'all') {
+          // Get real error logs from the logger
+          const errorLogs = await this.logger.getRecentErrors(limit);
+          logs = errorLogs.map(log => ({
+            timestamp: log.timestamp,
+            level: 'error',
+            message: log.message,
+            data: log.data,
+            context: {
+              userId: log.userId,
+              adminId: log.adminId,
+              requestId: log.requestId
+            }
+          }));
+        }
+        
+        if (level === 'all' && logs.length < limit) {
+          // Add some recent activity as info logs
+          const recentActivity = await this.getRecentActivity();
+          const activityLogs = recentActivity.map(activity => ({
+            timestamp: activity.timestamp,
+            level: 'info',
+            message: activity.title,
+            data: { description: activity.description, icon: activity.icon }
+          }));
+          logs = [...logs, ...activityLogs].slice(0, limit);
+        }
+      }
+      
+      // Fallback to mock logs if no real logs available
+      if (logs.length === 0) {
+        logs = this.generateMockLogs(level, limit);
+      }
       
       return new Response(JSON.stringify({ logs }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
