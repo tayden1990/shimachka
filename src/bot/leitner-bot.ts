@@ -1536,8 +1536,23 @@ ${texts.chooseLanguageBelow}`;
     
     switch (registration.step) {
       case 'ask_language': {
-        // This is handled by callback queries, so ignore text input
-        await this.sendMessage(chatId, texts.chooseLanguageBelow);
+        // This is handled by callback queries, so redirect to proper language selection
+        const languageKeyboard: TelegramInlineKeyboard = {
+          inline_keyboard: [
+            [
+              { text: '🇺🇸 English', callback_data: 'select_language:en' },
+              { text: '🇮🇷 فارسی', callback_data: 'select_language:fa' }
+            ],
+            [
+              { text: '🇸🇦 العربية', callback_data: 'select_language:ar' },
+              { text: '🇪🇸 Español', callback_data: 'select_language:es' }
+            ],
+            [
+              { text: '🇷🇺 Русский', callback_data: 'select_language:ru' }
+            ]
+          ]
+        };
+        await this.sendMessage(chatId, texts.chooseLanguageBelow, languageKeyboard);
         break;
       }
       case 'ask_name': {
