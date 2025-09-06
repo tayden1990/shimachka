@@ -543,22 +543,39 @@ Choose what you'd like to do:
   // Command handler method (moved switch/case block here)
   private async handleCommand(command: string, chatId: number, userId: number, args: string[]): Promise<void> {
   // (Removed stray case statement outside switch)
+    console.log('🤖 handleCommand called:', { command, chatId, userId, args });
+    
     // Check if registration is complete (except for /start command)
     if (command !== '/start') {
+      console.log('🔍 Checking registration status for non-start command');
       const user = await this.userManager.getUser(userId);
+      console.log('👤 User registration check:', { 
+        userFound: !!user, 
+        isComplete: user?.isRegistrationComplete,
+        command 
+      });
+      
       if (!user || !user.isRegistrationComplete) {
         const userLang = await this.getUserInterfaceLanguage(userId);
         const texts = languageManager.getTexts(userLang);
+        console.log('❌ Registration incomplete, sending registration prompt');
         await this.sendMessage(chatId, `${texts.completeRegistrationFirst}\n\n${texts.useStartToBegin}`);
         return;
       }
     }
 
+    console.log('✅ Processing command:', command);
     switch (command) {
       case '/start': {
         console.log('🚀 /start command received for user:', userId);
         const user = await this.userManager.getUser(userId);
-        console.log('👤 User data:', user ? 'Found existing user' : 'New user');
+        console.log('👤 User data for /start:', user ? {
+          id: user.id,
+          isRegistrationComplete: user.isRegistrationComplete,
+          username: user.username,
+          language: user.language
+        } : 'No user found');
+        
         if (user && user.isRegistrationComplete) {
           console.log('✅ User is registered, sending welcome message');
           await this.sendWelcomeMessage(chatId);
