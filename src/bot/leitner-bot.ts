@@ -68,18 +68,11 @@ export class LeitnerBot {
   async sendPendingNotifications(): Promise<void> {
     try {
       console.log('Checking for pending notifications...');
-      
-      // Get all pending Telegram notifications via AdminService
-      const pendingNotifications = await this.adminService.getPendingTelegramNotifications();
-      
-      for (const notification of pendingNotifications) {
-        try {
+        const pendingNotifications = await this.adminService.getPendingTelegramNotifications();
+        for (const notification of pendingNotifications) {
           await this.sendNotificationToUser(notification);
           await this.adminService.markTelegramNotificationAsSent(notification.key);
-        } catch (error) {
-          console.error(`Error sending notification ${notification.key}:`, error);
         }
-      }
     } catch (error) {
       console.error('Error sending pending notifications:', error);
     }

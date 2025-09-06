@@ -1,4 +1,5 @@
 import { User, Card, Topic, ReviewSession } from '../types';
+import { safeParse } from '../utils/safe-parse';
 
 export class UserManager {
   constructor(private kv: KVNamespace) {}
@@ -6,13 +7,7 @@ export class UserManager {
   async getUser(userId: number): Promise<User | null> {
     const userKey = `user:${userId}`;
     const userData = await this.kv.get(userKey);
-    if (!userData) return null;
-    try {
-      return JSON.parse(userData);
-    } catch (e) {
-      console.error('Malformed user JSON for', userKey, e);
-      return null;
-    }
+  return userData ? safeParse<User>(userData) : null;
   }
 
   async createUser(userData: Partial<User>): Promise<User> {
@@ -51,13 +46,8 @@ export class UserManager {
 
     for (const key of list.keys) {
       const userData = await this.kv.get(key.name);
-      if (!userData) continue;
-      try {
-        const user = JSON.parse(userData) as User;
-        if (user.isActive) users.push(user);
-      } catch (e) {
-        console.error('Skipping malformed user record', key.name);
-      }
+      const user = userData ? safeParse<User>(userData) : null;
+      if (user && user.isActive) users.push(user);
     }
 
     return users;
@@ -70,13 +60,8 @@ export class UserManager {
 
     for (const key of list.keys) {
       const cardData = await this.kv.get(key.name);
-      if (!cardData) continue;
-      try {
-        const card = JSON.parse(cardData) as Card;
-        if (!box || card.box === box) cards.push(card);
-      } catch (e) {
-        console.error('Skipping malformed card', key.name);
-      }
+      const card = cardData ? safeParse<Card>(cardData) : null;
+      if (card && (!box || card.box === box)) cards.push(card);
     }
 
     return cards.sort((a, b) => new Date(a.nextReviewAt).getTime() - new Date(b.nextReviewAt).getTime());
@@ -144,12 +129,8 @@ export class UserManager {
 
     for (const key of list.keys) {
       const topicData = await this.kv.get(key.name);
-      if (!topicData) continue;
-      try {
-        topics.push(JSON.parse(topicData) as Topic);
-      } catch (e) {
-        console.error('Skipping malformed topic', key.name);
-      }
+      const topic = topicData ? safeParse<Topic>(topicData) : null;
+      if (topic) topics.push(topic);
     }
 
     return topics.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

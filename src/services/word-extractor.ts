@@ -1,5 +1,22 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { WordExtractionRequest, ExtractedWord, LanguageCode, LANGUAGES } from '../types';
+import { safeParse } from '../utils/safe-parse';
+// Simple in-memory rate limiter (per process, not distributed)
+const aiCallTimestamps: number[] = [];
+const AI_RATE_LIMIT = 5; // max 5 calls
+const AI_RATE_WINDOW_MS = 10 * 1000; // per 10 seconds
+
+function checkRateLimit() {
+  const now = Date.now();
+  // Remove timestamps older than window
+  while (aiCallTimestamps.length && aiCallTimestamps[0] < now - AI_RATE_WINDOW_MS) {
+    aiCallTimestamps.shift();
+  }
+  if (aiCallTimestamps.length >= AI_RATE_LIMIT) {
+    throw new Error('AI rate limit exceeded. Please try again later.');
+  }
+  aiCallTimestamps.push(now);
+}
 
 export class WordExtractor {
   private genAI: GoogleGenerativeAI;
@@ -64,35 +81,25 @@ Return only the JSON array, with no extra text or explanation.
 `;
 
     try {
+      checkRateLimit();
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      
       // Clean the response to extract JSON
       const jsonMatch = text.match(/\[[\s\S]*\]/);
       if (!jsonMatch) {
         throw new Error('No valid JSON found in response');
       }
-
-      let wordsData: any;
-      try {
-        wordsData = JSON.parse(jsonMatch[0]);
-      } catch (e) {
-        console.error('Primary JSON parse failed (extractWords). Raw slice length:', jsonMatch[0].length);
-        throw new Error('Invalid JSON from AI response');
-      }
-      
+      const wordsData = safeParse<any[]>(jsonMatch[0]);
       if (!Array.isArray(wordsData)) {
         throw new Error('Response is not an array');
       }
-
       return wordsData.map((item: any): ExtractedWord => ({
         word: item.word || '',
         translation: item.translation || '',
         definition: item.definition || '',
         context: item.context || ''
       })).filter(word => word.word && word.translation && word.definition);
-
     } catch (error) {
       console.error('Error extracting words:', error);
       throw new Error('Failed to extract words from the topic');
@@ -126,31 +133,22 @@ Return only the JSON object, no additional text.
 `;
 
     try {
+      checkRateLimit();
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      
       // Clean the response to extract JSON
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error('No valid JSON found in response');
       }
-
-      let wordData: any;
-      try {
-        wordData = JSON.parse(jsonMatch[0]);
-      } catch (e) {
-        console.error('Primary JSON parse failed (translateWord). Raw slice length:', jsonMatch[0].length);
-        throw new Error('Invalid JSON from AI response');
-      }
-      
+      const wordData = safeParse<any>(jsonMatch[0]);
       return {
-        word: wordData.word || word,
-        translation: wordData.translation || '',
-        definition: wordData.definition || '',
-        context: wordData.context || ''
+        word: wordData?.word || word,
+        translation: wordData?.translation || '',
+        definition: wordData?.definition || '',
+        context: wordData?.context || ''
       };
-
     } catch (error) {
       console.error('Error translating word:', error);
       throw new Error('Failed to translate the word');
@@ -215,11 +213,10 @@ Return only the language code, no additional text.
     definition: string;
   }> {
     try {
+      checkRateLimit();
       const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      
       const sourceLanguageName = LANGUAGES[sourceLanguage as LanguageCode] || sourceLanguage;
       const targetLanguageName = LANGUAGES[targetLanguage as LanguageCode] || targetLanguage;
-      
       const prompt = `Please provide for the word "${word}" in ${sourceLanguageName}:
 1. Translation to ${targetLanguageName}
 2. Brief definition in ${targetLanguageName}
@@ -229,42 +226,26 @@ Respond in this exact JSON format:
   "translation": "word translation",
   "definition": "brief definition"
 }`;
-
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      
-      try {
-        const parsed = JSON.parse(text);
-        
-        // Validate the AI response quality
-        if (parsed.translation && parsed.definition && 
-            parsed.translation !== `${word}_translated` && 
-            parsed.definition !== `Definition of ${word}` &&
-            parsed.translation.trim().length > 0 && 
-            parsed.definition.trim().length > 0) {
-          
-          return {
-            translation: parsed.translation.trim(),
-            definition: parsed.definition.trim()
-          };
-        } else {
-          console.warn(`AI returned poor quality response for word: ${word}`, parsed);
-          return {
-            translation: word + '_translated',
-            definition: 'Definition of ' + word
-          };
-        }
-      } catch (parseError) {
-        console.error('Failed to parse AI response:', parseError);
-        console.error('Raw AI response:', text);
-        
+      const parsed = safeParse<any>(text);
+      if (parsed && parsed.translation && parsed.definition &&
+          parsed.translation !== `${word}_translated` &&
+          parsed.definition !== `Definition of ${word}` &&
+          parsed.translation.trim().length > 0 &&
+          parsed.definition.trim().length > 0) {
+        return {
+          translation: parsed.translation.trim(),
+          definition: parsed.definition.trim()
+        };
+      } else {
+        console.warn(`AI returned poor quality response for word: ${word}`, parsed);
         // Try to extract translation and definition from non-JSON response
         const extractedData = this.extractFromRawText(text, word);
         if (extractedData) {
           return extractedData;
         }
-        
         return {
           translation: word + '_translated',
           definition: 'Definition of ' + word

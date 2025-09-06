@@ -1,4 +1,5 @@
 import { Card, User, LEITNER_INTERVALS } from '../types';
+import { safeParse } from '../utils/safe-parse';
 
 export class ScheduleManager {
   constructor(private kv: KVNamespace) {}
@@ -66,13 +67,8 @@ export class ScheduleManager {
 
     for (const cardKey of cardsList.keys) {
       const cardData = await this.kv.get(cardKey.name);
-      if (!cardData) continue;
-      try {
-        const card = JSON.parse(cardData) as Card;
-        if (new Date(card.nextReviewAt) <= now) return true;
-      } catch (e) {
-        console.error('Malformed card JSON (reminder check)', cardKey.name);
-      }
+      const card = cardData ? safeParse<Card>(cardData) : null;
+      if (card && new Date(card.nextReviewAt) <= now) return true;
     }
 
     return false;
@@ -115,15 +111,12 @@ export class ScheduleManager {
 
     for (const cardKey of cardsList.keys) {
       const cardData = await this.kv.get(cardKey.name);
-      if (!cardData) continue;
-      try {
-        const card = JSON.parse(cardData) as Card;
+      const card = cardData ? safeParse<Card>(cardData) : null;
+      if (card) {
         totalCards++;
         cardsReviewed += card.reviewCount;
         correctAnswers += card.correctCount;
         boxDistribution[card.box]++;
-      } catch (e) {
-        console.error('Skipping malformed card (stats)', cardKey.name);
       }
     }
 
@@ -163,16 +156,13 @@ export class ScheduleManager {
 
       for (const sessionKey of sessionsList.keys) {
         const sessionData = await this.kv.get(sessionKey.name);
-        if (!sessionData) continue;
-        try {
-          const session = JSON.parse(sessionData);
+        const session = sessionData ? safeParse<any>(sessionData) : null;
+        if (session) {
           const sessionDate = new Date(session.startedAt);
           if (sessionDate >= dayStart && sessionDate <= dayEnd && session.cardsReviewed > 0) {
             hasActivity = true;
             break;
           }
-        } catch (e) {
-          console.error('Skipping malformed session', sessionKey.name);
         }
       }
 
