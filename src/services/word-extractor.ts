@@ -101,6 +101,7 @@ Return only the JSON array, with no extra text or explanation.
         context: item.context || ''
       })).filter(word => word.word && word.translation && word.definition);
     } catch (error) {
+      if (error instanceof Error && error.message.includes('rate limit')) throw error;
       console.error('Error extracting words:', error);
       throw new Error('Failed to extract words from the topic');
     }
