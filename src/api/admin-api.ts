@@ -1,13 +1,19 @@
 import { AdminService } from '../services/admin-service';
 import { UserManager } from '../services/user-manager';
 import { WordExtractor } from '../services/word-extractor';
+import { Logger } from '../services/logger';
 
 export class AdminAPI {
+  private logger: Logger;
+  
   constructor(
     private adminService: AdminService,
     private userManager: UserManager,
-    private wordExtractor?: WordExtractor
-  ) {}
+    private wordExtractor?: WordExtractor,
+    private env?: any
+  ) {
+    this.logger = new Logger(env);
+  }
 
   async handleAdminRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
@@ -73,6 +79,9 @@ export class AdminAPI {
           
         case path === '/admin/bulk-assignments' && method === 'GET':
           return await this.handleGetBulkAssignments(corsHeaders);
+          
+        case path === '/admin/assign-words' && method === 'POST':
+          return await this.handleAssignWords(request, corsHeaders);
 
         // Support & Tickets endpoints
         case path === '/admin/tickets' && method === 'GET':
@@ -317,27 +326,52 @@ export class AdminAPI {
       
       const processedWords: any[] = [];
       const wordsArray = Array.isArray(words) ? words : words.split(/[,\n]/).filter((w: string) => w.trim());
+      let successCount = 0;
+      let failureCount = 0;
       
       for (const word of wordsArray) {
         try {
           const result = await this.wordExtractor.extractWordData(word.trim(), sourceLanguage, targetLanguage);
-          processedWords.push({
-            word: word.trim(),
-            translation: result.translation,
-            definition: result.definition,
-            sourceLanguage,
-            targetLanguage
-          });
+          
+          // Validate AI response quality
+          if (result.translation !== `${word.trim()}_translated` && 
+              result.definition !== `Definition of ${word.trim()}`) {
+            processedWords.push({
+              word: word.trim(),
+              translation: result.translation,
+              definition: result.definition,
+              sourceLanguage,
+              targetLanguage,
+              status: 'success'
+            });
+            successCount++;
+          } else {
+            // AI returned fallback data, try to provide better fallback
+            processedWords.push({
+              word: word.trim(),
+              translation: await this.getFallbackTranslation(word.trim(), sourceLanguage, targetLanguage),
+              definition: `Learn more about: ${word.trim()}`,
+              sourceLanguage,
+              targetLanguage,
+              status: 'fallback',
+              note: 'AI returned generic response, using fallback'
+            });
+            failureCount++;
+          }
         } catch (error) {
           console.error(`Failed to process word: ${word}`, error);
+          this.logger?.error(`AI word processing failed for word: ${word}`, error);
+          
           processedWords.push({
             word: word.trim(),
-            translation: `${word.trim()}_translated`,
-            definition: `Definition of ${word.trim()}`,
+            translation: await this.getFallbackTranslation(word.trim(), sourceLanguage, targetLanguage),
+            definition: `Study word: ${word.trim()}`,
             sourceLanguage,
             targetLanguage,
+            status: 'error',
             error: 'AI processing failed'
           });
+          failureCount++;
         }
       }
       
@@ -355,7 +389,9 @@ export class AdminAPI {
         assignmentId,
         processedWords,
         totalWords: processedWords.length,
-        message: 'Words processed successfully'
+        successCount,
+        failureCount,
+        message: `Words processed: ${successCount} successful, ${failureCount} with fallback data`
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -363,6 +399,45 @@ export class AdminAPI {
       console.error('Bulk words AI error:', error);
       return new Response(JSON.stringify({ 
         error: 'Failed to process words with AI',
+        message: error instanceof Error ? error.message : String(error)
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleAssignWords(request: Request, corsHeaders: any): Promise<Response> {
+    try {
+      const body: any = await request.json();
+      const { assignmentId } = body;
+      
+      if (!assignmentId) {
+        return new Response(JSON.stringify({ error: 'Assignment ID is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      const success = await this.adminService.assignWordsToUsers(assignmentId);
+      
+      if (success) {
+        return new Response(JSON.stringify({
+          message: 'Words assigned to users successfully',
+          assignmentId
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else {
+        return new Response(JSON.stringify({ error: 'Failed to assign words to users' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    } catch (error) {
+      console.error('Assign words error:', error);
+      return new Response(JSON.stringify({ 
+        error: 'Failed to assign words to users',
         message: error instanceof Error ? error.message : String(error)
       }), {
         status: 500,
@@ -471,8 +546,42 @@ export class AdminAPI {
       const level = url.searchParams.get('level') || 'all';
       const limit = parseInt(url.searchParams.get('limit') || '100');
       
-      // Mock logs for now - in production, integrate with actual logging system
-      const logs = this.generateMockLogs(level, limit);
+      let logs: any[] = [];
+      
+      if (this.logger) {
+        if (level === 'error' || level === 'all') {
+          // Get real error logs from the logger
+          const errorLogs = await this.logger.getRecentErrors(limit);
+          logs = errorLogs.map(log => ({
+            timestamp: log.timestamp,
+            level: 'error',
+            message: log.message,
+            data: log.data,
+            context: {
+              userId: log.userId,
+              adminId: log.adminId,
+              requestId: log.requestId
+            }
+          }));
+        }
+        
+        if (level === 'all' && logs.length < limit) {
+          // Add some recent activity as info logs
+          const recentActivity = await this.getRecentActivity();
+          const activityLogs = recentActivity.map(activity => ({
+            timestamp: activity.timestamp,
+            level: 'info',
+            message: activity.title,
+            data: { description: activity.description, icon: activity.icon }
+          }));
+          logs = [...logs, ...activityLogs].slice(0, limit);
+        }
+      }
+      
+      // Fallback to mock logs if no real logs available
+      if (logs.length === 0) {
+        logs = this.generateMockLogs(level, limit);
+      }
       
       return new Response(JSON.stringify({ logs }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -484,6 +593,37 @@ export class AdminAPI {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+  }
+
+  private async getFallbackTranslation(word: string, sourceLanguage: string, targetLanguage: string): Promise<string> {
+    // Simple fallback translation logic - in production, this could use a backup translation service
+    // or a local dictionary
+    
+    // Common word mappings for demo purposes
+    const commonTranslations: { [key: string]: { [key: string]: { [key: string]: string } } } = {
+      'en': {
+        'es': { 'hello': 'hola', 'goodbye': 'adiós', 'thank you': 'gracias', 'please': 'por favor' },
+        'fr': { 'hello': 'bonjour', 'goodbye': 'au revoir', 'thank you': 'merci', 'please': 's\'il vous plaît' },
+        'de': { 'hello': 'hallo', 'goodbye': 'auf wiedersehen', 'thank you': 'danke', 'please': 'bitte' }
+      },
+      'es': {
+        'en': { 'hola': 'hello', 'adiós': 'goodbye', 'gracias': 'thank you', 'por favor': 'please' }
+      },
+      'fr': {
+        'en': { 'bonjour': 'hello', 'au revoir': 'goodbye', 'merci': 'thank you', 's\'il vous plaît': 'please' }
+      }
+    };
+    
+    const normalizedWord = word.toLowerCase();
+    
+    if (commonTranslations[sourceLanguage] && 
+        commonTranslations[sourceLanguage][targetLanguage] && 
+        commonTranslations[sourceLanguage][targetLanguage][normalizedWord]) {
+      return commonTranslations[sourceLanguage][targetLanguage][normalizedWord];
+    }
+    
+    // If no mapping found, return a formatted version indicating it needs translation
+    return `[${word}]`;
   }
 
   private async getRecentActivity(): Promise<any[]> {
