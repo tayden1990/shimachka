@@ -287,7 +287,7 @@ export class LeitnerBot {
     // Handle commands
     if (text.startsWith('/')) {
       const [cmd, ...args] = text.split(' ');
-    await this.handleCommand(cmd, chatId, userId, args);
+      await this.handleCommand(cmd, chatId, userId, args);
     } else {
       // Handle text input based on current context
       await this.handleTextInput(chatId, userId, text);
