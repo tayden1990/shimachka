@@ -963,6 +963,206 @@ export function getPremiumAdminHTML(): string {
                         </div>
                     </div>
 
+                    <!-- Messaging Tab -->
+                    <div x-show="activeTab === 'messaging'" class="space-y-6 fade-in">
+                        <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Send Messages</h3>
+                            
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- Broadcast Message -->
+                                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6">
+                                    <h4 class="text-md font-semibold text-gray-900 mb-3">
+                                        <i class="fas fa-bullhorn text-blue-600 mr-2"></i>Broadcast Message
+                                    </h4>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                                            <textarea x-model="broadcastForm.message" rows="4" 
+                                                      placeholder="Enter broadcast message..."
+                                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                                        </div>
+                                        <button @click="sendBroadcast()" :disabled="!broadcastForm.message" 
+                                                class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                                            <i class="fas fa-paper-plane mr-2"></i>Send to All Users
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Direct Message -->
+                                <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6">
+                                    <h4 class="text-md font-semibold text-gray-900 mb-3">
+                                        <i class="fas fa-user text-green-600 mr-2"></i>Direct Message
+                                    </h4>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">User ID</label>
+                                            <input type="number" x-model="directForm.userId" placeholder="Enter user ID"
+                                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                                            <textarea x-model="directForm.message" rows="3" 
+                                                      placeholder="Enter message..."
+                                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                                        </div>
+                                        <button @click="sendDirect()" :disabled="!directForm.userId || !directForm.message" 
+                                                class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50">
+                                            <i class="fas fa-paper-plane mr-2"></i>Send Message
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Message History -->
+                        <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Message History</h3>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recipient</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Message</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sent At</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200">
+                                        <template x-for="message in messageHistory" :key="message.id">
+                                            <tr class="hover:bg-gray-50">
+                                                <td class="px-4 py-3">
+                                                    <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                                          :class="message.type === 'broadcast' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'"
+                                                          x-text="message.type"></span>
+                                                </td>
+                                                <td class="px-4 py-3 text-sm text-gray-600" x-text="message.recipient"></td>
+                                                <td class="px-4 py-3 text-sm text-gray-900" x-text="message.content.substring(0, 50) + '...'"></td>
+                                                <td class="px-4 py-3 text-sm text-gray-600" x-text="formatDate(message.sentAt)"></td>
+                                                <td class="px-4 py-3">
+                                                    <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                                          :class="message.status === 'sent' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                                                          x-text="message.status"></span>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div x-show="!messageHistory || messageHistory.length === 0" class="text-center py-8 text-gray-500">
+                                <i class="fas fa-envelope text-4xl mb-4"></i>
+                                <p>No messages sent yet</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Tab -->
+                    <div x-show="activeTab === 'analytics'" class="space-y-6 fade-in">
+                        <!-- Key Metrics -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white card-hover">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-blue-100 text-sm">Total Users</p>
+                                        <p class="text-2xl font-bold" x-text="analyticsData.totalUsers || 0"></p>
+                                    </div>
+                                    <i class="fas fa-users text-3xl text-blue-200"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white card-hover">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-green-100 text-sm">Active Today</p>
+                                        <p class="text-2xl font-bold" x-text="analyticsData.activeToday || 0"></p>
+                                    </div>
+                                    <i class="fas fa-user-check text-3xl text-green-200"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white card-hover">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-purple-100 text-sm">Total Cards</p>
+                                        <p class="text-2xl font-bold" x-text="analyticsData.totalCards || 0"></p>
+                                    </div>
+                                    <i class="fas fa-layer-group text-3xl text-purple-200"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white card-hover">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-orange-100 text-sm">Reviews Today</p>
+                                        <p class="text-2xl font-bold" x-text="analyticsData.reviewsToday || 0"></p>
+                                    </div>
+                                    <i class="fas fa-brain text-3xl text-orange-200"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Charts -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- User Activity Chart -->
+                            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">User Activity (Last 7 Days)</h3>
+                                <canvas id="userActivityChart" width="400" height="200"></canvas>
+                            </div>
+
+                            <!-- Learning Progress Chart -->
+                            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Learning Progress</h3>
+                                <canvas id="learningProgressChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- User Engagement -->
+                        <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">User Engagement Analysis</h3>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cards</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reviews</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Accuracy</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Active</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200">
+                                        <template x-for="user in analyticsData.userEngagement" :key="user.userId">
+                                            <tr class="hover:bg-gray-50">
+                                                <td class="px-4 py-3 text-sm font-medium text-gray-900" x-text="user.name"></td>
+                                                <td class="px-4 py-3 text-sm text-gray-600" x-text="user.totalCards"></td>
+                                                <td class="px-4 py-3 text-sm text-gray-600" x-text="user.totalReviews"></td>
+                                                <td class="px-4 py-3">
+                                                    <div class="flex items-center">
+                                                        <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                                                            <div class="bg-blue-600 h-2 rounded-full" :style="'width: ' + user.accuracy + '%'"></div>
+                                                        </div>
+                                                        <span class="text-sm text-gray-600" x-text="user.accuracy + '%'"></span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-4 py-3 text-sm text-gray-600" x-text="formatDate(user.lastActive)"></td>
+                                                <td class="px-4 py-3">
+                                                    <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                                          :class="user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                                                          x-text="user.isActive ? 'Active' : 'Inactive'"></span>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div x-show="!analyticsData.userEngagement || analyticsData.userEngagement.length === 0" class="text-center py-8 text-gray-500">
+                                <i class="fas fa-chart-line text-4xl mb-4"></i>
+                                <p>No engagement data available</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Other tabs remain similar but with enhanced styling... -->
                     
                 </div>
@@ -1081,6 +1281,27 @@ export function getPremiumAdminHTML(): string {
                     tickets: []
                 },
                 
+                // Messaging data
+                broadcastForm: {
+                    message: ''
+                },
+                
+                directForm: {
+                    userId: '',
+                    message: ''
+                },
+                
+                messageHistory: [],
+                
+                // Analytics data
+                analyticsData: {
+                    totalUsers: 0,
+                    activeToday: 0,
+                    totalCards: 0,
+                    reviewsToday: 0,
+                    userEngagement: []
+                },
+                
                 init() {
                     this.updateTime();
                     setInterval(() => this.updateTime(), 1000);
@@ -1122,6 +1343,14 @@ export function getPremiumAdminHTML(): string {
                             if (this.supportTickets.tickets.length === 0) {
                                 this.loadSupportTickets();
                             }
+                            break;
+                        case 'messaging':
+                            if (this.messageHistory.length === 0) {
+                                this.loadMessageHistory();
+                            }
+                            break;
+                        case 'analytics':
+                            this.loadAnalytics();
                             break;
                     }
                 },
@@ -1666,6 +1895,166 @@ export function getPremiumAdminHTML(): string {
                 viewUserDetails(user) {
                     this.addLog('info', 'Viewing user details', 'User: ' + (user.fullName || user.id));
                     this.addNotification('info', 'User Details', 'Viewing details for ' + (user.fullName || 'User ' + user.id));
+                },
+                
+                // Messaging functions
+                async loadMessageHistory() {
+                    this.addLog('debug', 'Loading message history');
+                    try {
+                        const response = await fetch('/admin/messages', {
+                            headers: { 'Authorization': 'Bearer ' + this.token }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.messageHistory = data.messages || [];
+                            this.addLog('success', 'Message history loaded', 'Found ' + this.messageHistory.length + ' messages');
+                        } else {
+                            this.addLog('error', 'Failed to load message history', 'Status: ' + response.status);
+                        }
+                    } catch (error) {
+                        this.addLog('error', 'Error loading message history', error.toString());
+                    }
+                },
+                
+                async sendBroadcast() {
+                    if (!this.broadcastForm.message) return;
+                    
+                    this.addLog('info', 'Sending broadcast message', 'Message: ' + this.broadcastForm.message.substring(0, 50) + '...');
+                    try {
+                        const response = await fetch('/admin/send-broadcast-message', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.token 
+                            },
+                            body: JSON.stringify({
+                                message: this.broadcastForm.message
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            this.broadcastForm.message = '';
+                            this.addNotification('success', 'Broadcast Sent', 'Message sent to all users');
+                            this.loadMessageHistory(); // Refresh history
+                        } else {
+                            const data = await response.json();
+                            this.addLog('error', 'Failed to send broadcast', data.error || 'Unknown error');
+                        }
+                    } catch (error) {
+                        this.addLog('error', 'Error sending broadcast', error.toString());
+                    }
+                },
+                
+                async sendDirect() {
+                    if (!this.directForm.userId || !this.directForm.message) return;
+                    
+                    this.addLog('info', 'Sending direct message', 'To user: ' + this.directForm.userId);
+                    try {
+                        const response = await fetch('/admin/send-direct-message', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.token 
+                            },
+                            body: JSON.stringify({
+                                userId: parseInt(this.directForm.userId),
+                                message: this.directForm.message
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            this.directForm.userId = '';
+                            this.directForm.message = '';
+                            this.addNotification('success', 'Message Sent', 'Direct message sent successfully');
+                            this.loadMessageHistory(); // Refresh history
+                        } else {
+                            const data = await response.json();
+                            this.addLog('error', 'Failed to send direct message', data.error || 'Unknown error');
+                        }
+                    } catch (error) {
+                        this.addLog('error', 'Error sending direct message', error.toString());
+                    }
+                },
+                
+                // Analytics functions
+                async loadAnalytics() {
+                    this.addLog('debug', 'Loading analytics data');
+                    try {
+                        const response = await fetch('/admin/analytics', {
+                            headers: { 'Authorization': 'Bearer ' + this.token }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.analyticsData = data;
+                            this.addLog('success', 'Analytics data loaded successfully');
+                            this.updateAnalyticsCharts();
+                        } else {
+                            this.addLog('error', 'Failed to load analytics', 'Status: ' + response.status);
+                        }
+                    } catch (error) {
+                        this.addLog('error', 'Error loading analytics', error.toString());
+                    }
+                },
+                
+                updateAnalyticsCharts() {
+                    this.$nextTick(() => {
+                        // User Activity Chart
+                        const activityCtx = document.getElementById('userActivityChart');
+                        if (activityCtx) {
+                            new Chart(activityCtx, {
+                                type: 'line',
+                                data: {
+                                    labels: ['6 days ago', '5 days ago', '4 days ago', '3 days ago', '2 days ago', 'Yesterday', 'Today'],
+                                    datasets: [{
+                                        label: 'Active Users',
+                                        data: [12, 15, 8, 22, 18, 25, 20],
+                                        borderColor: 'rgb(59, 130, 246)',
+                                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                        fill: true
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                        
+                        // Learning Progress Chart
+                        const progressCtx = document.getElementById('learningProgressChart');
+                        if (progressCtx) {
+                            new Chart(progressCtx, {
+                                type: 'doughnut',
+                                data: {
+                                    labels: ['Box 1', 'Box 2', 'Box 3', 'Box 4', 'Box 5'],
+                                    datasets: [{
+                                        data: [150, 120, 80, 50, 30],
+                                        backgroundColor: [
+                                            'rgba(239, 68, 68, 0.8)',
+                                            'rgba(245, 158, 11, 0.8)',
+                                            'rgba(59, 130, 246, 0.8)',
+                                            'rgba(16, 185, 129, 0.8)',
+                                            'rgba(139, 92, 246, 0.8)'
+                                        ]
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    plugins: {
+                                        legend: {
+                                            position: 'bottom'
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    });
                 }
             };
         }
