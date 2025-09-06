@@ -37,27 +37,49 @@ export class AdminAPI {
   }
 
   async getRealSystemStats(): Promise<any> {
-    const users = await this.userManager.getAllUsers();
-    const activeUsers = users.filter(u => u.isRegistrationComplete);
-    
-    // Get all users' cards to calculate total words
-    let totalWords = 0;
-    let studySessions = 0;
-    
-    for (const user of users) {
-      const userCards = await this.userManager.getUserCards(user.id);
-      totalWords += userCards.length;
-      // Estimate study sessions based on review counts
-      studySessions += userCards.reduce((sum, card) => sum + card.reviewCount, 0);
-    }
+    try {
+      console.log('Getting real system stats...');
+      const users = await this.userManager.getAllUsers();
+      console.log(`Found ${users.length} users`);
+      
+      const activeUsers = users.filter(u => u.isRegistrationComplete === true);
+      console.log(`Found ${activeUsers.length} active users`);
+      
+      // Get all users' cards to calculate total words
+      let totalWords = 0;
+      let studySessions = 0;
+      
+      for (const user of users.slice(0, 10)) { // Limit to first 10 users for performance
+        try {
+          const userCards = await this.userManager.getUserCards(user.id);
+          totalWords += userCards.length;
+          // Estimate study sessions based on review counts
+          studySessions += userCards.reduce((sum, card) => sum + card.reviewCount, 0);
+        } catch (cardError) {
+          console.error(`Error getting cards for user ${user.id}:`, cardError);
+        }
+      }
 
-    return {
-      totalUsers: users.length,
-      activeUsers: activeUsers.length,
-      totalWords: totalWords,
-      studySessions: studySessions,
-      registrationRate: users.length > 0 ? (activeUsers.length / users.length * 100) : 0
-    };
+      const stats = {
+        totalUsers: users.length,
+        activeUsers: activeUsers.length,
+        totalWords: totalWords,
+        studySessions: studySessions,
+        registrationRate: users.length > 0 ? (activeUsers.length / users.length * 100) : 0
+      };
+      
+      console.log('Real system stats calculated:', stats);
+      return stats;
+    } catch (error) {
+      console.error('Error in getRealSystemStats:', error);
+      return {
+        totalUsers: 0,
+        activeUsers: 0,
+        totalWords: 0,
+        studySessions: 0,
+        registrationRate: 0
+      };
+    }
   }
 
   async handleAdminRequest(request: Request): Promise<Response> {
@@ -368,11 +390,20 @@ export class AdminAPI {
 
   private async handleDashboard(corsHeaders: any): Promise<Response> {
     try {
+      console.log('Loading dashboard data...');
+      
       // Get real statistics from all services
       const realStats = await this.getRealSystemStats();
+      console.log('Real stats loaded:', realStats);
+      
       const commandStats = await this.getCommandUsageStats();
+      console.log('Command stats loaded');
+      
       const recentActivity = await this.getRecentActivity();
+      console.log('Recent activity loaded');
+      
       const users = await this.userManager.getAllUsers();
+      console.log(`Users loaded: ${users.length}`);
       
       // Get recent users (last 10)
       const recentUsers = users
@@ -380,7 +411,23 @@ export class AdminAPI {
         .slice(0, 10);
 
       // Get admin service stats for additional data
-      const adminStats = await this.adminService.getDashboardStats();
+      let adminStats;
+      try {
+        adminStats = await this.adminService.getDashboardStats();
+        console.log('Admin stats loaded:', adminStats);
+      } catch (adminError) {
+        console.error('Error loading admin stats:', adminError);
+        adminStats = {
+          totalCards: 0,
+          reviewsToday: 0,
+          userGrowth: 0,
+          activeGrowth: 0,
+          cardGrowth: 0,
+          reviewGrowth: 0,
+          newUsersToday: 0,
+          openTickets: 0
+        };
+      }
 
       const dashboardData = {
         // Real stats from our calculations
@@ -421,6 +468,8 @@ export class AdminAPI {
         }
       };
 
+      console.log('Dashboard data prepared successfully');
+
       this.logger.info('Enhanced dashboard data retrieved', { 
         totalUsers: realStats.totalUsers,
         totalWords: realStats.totalWords,
@@ -432,7 +481,11 @@ export class AdminAPI {
       });
     } catch (error) {
       console.error('Dashboard error:', error);
-      return new Response(JSON.stringify({ error: 'Failed to load dashboard' }), {
+      this.logger.error('Dashboard loading failed', error);
+      return new Response(JSON.stringify({ 
+        error: 'Failed to load dashboard',
+        details: error instanceof Error ? error.message : String(error)
+      }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -810,15 +863,19 @@ export class AdminAPI {
       }
 
       // Send the actual message to the user via Telegram
+      console.log(`Sending direct message to user ${userId}`);
       await this.leitnerBot.sendDirectMessage(parseInt(userId), message);
+      console.log(`Telegram message sent successfully to user ${userId}`);
       
       // Store the message in admin service for history
+      console.log(`Storing message in admin service for user ${userId}`);
       const messageId = await this.adminService.sendDirectMessage({
         adminId: 'admin', // You might want to get this from auth token
         userId: parseInt(userId),
         subject: 'Direct Message from Admin',
         content: message
       });
+      console.log(`Message stored with ID: ${messageId}`);
 
       this.logger.info(`Direct message sent to user ${userId}`, {
         messageId,
@@ -870,17 +927,21 @@ export class AdminAPI {
       let failedCount = 0;
 
       // Send broadcast message to all users
+      console.log(`Sending broadcast to ${users.length} users`);
       for (const user of users) {
         try {
+          console.log(`Sending broadcast to user ${user.id}`);
           await this.leitnerBot.sendDirectMessage(user.id, `📢 **Broadcast Message:**\n\n${message}`);
           
           // Store each message in admin service for history
+          console.log(`Storing broadcast message for user ${user.id}`);
           await this.adminService.sendDirectMessage({
             adminId: 'admin',
             userId: user.id,
             subject: 'Broadcast Message',
             content: message
           });
+          console.log(`Broadcast message stored for user ${user.id}`);
           
           sentCount++;
         } catch (error) {
