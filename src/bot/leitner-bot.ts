@@ -154,7 +154,11 @@ export class LeitnerBot {
     }
 
     try {
-      console.log('Sending message with payload:', JSON.stringify(payload, null, 2));
+      console.log('📤 Sending message to chat:', chatId);
+      console.log('📝 Message text length:', text.length);
+      console.log('⌨️ Has keyboard:', !!keyboard);
+      console.log('🔧 Full payload:', JSON.stringify(payload, null, 2));
+      
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -163,15 +167,39 @@ export class LeitnerBot {
         body: JSON.stringify(payload)
       });
 
+      const responseText = await response.text();
+      console.log('📥 Telegram API response status:', response.status);
+      console.log('📥 Telegram API response:', responseText);
+
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Telegram API error:', response.status, errorText);
-        console.error('Failed payload:', JSON.stringify(payload, null, 2));
+        console.error('❌ Telegram API error:', response.status, responseText);
+        console.error('❌ Failed payload:', JSON.stringify(payload, null, 2));
+        
+        // Try to parse error details
+        try {
+          const errorData = JSON.parse(responseText);
+          console.error('❌ Telegram error details:', errorData);
+        } catch (e) {
+          console.error('❌ Could not parse error response as JSON');
+        }
       } else {
-        console.log('Message sent successfully');
+        console.log('✅ Message sent successfully');
+        
+        // Try to parse success response
+        try {
+          const successData = JSON.parse(responseText);
+          console.log('✅ Success response data:', successData);
+        } catch (e) {
+          console.log('✅ Message sent but could not parse response JSON');
+        }
       }
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('❌ Failed to send message - Network/Fetch error:', error);
+      console.error('❌ Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
     }
   }
   private baseUrl: string;
