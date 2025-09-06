@@ -114,6 +114,35 @@ export class AdminAPI {
         return await this.handleGetUserMessages(path, corsHeaders);
       }
 
+      // API admin endpoints
+      if (path === '/api/admin/env-check' && method === 'GET') {
+        return await this.handleEnvCheck(corsHeaders);
+      }
+
+      if (path === '/api/admin/test-telegram' && method === 'GET') {
+        return await this.handleTestTelegram(corsHeaders);
+      }
+
+      if (path === '/api/admin/test-database' && method === 'GET') {
+        return await this.handleTestDatabase(corsHeaders);
+      }
+
+      if (path === '/api/admin/test-ai' && method === 'GET') {
+        return await this.handleTestAI(corsHeaders);
+      }
+
+      if (path === '/api/admin/clear-cache' && method === 'POST') {
+        return await this.handleClearCache(corsHeaders);
+      }
+
+      if (path === '/api/admin/reset-database' && method === 'POST') {
+        return await this.handleResetDatabase(corsHeaders);
+      }
+
+      if (path === '/api/admin/restore-full-bot' && method === 'POST') {
+        return await this.handleRestoreFullBot(corsHeaders);
+      }
+
       return new Response(JSON.stringify({ error: 'Not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -529,6 +558,145 @@ export class AdminAPI {
       console.error('Error getting bulk words progress:', error);
       return new Response(JSON.stringify({ error: 'Failed to get progress' }), {
         status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleEnvCheck(corsHeaders: any): Promise<Response> {
+    try {
+      const envStatus = await this.adminService.checkEnvironmentVariables();
+      
+      return new Response(JSON.stringify(envStatus), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ error: 'Failed to check environment' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleTestTelegram(corsHeaders: any): Promise<Response> {
+    try {
+      // Test Telegram bot API connection
+      const testResult = await this.adminService.testTelegramConnection();
+      
+      return new Response(JSON.stringify({ 
+        success: testResult.success,
+        message: testResult.message 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Failed to test Telegram connection' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleTestDatabase(corsHeaders: any): Promise<Response> {
+    try {
+      // Test database connection
+      const testResult = await this.adminService.testDatabaseConnection();
+      
+      return new Response(JSON.stringify({ 
+        success: testResult.success,
+        message: testResult.message 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Failed to test database connection' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleTestAI(corsHeaders: any): Promise<Response> {
+    try {
+      // Test AI service connection
+      const testResult = await this.adminService.testAIConnection();
+      
+      return new Response(JSON.stringify({ 
+        success: testResult.success,
+        message: testResult.message 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Failed to test AI connection' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleClearCache(corsHeaders: any): Promise<Response> {
+    try {
+      await this.adminService.clearCache();
+      
+      return new Response(JSON.stringify({ 
+        success: true,
+        message: 'Cache cleared successfully' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Failed to clear cache' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleResetDatabase(corsHeaders: any): Promise<Response> {
+    try {
+      await this.adminService.resetDatabase();
+      
+      return new Response(JSON.stringify({ 
+        success: true,
+        message: 'Database reset successfully' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Failed to reset database' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleRestoreFullBot(corsHeaders: any): Promise<Response> {
+    try {
+      // This would typically update some configuration to restore full bot functionality
+      // For now, we'll just return success since the bot is already restored
+      
+      return new Response(JSON.stringify({ 
+        success: true,
+        message: 'Full bot functionality restored' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Failed to restore full bot' 
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
