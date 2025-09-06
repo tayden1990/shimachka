@@ -742,7 +742,10 @@ export function getSimpleAdminHTML(): string {
             };
         }
     </script>
-    
+    <script>
+      // Expose simpleAdmin globally for Alpine.js
+      window.simpleAdmin = simpleAdmin;
+    </script>
     <!-- Load Alpine.js after our function is defined -->
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
@@ -751,7 +754,6 @@ export function getSimpleAdminHTML(): string {
             console.log('Alpine.js initialized');
             document.body.classList.add('alpine-ready');
         });
-        
         // Additional fallback
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
