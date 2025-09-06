@@ -334,6 +334,13 @@ export class LeitnerBot {
       interfaceLanguage: user.interfaceLanguage
     });
 
+    // Fix for existing users who might not have isRegistrationComplete set
+    if (user.isRegistrationComplete === undefined || user.isRegistrationComplete === null) {
+      console.log('🔧 Fixing registration status for existing user');
+      await this.userManager.updateUser(userId, { isRegistrationComplete: true });
+      user.isRegistrationComplete = true;
+    }
+
     // Check if registration is complete
     if (!user.isRegistrationComplete) {
       console.log('📝 User registration incomplete, handling registration flow');
@@ -353,6 +360,15 @@ export class LeitnerBot {
     if (text.startsWith('/')) {
       const [cmd, ...args] = text.split(' ');
       console.log('🤖 Processing command:', { command: cmd, args, userId, chatId });
+      
+      // Special handling for /start command - it should always work
+      if (cmd === '/start') {
+        console.log('🚀 /start command - bypassing registration check');
+        await this.handleCommand(cmd, chatId, userId, args);
+        return;
+      }
+      
+      // For other commands, check registration first
       await this.handleCommand(cmd, chatId, userId, args);
     } else {
       // Handle text input based on current context
@@ -604,9 +620,29 @@ Choose what you'd like to do:
           language: user.language
         } : 'No user found');
         
-        if (user && user.isRegistrationComplete) {
+        // If no user found, this should never happen as we create user in handleMessage
+        if (!user) {
+          console.log('❌ No user found in /start command - this should not happen');
+          await this.sendMessage(chatId, 'Error: User not found. Please try again.');
+          return;
+        }
+        
+        // Force fix registration status if undefined
+        if (user.isRegistrationComplete === undefined || user.isRegistrationComplete === null) {
+          console.log('🔧 Fixing undefined registration status for /start');
+          await this.userManager.updateUser(userId, { isRegistrationComplete: true });
+          user.isRegistrationComplete = true;
+        }
+        
+        if (user.isRegistrationComplete) {
           console.log('✅ User is registered, sending welcome message');
-          await this.sendWelcomeMessage(chatId);
+          try {
+            await this.sendWelcomeMessage(chatId);
+            console.log('✅ Welcome message sent successfully');
+          } catch (error) {
+            console.error('❌ Error sending welcome message:', error);
+            await this.sendMessage(chatId, 'Welcome! Use the menu below to get started.');
+          }
         } else {
           console.log('📝 Starting registration flow for user');
           await this.startRegistrationFlow(chatId, userId);
@@ -621,6 +657,18 @@ Choose what you'd like to do:
         debugMsg += `<b>User:</b>\n<pre>${JSON.stringify(debugUser, null, 2)}</pre>\n`;
         debugMsg += `<b>Conversation State:</b>\n<pre>${JSON.stringify(debugState, null, 2)}</pre>`;
         await this.sendMessage(chatId, debugMsg, { parse_mode: 'HTML' });
+        break;
+      }
+      case '/force_complete_registration': {
+        // Debug command: force complete registration for user
+        console.log('🔧 Force completing registration for user:', userId);
+        await this.userManager.updateUser(userId, { 
+          isRegistrationComplete: true,
+          fullName: 'Debug User',
+          interfaceLanguage: 'en'
+        });
+        await this.conversationStateManager.clearState(userId);
+        await this.sendMessage(chatId, '✅ Registration force completed! Try /start again.');
         break;
       }
       case '/reset_registration': {
