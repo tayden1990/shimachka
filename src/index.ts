@@ -1,3 +1,5 @@
+/// <reference types="@cloudflare/workers-types" />
+
 import { AdminService } from './services/admin-service';
 import { AdminAPI } from './api/admin-api';
 import { UserManager } from './services/user-manager';

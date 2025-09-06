@@ -20,8 +20,7 @@
     "noUnusedParameters": false,
     "strict": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "types": ["@cloudflare/workers-types"]
+    "forceConsistentCasingInFileNames": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
