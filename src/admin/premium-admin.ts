@@ -180,14 +180,14 @@ export function getPremiumAdminHTML(): string {
                 
                 <nav class="mt-8 px-4">
                     <div class="space-y-2">
-                        <button @click="activeTab = 'dashboard'" 
+                        <button @click="switchTab('dashboard')" 
                                 :class="activeTab === 'dashboard' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'"
                                 class="w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200">
                             <i class="fas fa-tachometer-alt mr-3 text-lg"></i>
                             Dashboard
                         </button>
                         
-                        <button @click="activeTab = 'users'" 
+                        <button @click="switchTab('users')" 
                                 :class="activeTab === 'users' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'"
                                 class="w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200">
                             <i class="fas fa-users mr-3 text-lg"></i>
@@ -195,21 +195,21 @@ export function getPremiumAdminHTML(): string {
                             <span x-show="stats.totalUsers > 0" class="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full" x-text="stats.totalUsers"></span>
                         </button>
                         
-                        <button @click="activeTab = 'messaging'" 
+                        <button @click="switchTab('messaging')" 
                                 :class="activeTab === 'messaging' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'"
                                 class="w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200">
                             <i class="fas fa-paper-plane mr-3 text-lg"></i>
                             Messaging
                         </button>
                         
-                        <button @click="activeTab = 'analytics'" 
+                        <button @click="switchTab('analytics')" 
                                 :class="activeTab === 'analytics' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'"
                                 class="w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200">
                             <i class="fas fa-chart-line mr-3 text-lg"></i>
                             Analytics
                         </button>
                         
-                        <button @click="activeTab = 'logs'" 
+                        <button @click="switchTab('logs')" 
                                 :class="activeTab === 'logs' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'"
                                 class="w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200">
                             <i class="fas fa-file-alt mr-3 text-lg"></i>
@@ -217,7 +217,7 @@ export function getPremiumAdminHTML(): string {
                             <span x-show="logs.length > 0" class="ml-auto bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full" x-text="logs.length"></span>
                         </button>
                         
-                        <button @click="activeTab = 'system'" 
+                        <button @click="switchTab('system')" 
                                 :class="activeTab === 'system' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'"
                                 class="w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200">
                             <i class="fas fa-server mr-3 text-lg"></i>
@@ -225,7 +225,43 @@ export function getPremiumAdminHTML(): string {
                             <div class="ml-auto w-2 h-2 rounded-full pulse-dot" :class="systemHealth.status === 'healthy' ? 'bg-green-500' : 'bg-red-500'"></div>
                         </button>
                         
-                        <button @click="activeTab = 'settings'" 
+                        <button @click="switchTab('commands')" 
+                                :class="activeTab === 'commands' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'"
+                                class="w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200">
+                            <i class="fas fa-terminal mr-3 text-lg"></i>
+                            Bot Commands
+                        </button>
+                        
+                        <button @click="switchTab('words')" 
+                                :class="activeTab === 'words' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'"
+                                class="w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200">
+                            <i class="fas fa-book mr-3 text-lg"></i>
+                            Word Management
+                        </button>
+                        
+                        <button @click="switchTab('study')" 
+                                :class="activeTab === 'study' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'"
+                                class="w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200">
+                            <i class="fas fa-graduation-cap mr-3 text-lg"></i>
+                            Study Sessions
+                        </button>
+                        
+                        <button @click="switchTab('topics')" 
+                                :class="activeTab === 'topics' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'"
+                                class="w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200">
+                            <i class="fas fa-lightbulb mr-3 text-lg"></i>
+                            AI Topics
+                        </button>
+                        
+                        <button @click="switchTab('support')" 
+                                :class="activeTab === 'support' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'"
+                                class="w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200">
+                            <i class="fas fa-life-ring mr-3 text-lg"></i>
+                            Support Tickets
+                            <span x-show="supportTickets.openTickets > 0" class="ml-auto bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full" x-text="supportTickets.openTickets"></span>
+                        </button>
+                        
+                        <button @click="switchTab('settings')" 
                                 :class="activeTab === 'settings' ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'"
                                 class="w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200">
                             <i class="fas fa-cog mr-3 text-lg"></i>
@@ -615,6 +651,318 @@ export function getPremiumAdminHTML(): string {
                         </div>
                     </div>
 
+                    <!-- Bot Commands Tab -->
+                    <div x-show="activeTab === 'commands'" class="space-y-6 fade-in">
+                        <div class="bg-white rounded-xl shadow-lg card-hover">
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-lg font-semibold text-gray-900">Bot Commands Statistics</h3>
+                                    <button @click="loadCommandStats()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="p-6">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                    <template x-for="cmd in Object.keys(commandBreakdown)" :key="cmd">
+                                        <div class="bg-gray-50 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="font-mono text-sm text-blue-600" x-text="cmd"></span>
+                                                <span class="text-lg font-bold text-gray-900" x-text="commandBreakdown[cmd]?.users || 0"></span>
+                                            </div>
+                                            <p class="text-xs text-gray-500" x-text="commandBreakdown[cmd]?.description || ''"></p>
+                                        </div>
+                                    </template>
+                                </div>
+                                
+                                <div class="bg-blue-50 rounded-lg p-4">
+                                    <h4 class="font-semibold text-blue-900 mb-2">Command Usage Details</h4>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                        <div>
+                                            <span class="text-blue-600">Most Used:</span>
+                                            <span class="font-medium">/start</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-blue-600">Study Rate:</span>
+                                            <span class="font-medium">70%</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-blue-600">Registration:</span>
+                                            <span class="font-medium">90%</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-blue-600">AI Usage:</span>
+                                            <span class="font-medium">50%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Word Management Tab -->
+                    <div x-show="activeTab === 'words'" class="space-y-6 fade-in">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Add Word Form -->
+                            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Add Word to User</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">User ID</label>
+                                        <input type="number" x-model="wordForm.userId" placeholder="Enter user ID" 
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Word</label>
+                                            <input type="text" x-model="wordForm.word" placeholder="English word" 
+                                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Translation</label>
+                                            <input type="text" x-model="wordForm.translation" placeholder="Translation" 
+                                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Definition</label>
+                                        <textarea x-model="wordForm.definition" rows="3" placeholder="Word definition (optional)" 
+                                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                                    </div>
+                                    <button @click="addWordToUser()" :disabled="!wordForm.userId || !wordForm.word || !wordForm.translation" 
+                                            class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                                        <i class="fas fa-plus mr-2"></i>Add Word
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Words Summary -->
+                            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-lg font-semibold text-gray-900">Words Overview</h3>
+                                    <button @click="loadWordsSummary()" class="text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                </div>
+                                <div x-show="wordsSummary.length > 0" class="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
+                                    <template x-for="summary in wordsSummary" :key="summary.userId">
+                                        <div class="bg-gray-50 rounded-lg p-3">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="font-medium text-gray-900" x-text="summary.fullName"></span>
+                                                <span class="text-sm font-bold text-blue-600" x-text="summary.totalWords + ' words'"></span>
+                                            </div>
+                                            <div class="grid grid-cols-5 gap-1 text-xs">
+                                                <div class="text-center">
+                                                    <div class="text-red-600 font-medium" x-text="summary.wordsInBox1"></div>
+                                                    <div class="text-gray-500">Box 1</div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-orange-600 font-medium" x-text="summary.wordsInBox2"></div>
+                                                    <div class="text-gray-500">Box 2</div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-yellow-600 font-medium" x-text="summary.wordsInBox3"></div>
+                                                    <div class="text-gray-500">Box 3</div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-blue-600 font-medium" x-text="summary.wordsInBox4"></div>
+                                                    <div class="text-gray-500">Box 4</div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-green-600 font-medium" x-text="summary.wordsInBox5"></div>
+                                                    <div class="text-gray-500">Box 5</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Study Sessions Tab -->
+                    <div x-show="activeTab === 'study'" class="space-y-6 fade-in">
+                        <div class="bg-white rounded-xl shadow-lg card-hover">
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <h3 class="text-lg font-semibold text-gray-900">Study Sessions Management</h3>
+                            </div>
+                            <div class="p-6">
+                                <div x-show="studySummary.length > 0" class="overflow-x-auto">
+                                    <table class="w-full">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Cards</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due for Review</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Reviews</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Accuracy</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-200">
+                                            <template x-for="session in studySummary" :key="session.userId">
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-4 py-3 text-sm font-medium text-gray-900" x-text="session.fullName"></td>
+                                                    <td class="px-4 py-3 text-sm text-gray-600" x-text="session.totalCards"></td>
+                                                    <td class="px-4 py-3">
+                                                        <span class="px-2 py-1 text-xs font-medium rounded-full" 
+                                                              :class="session.dueForReview > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'"
+                                                              x-text="session.dueForReview"></span>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-sm text-gray-600" x-text="session.totalReviews"></td>
+                                                    <td class="px-4 py-3">
+                                                        <div class="flex items-center">
+                                                            <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                                                                <div class="bg-blue-600 h-2 rounded-full" :style="'width: ' + session.accuracy + '%'"></div>
+                                                            </div>
+                                                            <span class="text-sm text-gray-600" x-text="session.accuracy + '%'"></span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3">
+                                                        <button @click="forceReview(session.userId)" 
+                                                                class="text-blue-600 hover:text-blue-800 text-sm">
+                                                            <i class="fas fa-play mr-1"></i>Force Review
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Topics Tab -->
+                    <div x-show="activeTab === 'topics'" class="space-y-6 fade-in">
+                        <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Generate Words from Topic</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">User ID</label>
+                                        <input type="number" x-model="topicForm.userId" placeholder="Enter user ID" 
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Topic</label>
+                                        <input type="text" x-model="topicForm.topic" placeholder="e.g., Travel, Business, Science" 
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Source Language</label>
+                                            <select x-model="topicForm.sourceLanguage" 
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                                <option value="en">English</option>
+                                                <option value="es">Spanish</option>
+                                                <option value="fr">French</option>
+                                                <option value="de">German</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Target Language</label>
+                                            <select x-model="topicForm.targetLanguage" 
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                                <option value="es">Spanish</option>
+                                                <option value="en">English</option>
+                                                <option value="fr">French</option>
+                                                <option value="de">German</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Number of Words</label>
+                                        <input type="number" x-model="topicForm.wordCount" min="5" max="20" value="10" 
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                    <button @click="generateTopic()" :disabled="!topicForm.userId || !topicForm.topic || topicForm.generating" 
+                                            class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors">
+                                        <span x-show="!topicForm.generating">
+                                            <i class="fas fa-magic mr-2"></i>Generate Words
+                                        </span>
+                                        <span x-show="topicForm.generating">
+                                            <i class="fas fa-spinner loading-spinner mr-2"></i>Generating...
+                                        </span>
+                                    </button>
+                                </div>
+                                
+                                <div class="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg p-4">
+                                    <h4 class="font-semibold text-gray-900 mb-3">AI Topic Generation</h4>
+                                    <div class="space-y-2 text-sm text-gray-600">
+                                        <div class="flex items-center">
+                                            <i class="fas fa-brain text-green-600 mr-2"></i>
+                                            <span>Powered by Google Gemini AI</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <i class="fas fa-language text-blue-600 mr-2"></i>
+                                            <span>Supports 16+ languages</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <i class="fas fa-lightning-bolt text-yellow-600 mr-2"></i>
+                                            <span>Instant vocabulary generation</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <i class="fas fa-book-open text-purple-600 mr-2"></i>
+                                            <span>Context-aware definitions</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Support Tickets Tab -->
+                    <div x-show="activeTab === 'support'" class="space-y-6 fade-in">
+                        <div class="bg-white rounded-xl shadow-lg card-hover">
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-lg font-semibold text-gray-900">Support Tickets</h3>
+                                    <div class="flex space-x-3">
+                                        <span class="px-3 py-1 bg-red-100 text-red-800 text-sm font-medium rounded-full">
+                                            <span x-text="supportTickets.openTickets || 0"></span> Open
+                                        </span>
+                                        <span class="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                                            <span x-text="supportTickets.resolvedTickets || 0"></span> Resolved
+                                        </span>
+                                        <button @click="loadSupportTickets()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                            <i class="fas fa-sync-alt mr-2"></i>Refresh
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-6">
+                                <div x-show="supportTickets.tickets && supportTickets.tickets.length > 0" class="space-y-4">
+                                    <template x-for="ticket in supportTickets.tickets" :key="ticket.id">
+                                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                                            <div class="flex items-start justify-between mb-3">
+                                                <div>
+                                                    <h4 class="font-medium text-gray-900" x-text="ticket.subject || 'Support Request'"></h4>
+                                                    <p class="text-sm text-gray-600" x-text="'User ID: ' + ticket.userId"></p>
+                                                </div>
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full" 
+                                                      :class="ticket.status === 'open' ? 'bg-red-100 text-red-800' : ticket.status === 'resolved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'"
+                                                      x-text="ticket.status"></span>
+                                            </div>
+                                            <p class="text-sm text-gray-700 mb-3" x-text="ticket.message"></p>
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-xs text-gray-500" x-text="formatDate(ticket.createdAt)"></span>
+                                                <button @click="respondToTicket(ticket)" class="text-blue-600 hover:text-blue-800 text-sm">
+                                                    <i class="fas fa-reply mr-1"></i>Respond
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div x-show="!supportTickets.tickets || supportTickets.tickets.length === 0" class="text-center py-8 text-gray-500">
+                                    <i class="fas fa-ticket-alt text-4xl mb-4"></i>
+                                    <p>No support tickets found</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Other tabs remain similar but with enhanced styling... -->
                     
                 </div>
@@ -704,6 +1052,35 @@ export function getPremiumAdminHTML(): string {
                     maintenanceMode: false
                 },
                 
+                // New data properties for extended features
+                commandBreakdown: {},
+                
+                wordForm: {
+                    userId: '',
+                    word: '',
+                    translation: '',
+                    definition: ''
+                },
+                
+                wordsSummary: [],
+                
+                studySummary: [],
+                
+                topicForm: {
+                    userId: '',
+                    topic: '',
+                    sourceLanguage: 'en',
+                    targetLanguage: 'es',
+                    wordCount: 10,
+                    generating: false
+                },
+                
+                supportTickets: {
+                    openTickets: 0,
+                    resolvedTickets: 0,
+                    tickets: []
+                },
+                
                 init() {
                     this.updateTime();
                     setInterval(() => this.updateTime(), 1000);
@@ -718,6 +1095,35 @@ export function getPremiumAdminHTML(): string {
                     
                     this.initializeSampleData();
                     this.initializeCharts();
+                },
+                
+                // Tab switch handler with data loading
+                switchTab(tab) {
+                    this.activeTab = tab;
+                    
+                    // Load data when switching to specific tabs
+                    switch(tab) {
+                        case 'commands':
+                            if (Object.keys(this.commandBreakdown).length === 0) {
+                                this.loadCommandStats();
+                            }
+                            break;
+                        case 'words':
+                            if (this.wordsSummary.length === 0) {
+                                this.loadWordsSummary();
+                            }
+                            break;
+                        case 'study':
+                            if (this.studySummary.length === 0) {
+                                this.loadStudySummary();
+                            }
+                            break;
+                        case 'support':
+                            if (this.supportTickets.tickets.length === 0) {
+                                this.loadSupportTickets();
+                            }
+                            break;
+                    }
                 },
                 
                 updateTime() {
@@ -1051,6 +1457,183 @@ export function getPremiumAdminHTML(): string {
                             }
                         }
                     });
+                },
+
+                // Bot Commands Management
+                async loadCommandStats() {
+                    this.addLog('debug', 'Loading command statistics');
+                    try {
+                        const response = await fetch('/admin/api/commands/stats');
+                        const data = await response.json();
+                        this.commandBreakdown = data.commands || {};
+                        this.addLog('success', 'Command stats loaded');
+                    } catch (error) {
+                        this.addLog('error', 'Error loading command stats', error.toString());
+                    }
+                },
+
+                // Word Management
+                async addWordToUser() {
+                    const { userId, word, translation, definition } = this.wordForm;
+                    this.addLog('debug', 'Adding word to user', 'User: ' + userId + ', Word: ' + word);
+                    
+                    try {
+                        const response = await fetch('/admin/api/words/manage', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'add',
+                                userId: parseInt(userId),
+                                word,
+                                translation,
+                                definition
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            this.wordForm = { userId: '', word: '', translation: '', definition: '' };
+                            this.loadWordsSummary();
+                            this.addLog('success', 'Word added successfully');
+                            this.addNotification('success', 'Word Added', 'Added "' + word + '" to user ' + userId);
+                        } else {
+                            this.addLog('error', 'Failed to add word', data.error);
+                        }
+                    } catch (error) {
+                        this.addLog('error', 'Error adding word', error.toString());
+                    }
+                },
+
+                async loadWordsSummary() {
+                    try {
+                        const response = await fetch('/admin/api/words/summary');
+                        const data = await response.json();
+                        this.wordsSummary = data.users || [];
+                        this.addLog('debug', 'Words summary loaded', 'Found ' + this.wordsSummary.length + ' users');
+                    } catch (error) {
+                        this.addLog('error', 'Error loading words summary', error.toString());
+                    }
+                },
+
+                // Study Sessions Management
+                async loadStudySummary() {
+                    try {
+                        const response = await fetch('/admin/api/study/sessions');
+                        const data = await response.json();
+                        this.studySummary = data.sessions || [];
+                        this.addLog('debug', 'Study summary loaded', 'Found ' + this.studySummary.length + ' sessions');
+                    } catch (error) {
+                        this.addLog('error', 'Error loading study sessions', error.toString());
+                    }
+                },
+
+                async forceReview(userId) {
+                    if (confirm('Force review session for this user?')) {
+                        this.addLog('debug', 'Forcing review session', 'User ID: ' + userId);
+                        try {
+                            const response = await fetch('/admin/api/study/force-review', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId })
+                            });
+                            
+                            const data = await response.json();
+                            if (data.success) {
+                                this.loadStudySummary();
+                                this.addLog('success', 'Review session triggered');
+                                this.addNotification('success', 'Review Triggered', 'Forced review for user ' + userId);
+                            } else {
+                                this.addLog('error', 'Failed to trigger review', data.error);
+                            }
+                        } catch (error) {
+                            this.addLog('error', 'Error triggering review', error.toString());
+                        }
+                    }
+                },
+
+                // AI Topics Management
+                async generateTopic() {
+                    const { userId, topic, sourceLanguage, targetLanguage, wordCount } = this.topicForm;
+                    this.topicForm.generating = true;
+                    this.addLog('debug', 'Generating AI topic', 'Topic: ' + topic + ', User: ' + userId);
+                    
+                    try {
+                        const response = await fetch('/admin/api/topics/generate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                userId: parseInt(userId),
+                                topic,
+                                sourceLanguage,
+                                targetLanguage,
+                                wordCount: parseInt(wordCount) || 10
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        this.topicForm.generating = false;
+                        
+                        if (data.success) {
+                            this.topicForm = { 
+                                userId: '', 
+                                topic: '', 
+                                sourceLanguage: 'en', 
+                                targetLanguage: 'es', 
+                                wordCount: 10,
+                                generating: false 
+                            };
+                            this.loadWordsSummary();
+                            this.addLog('success', 'AI topic generated', 'Generated ' + data.wordsCount + ' words');
+                            this.addNotification('success', 'Topic Generated', 'Created ' + data.wordsCount + ' words for "' + topic + '"');
+                        } else {
+                            this.addLog('error', 'Failed to generate topic', data.error);
+                        }
+                    } catch (error) {
+                        this.topicForm.generating = false;
+                        this.addLog('error', 'Error generating topic', error.toString());
+                    }
+                },
+
+                // Support Tickets Management
+                async loadSupportTickets() {
+                    this.addLog('debug', 'Loading support tickets');
+                    try {
+                        const response = await fetch('/admin/api/support/tickets');
+                        const data = await response.json();
+                        this.supportTickets = data;
+                        this.addLog('debug', 'Support tickets loaded', data.openTickets + ' open, ' + data.resolvedTickets + ' resolved');
+                    } catch (error) {
+                        this.addLog('error', 'Error loading support tickets', error.toString());
+                    }
+                },
+
+                async respondToTicket(ticket) {
+                    const response = prompt('Respond to ticket from User ' + ticket.userId + ':\\n"' + ticket.message + '"\\n\\nYour response:');
+                    if (response) {
+                        this.addLog('debug', 'Responding to support ticket', 'Ticket ID: ' + ticket.id);
+                        try {
+                            const apiResponse = await fetch('/admin/api/support/respond', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    ticketId: ticket.id,
+                                    userId: ticket.userId,
+                                    response
+                                })
+                            });
+                            
+                            const data = await apiResponse.json();
+                            if (data.success) {
+                                this.loadSupportTickets();
+                                this.addLog('success', 'Response sent to user');
+                                this.addNotification('success', 'Response Sent', 'Replied to user ' + ticket.userId);
+                            } else {
+                                this.addLog('error', 'Failed to send response', data.error);
+                            }
+                        } catch (error) {
+                            this.addLog('error', 'Error sending response', error.toString());
+                        }
+                    }
                 },
 
                 // Additional methods remain the same...
