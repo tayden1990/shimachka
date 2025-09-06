@@ -485,6 +485,7 @@ ${cardsDue > 0 ? `${texts.readyToStudy} ${texts.useStudyToContinue}` : texts.all
     };
 
     try {
+      console.log('📞 Calling answerCallbackQuery with ID:', callbackQueryId);
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -493,12 +494,16 @@ ${cardsDue > 0 ? `${texts.readyToStudy} ${texts.useStudyToContinue}` : texts.all
         body: JSON.stringify(payload)
       });
 
+      console.log('📞 answerCallbackQuery response status:', response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Telegram answerCallbackQuery error:', response.status, errorText);
+        console.error('❌ Telegram answerCallbackQuery error:', response.status, errorText);
+      } else {
+        console.log('✅ answerCallbackQuery successful');
       }
     } catch (error) {
-      console.error('Failed to answer callback query:', error);
+      console.error('❌ Failed to answer callback query:', error);
     }
   }
 
@@ -796,13 +801,43 @@ Choose what you'd like to do:
     const userId = callbackQuery.from.id;
     const data = callbackQuery.data;
 
-    if (!chatId || !data) return;
+    console.log('🔘 handleCallbackQuery called:', {
+      chatId,
+      userId,
+      data,
+      messageId: callbackQuery.message?.message_id,
+      timestamp: new Date().toISOString()
+    });
 
+    if (!chatId || !data) {
+      console.error('❌ Missing chatId or data in callback query:', { chatId, data });
+      return;
+    }
+
+    console.log('📤 Answering callback query...');
     await this.answerCallbackQuery(callbackQuery.id);
+    console.log('✅ Callback query answered');
 
     const [action, ...params] = data.split(':');
+    console.log('🎯 Processing callback action:', { action, params });
 
-    switch (action) {
+    // Check user registration status - but allow callback queries for registration flow
+    const user = await this.userManager.getUser(userId);
+    console.log('👤 User status for callback:', {
+      userId,
+      userFound: !!user,
+      isRegistrationComplete: user?.isRegistrationComplete,
+      action
+    });
+
+    // Allow registration-related callbacks and force registration completion if needed
+    if (user && (user.isRegistrationComplete === undefined || user.isRegistrationComplete === null)) {
+      console.log('🔧 Auto-fixing registration status for callback user');
+      await this.userManager.updateUser(userId, { isRegistrationComplete: true });
+    }
+
+    try {
+      switch (action) {
       case 'select_language':
         await this.handleRegistrationLanguageSelection(chatId, userId, params[0]);
         break;
@@ -1134,6 +1169,16 @@ Choose what you'd like to do:
       case 'reminder_settings':
         await this.showReminderSettings(chatId, userId);
         break;
+      default:
+        console.log('❓ Unknown callback action:', action);
+        await this.sendMessage(chatId, 'Unknown action. Please try again.');
+        break;
+      }
+      console.log('✅ Callback action processed successfully');
+    } catch (error) {
+      console.error('❌ Error processing callback query:', error);
+      console.error('🔧 Callback details:', { action, params, userId, chatId });
+      await this.sendMessage(chatId, 'Sorry, there was an error processing your request. Please try again.');
     }
   }
 
