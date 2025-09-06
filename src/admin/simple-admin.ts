@@ -665,7 +665,7 @@ export function getSimpleAdminHTML(): string {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
+                                'Authorization': 'Bearer ' + token
                             },
                             body: JSON.stringify({
                                 words: words.split(/[,\n]/).map(w => w.trim()).filter(w => w),
@@ -677,7 +677,7 @@ export function getSimpleAdminHTML(): string {
                         
                         if (response.ok) {
                             const data = await response.json();
-                            this.showMessage(`🤖 AI processing started. Job ID: ${data.jobId}`, 'success');
+                            this.showMessage('🤖 AI processing started. Job ID: ' + data.jobId, 'success');
                         } else {
                             this.showMessage('❌ Failed to start AI processing', 'error');
                         }
@@ -707,7 +707,7 @@ export function getSimpleAdminHTML(): string {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
+                                'Authorization': 'Bearer ' + token
                             },
                             body: JSON.stringify({
                                 userId,
