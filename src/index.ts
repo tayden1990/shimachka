@@ -29,15 +29,24 @@ export default {
           const update: TelegramUpdate = await request.json();
           console.log('Webhook update received:', JSON.stringify(update, null, 2));
           
-          // Initialize services
-          console.log('Initializing services...');
+          // Step-by-step service initialization with error checking
+          console.log('Step 1: Testing UserManager...');
           const userManager = new UserManager(env.LEITNER_DB);
-          const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
-          const scheduleManager = new ScheduleManager(env.LEITNER_DB);
-          const adminService = new AdminService(env.LEITNER_DB, env);
+          console.log('✅ UserManager created successfully');
           
-          // Create and use the full bot instance
-          console.log('Creating LeitnerBot instance...');
+          console.log('Step 2: Testing WordExtractor...');
+          const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
+          console.log('✅ WordExtractor created successfully');
+          
+          console.log('Step 3: Testing ScheduleManager...');
+          const scheduleManager = new ScheduleManager(env.LEITNER_DB);
+          console.log('✅ ScheduleManager created successfully');
+          
+          console.log('Step 4: Testing AdminService...');
+          const adminService = new AdminService(env.LEITNER_DB, env);
+          console.log('✅ AdminService created successfully');
+          
+          console.log('Step 5: Creating LeitnerBot instance...');
           const bot = new LeitnerBot(
             env.TELEGRAM_BOT_TOKEN,
             userManager,
@@ -46,13 +55,19 @@ export default {
             env.LEITNER_DB,
             env
           );
+          console.log('✅ LeitnerBot created successfully');
           
-          // Process the update through the bot
-          console.log('Processing update through bot...');
+          // Simple test - if it's a /start command, just respond with OK for now
+          if (update.message && update.message.text === '/start') {
+            console.log('Received /start command - bot initialized OK');
+            return new Response('OK - Bot initialized and /start received', { status: 200 });
+          }
+          
+          console.log('Step 6: Processing through bot handleWebhook...');
           return await bot.handleWebhook(request);
           
         } catch (error) {
-          console.error('Bot webhook error:', error);
+          console.error('Bot webhook error at step:', error);
           return new Response(`Bot Error: ${error instanceof Error ? error.message : String(error)}`, { 
             status: 500 
           });
