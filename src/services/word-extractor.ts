@@ -196,4 +196,51 @@ Return only the language code, no additional text.
       return 'en'; // Default to English
     }
   }
+
+  // Method needed by admin API for single word processing
+  async extractWordData(word: string, sourceLanguage: string, targetLanguage: string): Promise<{
+    translation: string;
+    definition: string;
+  }> {
+    try {
+      const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      
+      const sourceLanguageName = LANGUAGES[sourceLanguage as LanguageCode] || sourceLanguage;
+      const targetLanguageName = LANGUAGES[targetLanguage as LanguageCode] || targetLanguage;
+      
+      const prompt = `Please provide for the word "${word}" in ${sourceLanguageName}:
+1. Translation to ${targetLanguageName}
+2. Brief definition in ${targetLanguageName}
+
+Respond in this exact JSON format:
+{
+  "translation": "word translation",
+  "definition": "brief definition"
+}`;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      
+      try {
+        const parsed = JSON.parse(text);
+        return {
+          translation: parsed.translation || word + '_translated',
+          definition: parsed.definition || 'Definition of ' + word
+        };
+      } catch (parseError) {
+        console.error('Failed to parse AI response:', parseError);
+        return {
+          translation: word + '_translated',
+          definition: 'Definition of ' + word
+        };
+      }
+    } catch (error) {
+      console.error('Word extraction error:', error);
+      return {
+        translation: word + '_translated',
+        definition: 'Definition of ' + word
+      };
+    }
+  }
 }

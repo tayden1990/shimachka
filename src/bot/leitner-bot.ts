@@ -1723,7 +1723,7 @@ Please review and submit your ticket:`, keyboard);
         subject: ticket.subject!,
         message: ticket.message!,
         status: 'open',
-        priority: priority === 'urgent' ? 'urgent' : 'medium'
+        priority: priority === 'urgent' ? 'urgent' : 'normal'
       });
 
       // Clear ticket state
@@ -2278,7 +2278,7 @@ Type your subject below:`);
     for (const message of messages.slice(0, 5)) { // Show latest 5 messages
       const readStatus = message.isRead ? '✅' : '🆕';
       const date = new Date(message.sentAt).toLocaleDateString();
-      messageText += `${readStatus} **${date}**\n${message.message}\n\n`;
+      messageText += `${readStatus} **${date}**\n${message.content}\n\n`;
       
       if (!message.isRead) {
         await this.adminService.markMessageAsRead(message.id);
@@ -2363,7 +2363,7 @@ We're here to help! 🎯`;
 
       const messageText = messages.map((msg, index) => 
         `📩 **Message ${index + 1}** (${new Date(msg.sentAt).toLocaleDateString()})
-${msg.message}
+${msg.content}
 ${msg.isRead ? '✅ Read' : '🔵 New'}`
       ).join('\n\n');
 
@@ -2644,7 +2644,7 @@ Now I'll submit your ticket to our support team.`);
   async checkForNotifications(userId: number): Promise<void> {
     try {
       // Check for unread direct messages
-      const messages = await this.adminService.getUserMessages(userId, true);
+      const messages = await this.adminService.getUserMessages(userId);
       if (messages.length > 0) {
         const chatId = userId; // In private chats, userId = chatId
         await this.sendMessage(chatId, `📬 You have ${messages.length} new message${messages.length > 1 ? 's' : ''} from support! Use /support to view them.`);
@@ -2652,7 +2652,7 @@ Now I'll submit your ticket to our support team.`);
 
       // Check for new bulk word assignments
       const allAssignments = await this.adminService.getBulkAssignments(1, 100);
-      const userAssignments = allAssignments.assignments.filter(a => 
+      const userAssignments = allAssignments.filter(a => 
         a.targetUserIds.includes(userId) && !a.notificationSent
       );
       
