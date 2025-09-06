@@ -577,7 +577,8 @@ export function getAdminPanelHTML(): string {
                     wordsInput: '',
                     processing: false,
                     progress: 0,
-                    results: []
+                    results: [],
+                    lastAssignmentId: null
                 },
                 
                 // Settings
@@ -873,29 +874,57 @@ export function getAdminPanelHTML(): string {
                     this.bulkWords.processing = true;
                     this.bulkWords.progress = 0;
                     this.bulkWords.results = [];
+                    this.bulkWords.lastAssignmentId = null;
                     
                     try {
-                        const words = this.bulkWords.wordsInput.split(/[,\\n]/).filter(word => word.trim());
+                        const words = this.bulkWords.wordsInput.split(/[,\n]/).filter(word => word.trim());
                         
-                        for (let i = 0; i < words.length; i++) {
-                            const word = words[i].trim();
-                            this.bulkWords.progress = Math.round((i / words.length) * 100);
-                            
-                            // Simulate AI processing
-                            await new Promise(resolve => setTimeout(resolve, 1000));
-                            
-                            this.bulkWords.results.push({
-                                word: word,
-                                translation: word + '_translated',
-                                definition: 'Definition of ' + word,
-                                sourceLanguage: this.bulkWords.sourceLanguage,
-                                targetLanguage: this.bulkWords.targetLanguage
-                            });
+                        if (words.length === 0) {
+                            this.showToast('error', 'No Words', 'Please enter some words to process');
+                            return;
                         }
                         
-                        this.showToast('success', 'AI Processing Complete', words.length + ' words processed successfully');
+                        // Get selected target users
+                        const targetUsers = Array.from(document.querySelectorAll('input[name="targetUsers"]:checked'))
+                            .map(checkbox => parseInt(checkbox.value))
+                            .filter(id => !isNaN(id));
+                        
+                        if (targetUsers.length === 0) {
+                            this.showToast('error', 'No Users Selected', 'Please select at least one user to assign words to');
+                            return;
+                        }
+                        
+                        this.bulkWords.progress = 10;
+                        
+                        const response = await fetch('/admin/bulk-words-ai', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.authToken
+                            },
+                            body: JSON.stringify({
+                                words: words,
+                                sourceLanguage: this.bulkWords.sourceLanguage,
+                                targetLanguage: this.bulkWords.targetLanguage,
+                                targetUsers: targetUsers
+                            })
+                        });
+                        
+                        this.bulkWords.progress = 90;
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            this.bulkWords.results = result.processedWords || [];
+                            this.bulkWords.lastAssignmentId = result.assignmentId;
+                            this.showToast('success', 'AI Processing Complete', 
+                                result.totalWords + ' words processed: ' + result.successCount + ' successful, ' + result.failureCount + ' with fallback data');
+                        } else {
+                            this.showToast('error', 'Processing Failed', result.error || 'AI processing encountered an error');
+                        }
                     } catch (error) {
-                        this.showToast('error', 'Processing Failed', 'AI processing encountered an error');
+                        console.error('AI processing error:', error);
+                        this.showToast('error', 'Processing Failed', 'Network error occurred during AI processing');
                     } finally {
                         this.bulkWords.processing = false;
                         this.bulkWords.progress = 100;
@@ -903,7 +932,38 @@ export function getAdminPanelHTML(): string {
                 },
                 
                 async assignWordsToUsers() {
-                    this.showToast('success', 'Words Assigned', 'Words have been assigned to users');
+                    if (!this.bulkWords.lastAssignmentId) {
+                        this.showToast('error', 'Assignment Error', 'No recent word processing found. Please process words first.');
+                        return;
+                    }
+                    
+                    this.loading = true;
+                    try {
+                        const response = await fetch('/admin/assign-words', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + this.authToken
+                            },
+                            body: JSON.stringify({
+                                assignmentId: this.bulkWords.lastAssignmentId
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            this.showToast('success', 'Words Assigned', 'Words have been assigned to users successfully');
+                            this.bulkWords.lastAssignmentId = null; // Clear after assignment
+                        } else {
+                            this.showToast('error', 'Assignment Failed', result.error || 'Failed to assign words to users');
+                        }
+                    } catch (error) {
+                        console.error('Assignment error:', error);
+                        this.showToast('error', 'Assignment Error', 'Network error occurred while assigning words');
+                    } finally {
+                        this.loading = false;
+                    }
                 },
                 
                 // System health methods

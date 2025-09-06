@@ -224,12 +224,35 @@ Respond in this exact JSON format:
       
       try {
         const parsed = JSON.parse(text);
-        return {
-          translation: parsed.translation || word + '_translated',
-          definition: parsed.definition || 'Definition of ' + word
-        };
+        
+        // Validate the AI response quality
+        if (parsed.translation && parsed.definition && 
+            parsed.translation !== `${word}_translated` && 
+            parsed.definition !== `Definition of ${word}` &&
+            parsed.translation.trim().length > 0 && 
+            parsed.definition.trim().length > 0) {
+          
+          return {
+            translation: parsed.translation.trim(),
+            definition: parsed.definition.trim()
+          };
+        } else {
+          console.warn(`AI returned poor quality response for word: ${word}`, parsed);
+          return {
+            translation: word + '_translated',
+            definition: 'Definition of ' + word
+          };
+        }
       } catch (parseError) {
         console.error('Failed to parse AI response:', parseError);
+        console.error('Raw AI response:', text);
+        
+        // Try to extract translation and definition from non-JSON response
+        const extractedData = this.extractFromRawText(text, word);
+        if (extractedData) {
+          return extractedData;
+        }
+        
         return {
           translation: word + '_translated',
           definition: 'Definition of ' + word
@@ -241,6 +264,38 @@ Respond in this exact JSON format:
         translation: word + '_translated',
         definition: 'Definition of ' + word
       };
+    }
+  }
+
+  private extractFromRawText(text: string, word: string): { translation: string; definition: string } | null {
+    try {
+      // Try to extract translation and definition from raw text response
+      const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+      
+      let translation = '';
+      let definition = '';
+      
+      for (const line of lines) {
+        // Look for translation patterns
+        if (line.toLowerCase().includes('translation') && line.includes(':')) {
+          translation = line.split(':')[1].trim().replace(/['"]/g, '');
+        }
+        // Look for definition patterns
+        if (line.toLowerCase().includes('definition') && line.includes(':')) {
+          definition = line.split(':')[1].trim().replace(/['"]/g, '');
+        }
+      }
+      
+      if (translation && definition && 
+          translation !== `${word}_translated` && 
+          definition !== `Definition of ${word}`) {
+        return { translation, definition };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Failed to extract from raw text:', error);
+      return null;
     }
   }
 }

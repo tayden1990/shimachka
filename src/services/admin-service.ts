@@ -419,6 +419,77 @@ export class AdminService {
     }
   }
 
+  async assignWordsToUsers(assignmentId: string): Promise<boolean> {
+    try {
+      const assignment = await this.kv.get(`bulk_assignment:${assignmentId}`, 'json');
+      if (!assignment) {
+        console.error('Assignment not found:', assignmentId);
+        return false;
+      }
+
+      const targetUserIds = assignment.targetUserIds || [];
+      const words = assignment.words || [];
+      
+      if (targetUserIds.length === 0) {
+        console.error('No target users specified for assignment:', assignmentId);
+        return false;
+      }
+
+      // Create cards for each user
+      let cardsCreated = 0;
+      for (const userId of targetUserIds) {
+        for (const wordData of words) {
+          try {
+            // Check if card already exists for this user and word
+            const existingCardKey = `card:${userId}:${wordData.word.toLowerCase()}`;
+            const existingCard = await this.kv.get(existingCardKey);
+            
+            if (!existingCard) {
+              const cardId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              const card = {
+                id: cardId,
+                userId: userId,
+                word: wordData.word,
+                translation: wordData.translation,
+                definition: wordData.definition,
+                sourceLanguage: assignment.sourceLanguage,
+                targetLanguage: assignment.targetLanguage,
+                box: 1,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                nextReviewAt: new Date().toISOString(),
+                reviewCount: 0,
+                correctCount: 0,
+                incorrectCount: 0,
+                lastReviewedAt: undefined,
+                difficulty: 'normal',
+                isMastered: false
+              };
+              
+              await this.kv.put(`card:${userId}:${cardId}`, JSON.stringify(card));
+              await this.kv.put(existingCardKey, cardId); // For duplicate checking
+              cardsCreated++;
+            }
+          } catch (error) {
+            console.error(`Failed to create card for user ${userId}, word ${wordData.word}:`, error);
+          }
+        }
+      }
+
+      // Update assignment status
+      assignment.status = 'assigned';
+      assignment.cardsCreated = cardsCreated;
+      assignment.assignedAt = new Date().toISOString();
+      await this.kv.put(`bulk_assignment:${assignmentId}`, JSON.stringify(assignment));
+
+      console.log(`Bulk assignment ${assignmentId} completed: ${cardsCreated} cards created`);
+      return true;
+    } catch (error) {
+      console.error('Assign words to users error:', error);
+      return false;
+    }
+  }
+
   async getBulkAssignments(page: number = 1, limit: number = 10): Promise<BulkWordAssignment[]> {
     try {
       const recentAssignments = await this.kv.get('recent_bulk_assignments', 'json') || [];
