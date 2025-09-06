@@ -1,26 +1,26 @@
-const http = require('http');
+const https = require('https');
+function post(path, body) {
+  return new Promise((resolve, reject) => {
+    const url = `https://leitner-telegram-bot.t-ak-sa.workers.dev${path}`;
+    const data = JSON.stringify(body);
+    const options = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) }
+    };
+    const req = https.request(url, options, res => {
+      let resData = '';
+      res.on('data', chunk => resData += chunk);
+      res.on('end', () => resolve({ status: res.statusCode, data: resData }));
+    });
+    req.on('error', reject);
+    req.write(data);
+    req.end();
+  });
+}
+
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
-}
-
-function post(path, body) {
-  return new Promise((resolve, reject) => {
-    const req = http.request({
-      hostname: '127.0.0.1',
-      port: 8787,
-      path,
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    }, res => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => resolve({ status: res.statusCode, data }));
-    });
-    req.on('error', reject);
-    req.write(JSON.stringify(body));
-    req.end();
-  });
 }
 
 async function testBotCallbackError() {

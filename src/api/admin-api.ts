@@ -183,6 +183,10 @@ export class AdminAPI {
         case path === '/admin/debug-info' && method === 'GET':
           return await this.handleDebugInfo(request, corsHeaders);
 
+        // Cache management
+        case path === '/admin/init-cache' && method === 'POST':
+          return await this.handleInitCache(corsHeaders);
+
         // Export endpoints
         case path === '/admin/export/users' && method === 'GET':
           return await this.handleExportUsers(corsHeaders);
@@ -907,6 +911,33 @@ export class AdminAPI {
     
     const levelMessages = messages[level as keyof typeof messages] || messages.info;
     return levelMessages[Math.floor(Math.random() * levelMessages.length)];
+  }
+
+  // Cache initialization handler
+  private async handleInitCache(corsHeaders: any): Promise<Response> {
+    try {
+      const { initializeAdminCache } = await import('../utils/init-cache');
+      const success = await initializeAdminCache(this.env?.LEITNER_DB);
+      
+      return new Response(JSON.stringify({
+        success,
+        message: success ? 'Admin cache initialized successfully' : 'Failed to initialize cache',
+        timestamp: new Date().toISOString()
+      }), {
+        status: success ? 200 : 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    } catch (error) {
+      console.error('Error initializing cache:', error);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Failed to initialize admin cache',
+        details: error instanceof Error ? error.message : String(error)
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
   }
 
   // Enhanced Tickets Management with Real Data
