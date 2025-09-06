@@ -2246,12 +2246,12 @@ export class AdminAPI {
 
         // Calculate study streak
         if (lastStudyDate) {
-          const daysSinceLastStudy = Math.floor((Date.now() - lastStudyDate.getTime()) / (1000 * 60 * 60 * 24));
+          const daysSinceLastStudy = Math.floor((Date.now() - (lastStudyDate as Date).getTime()) / (1000 * 60 * 60 * 24));
           studyStreak = Math.max(0, 7 - daysSinceLastStudy); // Simple streak calculation
         }
 
         // Determine session status
-        const isActive = dueForReview > 0 || (lastStudyDate && Date.now() - lastStudyDate.getTime() < 24 * 60 * 60 * 1000);
+        const isActive = dueForReview > 0 || (lastStudyDate && Date.now() - (lastStudyDate as Date).getTime() < 24 * 60 * 60 * 1000);
         const sessionCount = Math.ceil(totalReviews / 10); // Estimate sessions
         
         // Calculate progress percentage
@@ -2275,7 +2275,7 @@ export class AdminAPI {
           accuracy,
           progress,
           studyStreak,
-          lastStudyDate: lastStudyDate ? lastStudyDate.toISOString() : null,
+          lastStudyDate: lastStudyDate ? (lastStudyDate as Date).toISOString() : null,
           sessionCount,
           estimatedStudyTime: Math.round(estimatedStudyTime),
           isActive,
