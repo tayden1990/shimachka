@@ -19,6 +19,14 @@ export function getSimpleAdminHTML(): string {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         body.alpine-ready .loading-fallback { display: none !important; }
+        
+        /* Ensure login form is visible by default */
+        .login-screen { display: block !important; }
+        .dashboard-screen { display: none !important; }
+        
+        /* Alpine.js will control these when ready */
+        [x-data] .login-screen[x-show] { display: block !important; }
+        [x-data] .dashboard-screen[x-show] { display: block !important; }
     </style>
     <script>
         // Add a timeout fallback in case Alpine.js doesn't load
@@ -26,6 +34,11 @@ export function getSimpleAdminHTML(): string {
             if (!window.Alpine) {
                 console.warn('Alpine.js failed to load, removing loading screen');
                 document.body.classList.add('alpine-ready');
+                // Force show login screen if Alpine.js fails
+                const loginScreen = document.querySelector('.login-screen');
+                const dashboardScreen = document.querySelector('.dashboard-screen');
+                if (loginScreen) loginScreen.style.display = 'block';
+                if (dashboardScreen) dashboardScreen.style.display = 'none';
             }
         }, 5000);
     </script>
@@ -41,7 +54,7 @@ export function getSimpleAdminHTML(): string {
 
     <div x-data="simpleAdmin()" x-init="init(); document.body.classList.add('alpine-ready');">
         <!-- Login Screen -->
-        <div x-show="!isAuthenticated" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
+        <div x-show="!isAuthenticated" class="login-screen min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
             <div class="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
                 <div class="text-center mb-8">
                     <h2 class="text-3xl font-bold text-gray-900">Admin Login</h2>
@@ -77,7 +90,7 @@ export function getSimpleAdminHTML(): string {
         </div>
 
         <!-- Dashboard -->
-        <div x-show="isAuthenticated" class="min-h-screen bg-gray-100">
+        <div x-show="isAuthenticated" class="dashboard-screen min-h-screen bg-gray-100">
             <nav class="bg-white shadow">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between h-16">
@@ -760,14 +773,13 @@ export function getSimpleAdminHTML(): string {
                 if (!document.body.classList.contains('alpine-ready')) {
                     console.warn('Alpine.js initialization timeout, showing content anyway');
                     document.body.classList.add('alpine-ready');
+                    // Force show login screen
+                    const loginScreen = document.querySelector('.login-screen');
+                    const dashboardScreen = document.querySelector('.dashboard-screen');
+                    if (loginScreen) loginScreen.style.display = 'block';
+                    if (dashboardScreen) dashboardScreen.style.display = 'none';
                 }
             }, 3000);
-        });
-    </script>
-    <script>
-        // Mark body as alpine loaded
-        document.addEventListener('alpine:init', () => {
-            document.body.classList.add('alpine-loaded');
         });
     </script>
 </body>
