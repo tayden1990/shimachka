@@ -19,6 +19,7 @@ export class UserManager {
       timezone: userData.timezone || 'UTC',
       reminderTimes: userData.reminderTimes || ['08:00', '14:00', '20:00'],
       isActive: true,
+      isRegistrationComplete: userData.isRegistrationComplete || false,
       createdAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString()
     };
