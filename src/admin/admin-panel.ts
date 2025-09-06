@@ -1792,7 +1792,7 @@ export function getAdminPanelHTML(): string {
 
                         if (response.ok) {
                             const result = await response.json();
-                            this.showToast('success', 'Success', \`Message sent to \${result.recipientCount || 0} users\`);
+                            this.showToast('success', 'Success', 'Message sent to ' + (result.recipientCount || 0) + ' users');
                             this.clearMessage();
                             this.loadMessageHistory();
                         } else {
@@ -1906,7 +1906,7 @@ export function getAdminPanelHTML(): string {
                             const a = document.createElement('a');
                             a.style.display = 'none';
                             a.href = url;
-                            a.download = \`leitner-backup-\${new Date().toISOString().split('T')[0]}.\${this.exportData.format}\`;
+                            a.download = 'leitner-backup-' + new Date().toISOString().split('T')[0] + '.' + this.exportData.format;
                             document.body.appendChild(a);
                             a.click();
                             window.URL.revokeObjectURL(url);
@@ -1952,7 +1952,7 @@ export function getAdminPanelHTML(): string {
 
                         if (response.ok) {
                             const result = await response.json();
-                            this.showToast('success', 'Success', \`Data imported successfully. \${result.recordsImported || 0} records processed.\`);
+                            this.showToast('success', 'Success', 'Data imported successfully. ' + (result.recordsImported || 0) + ' records processed.');
                             this.importData.file = null;
                             this.loadInitialData();
                         } else {
