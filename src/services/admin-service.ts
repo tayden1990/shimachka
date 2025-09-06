@@ -867,6 +867,26 @@ export class AdminService {
     }
   }
 
+  async getAllMessages(): Promise<DirectMessage[]> {
+    try {
+      const list = await this.kv.list({ prefix: 'direct_message:' });
+      const messages: DirectMessage[] = [];
+      
+      for (const key of list.keys) {
+        const message = await this.kv.get(key.name, 'json');
+        if (message) {
+          messages.push(message);
+        }
+      }
+      
+      // Sort by sent date, newest first
+      return messages.sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+    } catch (error) {
+      console.error('Get all messages error:', error);
+      return [];
+    }
+  }
+
   async getUserTickets(userId: number): Promise<SupportTicket[]> {
     try {
       // In production, implement proper user ticket filtering
