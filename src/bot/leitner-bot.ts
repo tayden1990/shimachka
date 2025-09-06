@@ -1038,7 +1038,9 @@ Choose what you'd like to do:
         await this.showStudyGoals(chatId, userId);
         break;
       case 'start_study':
+        console.log('📚 Processing start_study callback for user:', userId);
         await this.startStudySession(chatId, userId);
+        console.log('✅ start_study callback completed successfully');
         break;
       case 'add_vocabulary':
         // Start multi-step topic flow
@@ -1064,6 +1066,7 @@ Choose what you'd like to do:
         break;
       // New navigation handlers
       case 'add_topic':
+        console.log('➕ Processing add_topic callback for user:', userId);
         // Start multi-step topic flow
         const addTopicState: ConversationState = {
           addTopic: {
@@ -1072,9 +1075,12 @@ Choose what you'd like to do:
         };
         await this.conversationStateManager.setState(userId, addTopicState);
         await this.sendMessage(chatId, '📝 What topic do you want to add vocabulary for?');
+        console.log('✅ add_topic callback completed successfully');
         break;
       case 'view_stats':
+        console.log('📊 Processing view_stats callback for user:', userId);
         await this.handleCommand('/stats', chatId, userId, []);
+        console.log('✅ view_stats callback completed successfully');
         break;
       case 'show_words':
         await this.sendUserWords(chatId, userId);
@@ -1083,7 +1089,9 @@ Choose what you'd like to do:
         await this.handleCommand('/settings', chatId, userId, []);
         break;
       case 'show_help':
+        console.log('❓ Processing show_help callback for user:', userId);
         await this.sendHelpMessage(chatId, userId);
+        console.log('✅ show_help callback completed successfully');
         break;
       case 'confirm_add_topic':
         if (params[0] === 'yes') {
@@ -1161,10 +1169,14 @@ Choose what you'd like to do:
         }
         break;
       case 'settings_menu':
+        console.log('⚙️ Processing settings_menu callback for user:', userId);
         await this.sendSettingsMenu(chatId, userId);
+        console.log('✅ settings_menu callback completed successfully');
         break;
       case 'main_menu':
+        console.log('🏠 Processing main_menu callback for user:', userId);
         await this.sendWelcomeMessage(chatId);
+        console.log('✅ main_menu callback completed successfully');
         break;
       case 'reminder_settings':
         await this.showReminderSettings(chatId, userId);
