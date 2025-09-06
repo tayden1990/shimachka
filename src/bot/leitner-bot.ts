@@ -256,12 +256,20 @@ export class LeitnerBot {
     const text = message.text.trim();
 
     console.log('🔄 Processing message:', { userId, chatId, text });
+    console.log('📋 Message details:', {
+      from: message.from,
+      chat: message.chat,
+      messageId: message.message_id,
+      timestamp: new Date().toISOString()
+    });
 
     // Get or create user
     let user = await this.userManager.getUser(userId);
+    console.log('👤 User lookup result:', user ? 'Found user' : 'No existing user');
+    
     if (!user) {
       console.log('👤 Creating new user for ID:', userId);
-      user = await this.userManager.createUser({
+      console.log('📝 User data for creation:', {
         id: userId,
         username: message.from.username,
         firstName: message.from.first_name,
@@ -269,10 +277,34 @@ export class LeitnerBot {
         interfaceLanguage: message.from.language_code || 'en',
         isRegistrationComplete: false
       });
-      console.log('✅ New user created, starting registration');
-      await this.startRegistrationFlow(chatId, userId);
-      return;
+      
+      try {
+        user = await this.userManager.createUser({
+          id: userId,
+          username: message.from.username,
+          firstName: message.from.first_name,
+          language: message.from.language_code || 'en',
+          interfaceLanguage: message.from.language_code || 'en',
+          isRegistrationComplete: false
+        });
+        console.log('✅ New user created successfully:', user);
+        console.log('🚀 Starting registration flow for new user');
+        await this.startRegistrationFlow(chatId, userId);
+        return;
+      } catch (error) {
+        console.error('❌ Failed to create user:', error);
+        await this.sendMessage(chatId, 'Sorry, there was an error setting up your account. Please try again later.');
+        return;
+      }
     }
+
+    console.log('📊 User registration status:', {
+      userId: user.id,
+      isRegistrationComplete: user.isRegistrationComplete,
+      hasUsername: !!user.username,
+      language: user.language,
+      interfaceLanguage: user.interfaceLanguage
+    });
 
     // Check if registration is complete
     if (!user.isRegistrationComplete) {
@@ -282,14 +314,21 @@ export class LeitnerBot {
     }
 
     // Update last active time
-    await this.userManager.updateUser(userId, { lastActiveAt: new Date().toISOString() });
+    try {
+      await this.userManager.updateUser(userId, { lastActiveAt: new Date().toISOString() });
+      console.log('✅ Updated user last active time');
+    } catch (error) {
+      console.error('⚠️ Failed to update user last active time:', error);
+    }
 
     // Handle commands
     if (text.startsWith('/')) {
       const [cmd, ...args] = text.split(' ');
+      console.log('🤖 Processing command:', { command: cmd, args, userId, chatId });
       await this.handleCommand(cmd, chatId, userId, args);
     } else {
       // Handle text input based on current context
+      console.log('💬 Processing text input:', { text, userId, chatId });
       await this.handleTextInput(chatId, userId, text);
     }
   }
