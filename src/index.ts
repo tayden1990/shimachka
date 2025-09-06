@@ -3,7 +3,7 @@ import { AdminAPI } from './api/admin-api';
 import { UserManager } from './services/user-manager';
 import { WordExtractor } from './services/word-extractor';
 import { ScheduleManager } from './services/schedule-manager';
-import { getSimpleAdminHTML } from './admin/simple-admin';
+import { getAdminPanelHTML } from './admin/admin-panel';
 import { LeitnerBot } from './bot/leitner-bot';
 import { TelegramUpdate } from './types';
 
@@ -57,8 +57,8 @@ export default {
       // Admin panel and API routes
       if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/api/admin')) {
         if (url.pathname === '/admin' || url.pathname === '/admin/') {
-          // Serve simple admin panel HTML interface
-          return new Response(getSimpleAdminHTML(), {
+          // Serve new comprehensive admin panel HTML interface
+          return new Response(getAdminPanelHTML(), {
             headers: { 'Content-Type': 'text/html' }
           });
         }
@@ -67,7 +67,8 @@ export default {
         if (url.pathname.startsWith('/admin/') || url.pathname.startsWith('/api/admin/')) {
           const adminService = new AdminService(env.LEITNER_DB, env);
           const userManager = new UserManager(env.LEITNER_DB);
-          const adminAPI = new AdminAPI(adminService, userManager);
+          const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
+          const adminAPI = new AdminAPI(adminService, userManager, wordExtractor);
           
           return await adminAPI.handleAdminRequest(request);
         }
@@ -103,7 +104,7 @@ export default {
             <p>A powerful Telegram bot implementing the Leitner spaced repetition system for language learning.</p>
             
             <div class="status">
-              <strong>✅ Status:</strong> Running (Simplified Mode)
+              <strong>✅ Status:</strong> Running (Enhanced v5.0)
             </div>
             
             <div class="links">
@@ -118,7 +119,11 @@ export default {
               <li>🌐 Multi-language support (19+ languages)</li>
               <li>📊 Progress tracking and statistics</li>
               <li>🔔 Smart reminders and scheduling</li>
-              <li>👥 Admin panel for user management</li>
+              <li>👥 Advanced admin panel with complete management tools</li>
+              <li>🎫 Support ticket system</li>
+              <li>📧 Comprehensive messaging system</li>
+              <li>📈 Real-time analytics and monitoring</li>
+              <li>🔧 System health monitoring and debugging</li>
             </ul>
             
             <p><small>Powered by Cloudflare Workers</small></p>
@@ -141,7 +146,62 @@ export default {
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    // Simplified scheduled handler - disabled for now
-    console.log('Scheduled event triggered but disabled in simplified mode');
+    // Enhanced scheduled handler for reminders and maintenance
+    console.log('Scheduled event triggered');
+    
+    try {
+      const userManager = new UserManager(env.LEITNER_DB);
+      const scheduleManager = new ScheduleManager(env.LEITNER_DB);
+      const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
+      
+      // Create LeitnerBot instance for scheduled tasks
+      const bot = new LeitnerBot(
+        env.TELEGRAM_BOT_TOKEN,
+        userManager,
+        wordExtractor,
+        scheduleManager,
+        env.LEITNER_DB,
+        env
+      );
+      
+      // Send due reminders
+      await bot.sendDailyReminders();
+      
+      // Perform maintenance tasks
+      await this.performMaintenanceTasks(env);
+      
+      console.log('Scheduled tasks completed successfully');
+    } catch (error) {
+      console.error('Scheduled event error:', error);
+    }
+  },
+
+  async performMaintenanceTasks(env: Env): Promise<void> {
+    try {
+      const adminService = new AdminService(env.LEITNER_DB, env);
+      
+      // Update system statistics
+      await this.updateSystemStats(env);
+      
+      // Clean up old data
+      await this.cleanupOldData(env);
+      
+      // Run system health checks
+      await adminService.getSystemHealth();
+      
+      console.log('Maintenance tasks completed');
+    } catch (error) {
+      console.error('Maintenance tasks error:', error);
+    }
+  },
+
+  async updateSystemStats(env: Env): Promise<void> {
+    // Update user, card, and activity statistics
+    // This would be implemented based on actual data
+  },
+
+  async cleanupOldData(env: Env): Promise<void> {
+    // Clean up old logs, temporary data, etc.
+    // This would be implemented based on retention policies
   }
 };

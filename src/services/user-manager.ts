@@ -189,7 +189,7 @@ export class UserManager {
     return null;
   }
 
-  async getAllUsers(): Promise<User[]> {
+  async getAllUsers(options: { page?: number; limit?: number; search?: string } = {}): Promise<User[]> {
     const list = await this.kv.list({ prefix: 'user:' });
     const users: User[] = [];
 

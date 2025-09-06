@@ -177,8 +177,8 @@ export interface SupportTicket {
   subject: string;
   message: string;
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  assignedToAdmin?: string;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  assignedTo?: string;
   adminResponse?: string;
   createdAt: string;
   updatedAt: string;
@@ -187,12 +187,11 @@ export interface SupportTicket {
 
 export interface DirectMessage {
   id: string;
-  fromAdminId?: string;
-  toUserId: number;
-  fromUserId?: number;
-  toAdminId?: string;
-  message: string;
-  isRead: boolean;
+  adminId?: string;
+  userId?: number;
+  subject?: string;
+  content: string;
+  isRead?: boolean;
   sentAt: string;
   readAt?: string;
 }
@@ -200,7 +199,6 @@ export interface DirectMessage {
 export interface BulkWordAssignment {
   id: string;
   adminId: string;
-  targetUserIds: number[];
   words: {
     word: string;
     translation: string;
@@ -208,8 +206,17 @@ export interface BulkWordAssignment {
     sourceLanguage: string;
     targetLanguage: string;
   }[];
-  assignedAt: string;
-  notificationSent: boolean;
+  targetUsers: number[];
+  targetUserIds: number[];
+  targetType: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  status: string;
+  totalWords: number;
+  processedWords: number;
+  createdAt: string;
+  completedAt?: string;
+  notificationSent?: boolean;
   title?: string;
   description?: string;
 }
@@ -226,10 +233,16 @@ export interface UserActivity {
 export interface AdminStats {
   totalUsers: number;
   activeUsers: number;
+  newUsersToday: number;
   totalCards: number;
-  totalReviews: number;
+  cardsCreatedToday: number;
+  reviewsToday: number;
   openTickets: number;
   resolvedTickets: number;
-  recentRegistrations: number;
-  avgSessionTime: number;
+  avgResponseTime: string;
+  userGrowth: number;
+  activeGrowth: number;
+  cardGrowth: number;
+  reviewGrowth: number;
+  lastUpdated: string;
 }
