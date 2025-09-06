@@ -29,24 +29,27 @@ export default {
           const update: TelegramUpdate = await request.json();
           console.log('Webhook update received:', JSON.stringify(update, null, 2));
           
-          // Test service initialization
-          console.log('Testing service initialization...');
+          // Initialize services
+          console.log('Initializing services...');
           const userManager = new UserManager(env.LEITNER_DB);
-          console.log('UserManager created successfully');
-          
           const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
-          console.log('WordExtractor created successfully');
-          
           const scheduleManager = new ScheduleManager(env.LEITNER_DB);
-          console.log('ScheduleManager created successfully');
+          const adminService = new AdminService(env.LEITNER_DB, env);
           
-          // Simple response for now to test service initialization
-          if (update.message && update.message.text === '/start') {
-            console.log('Received /start command - services initialized OK');
-            return new Response('OK - Services initialized, start command received', { status: 200 });
-          }
+          // Create and use the full bot instance
+          console.log('Creating LeitnerBot instance...');
+          const bot = new LeitnerBot(
+            env.TELEGRAM_BOT_TOKEN,
+            userManager,
+            wordExtractor,
+            scheduleManager,
+            env.LEITNER_DB,
+            env
+          );
           
-          return new Response('OK - Services initialized successfully', { status: 200 });
+          // Process the update through the bot
+          console.log('Processing update through bot...');
+          return await bot.handleWebhook(request);
           
         } catch (error) {
           console.error('Bot webhook error:', error);

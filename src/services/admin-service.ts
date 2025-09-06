@@ -1030,4 +1030,130 @@ Please respond in this exact JSON format:
       return 0;
     }
   }
+
+  async checkEnvironmentVariables(): Promise<{ telegram: string, gemini: string, webhook: string }> {
+    return {
+      telegram: this.env?.TELEGRAM_BOT_TOKEN ? '✅ Set' : '❌ Missing',
+      gemini: this.env?.GEMINI_API_KEY ? '✅ Set' : '❌ Missing',
+      webhook: this.env?.WEBHOOK_SECRET ? '✅ Set' : '❌ Missing'
+    };
+  }
+
+  // Test methods for admin panel
+  async testTelegramConnection(): Promise<{ success: boolean, message: string }> {
+    try {
+      if (!this.env.TELEGRAM_BOT_TOKEN) {
+        return { success: false, message: 'Telegram bot token not configured' };
+      }
+
+      // Test by making a simple API call to get bot info
+      const response = await fetch(`https://api.telegram.org/bot${this.env.TELEGRAM_BOT_TOKEN}/getMe`);
+      
+      if (response.ok) {
+        const data: any = await response.json();
+        return { 
+          success: true, 
+          message: `Connected to bot: ${data.result?.first_name || 'Unknown'}` 
+        };
+      } else {
+        return { success: false, message: 'Failed to connect to Telegram API' };
+      }
+    } catch (error) {
+      return { 
+        success: false, 
+        message: `Telegram connection error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      };
+    }
+  }
+
+  async testDatabaseConnection(): Promise<{ success: boolean, message: string }> {
+    try {
+      // Test KV database by trying to write and read a test value
+      const testKey = 'test_connection_' + Date.now();
+      const testValue = { test: true, timestamp: Date.now() };
+      
+      await this.kv.put(testKey, JSON.stringify(testValue));
+      const retrieved = await this.kv.get(testKey, 'json');
+      
+      if (retrieved && retrieved.test === true) {
+        // Clean up test key
+        await this.kv.delete(testKey);
+        return { success: true, message: 'Database connection successful' };
+      } else {
+        return { success: false, message: 'Database read/write test failed' };
+      }
+    } catch (error) {
+      return { 
+        success: false, 
+        message: `Database error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      };
+    }
+  }
+
+  async testAIConnection(): Promise<{ success: boolean, message: string }> {
+    try {
+      if (!this.env.GEMINI_API_KEY) {
+        return { success: false, message: 'AI API key not configured' };
+      }
+
+      // Test Google Gemini API with a simple request
+      const { GoogleGenerativeAI } = await import('@google/generative-ai');
+      const genAI = new GoogleGenerativeAI(this.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      
+      const result = await model.generateContent('Say "AI connection test successful"');
+      const response = await result.response;
+      const text = response.text();
+      
+      if (text && text.includes('successful')) {
+        return { success: true, message: 'AI service connected successfully' };
+      } else {
+        return { success: false, message: 'AI service responded but content unexpected' };
+      }
+    } catch (error) {
+      return { 
+        success: false, 
+        message: `AI connection error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      };
+    }
+  }
+
+  async clearCache(): Promise<void> {
+    try {
+      // Clear conversation states and temporary data
+      const keys = await this.kv.list({ prefix: 'conversation_state:' });
+      for (const key of keys.keys) {
+        await this.kv.delete(key.name);
+      }
+      
+      // Clear any other cache data
+      const cacheKeys = await this.kv.list({ prefix: 'cache:' });
+      for (const key of cacheKeys.keys) {
+        await this.kv.delete(key.name);
+      }
+      
+      console.log('Cache cleared successfully');
+    } catch (error) {
+      console.error('Error clearing cache:', error);
+      throw error;
+    }
+  }
+
+  async resetDatabase(): Promise<void> {
+    try {
+      // WARNING: This will delete ALL data
+      // Only use in development or with extreme caution
+      
+      // Get all keys and delete them
+      const allKeys = await this.kv.list();
+      for (const key of allKeys.keys) {
+        await this.kv.delete(key.name);
+      }
+      
+      console.log('Database reset successfully - ALL DATA DELETED');
+    } catch (error) {
+      console.error('Error resetting database:', error);
+      throw error;
+    }
+  }
 }

@@ -301,6 +301,21 @@ export function getSimpleAdminHTML(): string {
                             <div x-show="activeTab === 'tools'">
                                 <h3 class="text-lg font-medium text-gray-900 mb-4">Admin Tools</h3>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <button @click="showBulkWordsAI()" 
+                                            class="p-4 border-2 border-dashed border-blue-300 rounded-lg hover:border-blue-400 text-left">
+                                        <div class="text-lg mb-2">🤖 Bulk Words AI</div>
+                                        <p class="text-sm text-gray-600">Generate vocabulary using AI</p>
+                                    </button>
+                                    <button @click="showSupportTickets()" 
+                                            class="p-4 border-2 border-dashed border-green-300 rounded-lg hover:border-green-400 text-left">
+                                        <div class="text-lg mb-2">🎫 Support Tickets</div>
+                                        <p class="text-sm text-gray-600">Manage user support tickets</p>
+                                    </button>
+                                    <button @click="showUserMessages()" 
+                                            class="p-4 border-2 border-dashed border-purple-300 rounded-lg hover:border-purple-400 text-left">
+                                        <div class="text-lg mb-2">💬 User Messages</div>
+                                        <p class="text-sm text-gray-600">Send messages to users</p>
+                                    </button>
                                     <button @click="clearCache()" 
                                             class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 text-left">
                                         <div class="text-lg mb-2">🗑️ Clear Cache</div>
@@ -630,6 +645,84 @@ export function getSimpleAdminHTML(): string {
                         } catch (error) {
                             this.showMessage('❌ Restoration error: ' + error.message, 'error');
                         }
+                    }
+                },
+
+                showBulkWordsAI() {
+                    const words = prompt('Enter words separated by commas or new lines:');
+                    if (!words) return;
+                    
+                    const meaningLang = prompt('Meaning language (e.g., en, fr, es):') || 'en';
+                    const definitionLang = prompt('Definition language (e.g., en, fr, es):') || 'en';
+                    
+                    this.processBulkWordsAI(words, meaningLang, definitionLang);
+                },
+
+                async processBulkWordsAI(words, meaningLanguage, definitionLanguage) {
+                    try {
+                        const token = localStorage.getItem('adminToken');
+                        const response = await fetch('/admin/bulk-words-ai', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                words: words.split(/[,\n]/).map(w => w.trim()).filter(w => w),
+                                meaningLanguage,
+                                definitionLanguage,
+                                assignUsers: []
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.showMessage(`🤖 AI processing started. Job ID: ${data.jobId}`, 'success');
+                        } else {
+                            this.showMessage('❌ Failed to start AI processing', 'error');
+                        }
+                    } catch (error) {
+                        this.showMessage('❌ AI processing error: ' + error.message, 'error');
+                    }
+                },
+
+                showSupportTickets() {
+                    this.showMessage('🎫 Support tickets feature: Use /tickets endpoint to view and manage tickets', 'success');
+                },
+
+                showUserMessages() {
+                    const userId = prompt('Enter user ID to send message to:');
+                    if (!userId) return;
+                    
+                    const message = prompt('Enter message:');
+                    if (!message) return;
+                    
+                    this.sendUserMessage(parseInt(userId), message);
+                },
+
+                async sendUserMessage(userId, message) {
+                    try {
+                        const token = localStorage.getItem('adminToken');
+                        const response = await fetch('/admin/send-message', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                userId,
+                                message,
+                                type: 'admin_message'
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            this.showMessage('✅ Message sent successfully', 'success');
+                        } else {
+                            this.showMessage('❌ Failed to send message', 'error');
+                        }
+                    } catch (error) {
+                        this.showMessage('❌ Message error: ' + error.message, 'error');
                     }
                 },
 
