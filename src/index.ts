@@ -29,43 +29,23 @@ export default {
           const update: TelegramUpdate = await request.json();
           console.log('Webhook update received:', JSON.stringify(update, null, 2));
           
-          // Test just basic functionality first
-          if (update.message && update.message.text === '/start') {
-            console.log('Processing /start command');
-            
-            // Try to send a simple response back using Telegram API
-            const chatId = update.message.chat.id;
-            const token = env.TELEGRAM_BOT_TOKEN;
-            const message = '🎯 Welcome to Leitner Bot!\n\nThis bot helps you learn languages using the proven Leitner spaced repetition system.\n\nChoose an option:';
-            
-            const telegramResponse = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: chatId,
-                text: message,
-                reply_markup: {
-                  inline_keyboard: [
-                    [{ text: '🆕 Get Started', callback_data: 'register' }],
-                    [{ text: '📚 Study Words', callback_data: 'study' }],
-                    [{ text: '⚙️ Settings', callback_data: 'settings' }]
-                  ]
-                }
-              })
-            });
-            
-            if (telegramResponse.ok) {
-              console.log('✅ Message sent successfully');
-              return new Response('OK', { status: 200 });
-            } else {
-              const errorText = await telegramResponse.text();
-              console.error('❌ Failed to send message:', errorText);
-              return new Response('Error sending message', { status: 500 });
-            }
-          }
+          // Initialize services
+          const userManager = new UserManager(env.LEITNER_DB);
+          const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
+          const scheduleManager = new ScheduleManager(env.LEITNER_DB);
           
-          // For other messages, just return OK for now
-          return new Response('OK - Message received', { status: 200 });
+          // Create LeitnerBot instance
+          const bot = new LeitnerBot(
+            env.TELEGRAM_BOT_TOKEN,
+            userManager,
+            wordExtractor,
+            scheduleManager,
+            env.LEITNER_DB,
+            env
+          );
+          
+          // Handle the update through the bot
+          return await bot.handleWebhook(request);
           
         } catch (error) {
           console.error('Webhook error:', error);
