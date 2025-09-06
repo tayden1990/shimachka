@@ -538,12 +538,17 @@ export class AdminService {
       const ticketList = await this.kv.list({ prefix: 'support_ticket:' });
       const tickets: SupportTicket[] = [];
       
+      console.log(`Found ${ticketList.keys.length} support ticket keys in KV storage`);
+      
       for (const key of ticketList.keys) {
         const ticketData = await this.kv.get(key.name);
         if (ticketData) {
           tickets.push(JSON.parse(ticketData) as SupportTicket);
+          console.log(`Loaded support ticket: ${key.name}`);
         }
       }
+      
+      console.log(`Total support tickets loaded: ${tickets.length}`);
       
       // Apply filters
       let filteredTickets = tickets;
@@ -563,16 +568,10 @@ export class AdminService {
       // Sort by creation date (newest first)
       filteredTickets.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
-      // If no real tickets exist, return some mock data for demonstration
-      if (filteredTickets.length === 0) {
-        return this.generateMockTickets();
-      }
-      
       return filteredTickets;
     } catch (error) {
       console.error('Get support tickets error:', error);
-      // Fallback to mock tickets in case of error
-      return this.generateMockTickets();
+      return [];
     }
   }
 
@@ -872,12 +871,17 @@ export class AdminService {
       const list = await this.kv.list({ prefix: 'direct_message:' });
       const messages: DirectMessage[] = [];
       
+      console.log(`Found ${list.keys.length} message keys in KV storage`);
+      
       for (const key of list.keys) {
         const message = await this.kv.get(key.name, 'json');
         if (message) {
           messages.push(message);
+          console.log(`Loaded message: ${key.name}`);
         }
       }
+      
+      console.log(`Total messages loaded: ${messages.length}`);
       
       // Sort by sent date, newest first
       return messages.sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());

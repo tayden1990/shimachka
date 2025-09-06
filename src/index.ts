@@ -65,7 +65,16 @@ export default {
           const adminService = new AdminService(env.LEITNER_DB, env);
           const userManager = new UserManager(env.LEITNER_DB);
           const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
-          const adminAPI = new AdminAPI(adminService, userManager, wordExtractor, env);
+          const scheduleManager = new ScheduleManager(env.LEITNER_DB);
+          const leitnerBot = new LeitnerBot(
+            env.TELEGRAM_BOT_TOKEN,
+            userManager,
+            wordExtractor,
+            scheduleManager,
+            env.LEITNER_DB,
+            env
+          );
+          const adminAPI = new AdminAPI(adminService, userManager, leitnerBot, wordExtractor, env);
           
           return await adminAPI.handleAdminRequest(request);
         }

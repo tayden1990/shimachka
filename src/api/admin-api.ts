@@ -2,6 +2,7 @@ import { AdminService } from '../services/admin-service';
 import { UserManager } from '../services/user-manager';
 import { WordExtractor } from '../services/word-extractor';
 import { Logger } from '../services/logger';
+import { LeitnerBot } from '../bot/leitner-bot';
 
 export class AdminAPI {
   private logger: Logger;
@@ -9,6 +10,7 @@ export class AdminAPI {
   constructor(
     private adminService: AdminService,
     private userManager: UserManager,
+    private leitnerBot: LeitnerBot,
     private wordExtractor?: WordExtractor,
     private env?: any
   ) {
@@ -794,9 +796,52 @@ export class AdminAPI {
   }
 
   private async handleSendDirectMessage(request: Request, corsHeaders: any): Promise<Response> {
-    return new Response(JSON.stringify({ success: true, message: 'Message sent' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    try {
+      const body = await request.json() as { userId: string; message: string };
+      const { userId, message } = body;
+      
+      if (!userId || !message) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Missing required fields: userId and message'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Send the actual message to the user via Telegram
+      await this.leitnerBot.sendDirectMessage(parseInt(userId), message);
+      
+      // Store the message in admin service for history
+      const messageId = await this.adminService.sendDirectMessage({
+        adminId: 'admin', // You might want to get this from auth token
+        userId: parseInt(userId),
+        subject: 'Direct Message from Admin',
+        content: message
+      });
+
+      this.logger.info(`Direct message sent to user ${userId}`, {
+        messageId,
+        userId: parseInt(userId),
+        messageLength: message.length
+      });
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Message sent successfully',
+        messageId
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      this.logger.error('Error sending direct message', error);
+      return new Response(JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
   }
 
   private async handleSendBulkMessage(request: Request, corsHeaders: any): Promise<Response> {
@@ -806,9 +851,68 @@ export class AdminAPI {
   }
 
   private async handleSendBroadcastMessage(request: Request, corsHeaders: any): Promise<Response> {
-    return new Response(JSON.stringify({ success: true, message: 'Broadcast message sent' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    try {
+      const body = await request.json() as { message: string };
+      const { message } = body;
+      
+      if (!message) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Missing required field: message'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Get all active users
+      const users = await this.userManager.getAllActiveUsers();
+      let sentCount = 0;
+      let failedCount = 0;
+
+      // Send broadcast message to all users
+      for (const user of users) {
+        try {
+          await this.leitnerBot.sendDirectMessage(user.id, `📢 **Broadcast Message:**\n\n${message}`);
+          
+          // Store each message in admin service for history
+          await this.adminService.sendDirectMessage({
+            adminId: 'admin',
+            userId: user.id,
+            subject: 'Broadcast Message',
+            content: message
+          });
+          
+          sentCount++;
+        } catch (error) {
+          console.error(`Failed to send broadcast to user ${user.id}:`, error);
+          failedCount++;
+        }
+      }
+
+      this.logger.info(`Broadcast message sent`, {
+        totalUsers: users.length,
+        sentCount,
+        failedCount,
+        messageLength: message.length
+      });
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Broadcast sent to ${sentCount} users${failedCount > 0 ? `, failed: ${failedCount}` : ''}`,
+        sentCount,
+        failedCount
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      this.logger.error('Error sending broadcast message', error);
+      return new Response(JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
   }
 
   // Add other placeholder methods...

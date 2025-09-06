@@ -2751,4 +2751,22 @@ Coming soon: Set custom reminder times for your daily study sessions.`;
 
     await this.sendMessage(chatId, message, keyboard);
   }
+
+  // Admin-initiated direct message to user
+  async sendDirectMessage(userId: number, message: string): Promise<void> {
+    try {
+      const user = await this.userManager.getUser(userId);
+      if (!user) {
+        throw new Error(`User ${userId} not found`);
+      }
+
+      // Send the message directly to the user
+      await this.sendMessage(userId, `📨 **Message from Admin:**\n\n${message}`);
+      
+      console.log(`Direct message sent to user ${userId}`);
+    } catch (error) {
+      console.error(`Failed to send direct message to user ${userId}:`, error);
+      throw error;
+    }
+  }
 } 
