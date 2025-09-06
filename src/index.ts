@@ -29,46 +29,47 @@ export default {
           const update: TelegramUpdate = await request.json();
           console.log('Webhook update received:', JSON.stringify(update, null, 2));
           
-          // Step-by-step service initialization with error checking
-          console.log('Step 1: Testing UserManager...');
-          const userManager = new UserManager(env.LEITNER_DB);
-          console.log('✅ UserManager created successfully');
-          
-          console.log('Step 2: Testing WordExtractor...');
-          const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
-          console.log('✅ WordExtractor created successfully');
-          
-          console.log('Step 3: Testing ScheduleManager...');
-          const scheduleManager = new ScheduleManager(env.LEITNER_DB);
-          console.log('✅ ScheduleManager created successfully');
-          
-          console.log('Step 4: Testing AdminService...');
-          const adminService = new AdminService(env.LEITNER_DB, env);
-          console.log('✅ AdminService created successfully');
-          
-          console.log('Step 5: Creating LeitnerBot instance...');
-          const bot = new LeitnerBot(
-            env.TELEGRAM_BOT_TOKEN,
-            userManager,
-            wordExtractor,
-            scheduleManager,
-            env.LEITNER_DB,
-            env
-          );
-          console.log('✅ LeitnerBot created successfully');
-          
-          // Simple test - if it's a /start command, just respond with OK for now
+          // Test just basic functionality first
           if (update.message && update.message.text === '/start') {
-            console.log('Received /start command - bot initialized OK');
-            return new Response('OK - Bot initialized and /start received', { status: 200 });
+            console.log('Processing /start command');
+            
+            // Try to send a simple response back using Telegram API
+            const chatId = update.message.chat.id;
+            const token = env.TELEGRAM_BOT_TOKEN;
+            const message = '🎯 Welcome to Leitner Bot!\n\nThis bot helps you learn languages using the proven Leitner spaced repetition system.\n\nChoose an option:';
+            
+            const telegramResponse = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: message,
+                reply_markup: {
+                  inline_keyboard: [
+                    [{ text: '🆕 Get Started', callback_data: 'register' }],
+                    [{ text: '📚 Study Words', callback_data: 'study' }],
+                    [{ text: '⚙️ Settings', callback_data: 'settings' }]
+                  ]
+                }
+              })
+            });
+            
+            if (telegramResponse.ok) {
+              console.log('✅ Message sent successfully');
+              return new Response('OK', { status: 200 });
+            } else {
+              const errorText = await telegramResponse.text();
+              console.error('❌ Failed to send message:', errorText);
+              return new Response('Error sending message', { status: 500 });
+            }
           }
           
-          console.log('Step 6: Processing through bot handleWebhook...');
-          return await bot.handleWebhook(request);
+          // For other messages, just return OK for now
+          return new Response('OK - Message received', { status: 200 });
           
         } catch (error) {
-          console.error('Bot webhook error at step:', error);
-          return new Response(`Bot Error: ${error instanceof Error ? error.message : String(error)}`, { 
+          console.error('Webhook error:', error);
+          return new Response(`Webhook Error: ${error instanceof Error ? error.message : String(error)}`, { 
             status: 500 
           });
         }
