@@ -70,23 +70,27 @@ Choose an option below to get started:`;
                 ]
               };
               
-              // Send welcome message
-              const telegramResponse = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  chat_id: chatId,
-                  text: welcomeMessage,
-                  parse_mode: 'Markdown',
-                  reply_markup: keyboard
-                })
-              });
-              
-              if (telegramResponse.ok) {
-                console.log('✅ Welcome message sent successfully');
-              } else {
-                const errorText = await telegramResponse.text();
-                console.error('❌ Failed to send message:', errorText);
+              // Send welcome message with error handling
+              try {
+                const telegramResponse = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    chat_id: chatId,
+                    text: welcomeMessage,
+                    parse_mode: 'Markdown',
+                    reply_markup: keyboard
+                  })
+                });
+                
+                if (telegramResponse.ok) {
+                  console.log('✅ Welcome message sent successfully');
+                } else {
+                  const errorText = await telegramResponse.text();
+                  console.error('❌ Failed to send message:', errorText);
+                }
+              } catch (telegramError) {
+                console.error('❌ Telegram API error:', telegramError);
               }
             }
             // Handle other commands
@@ -107,15 +111,20 @@ The Leitner system uses spaced repetition to help you learn efficiently. Words y
 *Need more help?*
 Contact support: @your_support_channel`;
 
-              await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  chat_id: chatId,
-                  text: helpMessage,
-                  parse_mode: 'Markdown'
-                })
-              });
+              try {
+                await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    chat_id: chatId,
+                    text: helpMessage,
+                    parse_mode: 'Markdown'
+                  })
+                });
+                console.log('✅ Help message sent');
+              } catch (telegramError) {
+                console.error('❌ Telegram API error sending help:', telegramError);
+              }
             }
             // Handle other basic commands
             else {
@@ -123,14 +132,19 @@ Contact support: @your_support_channel`;
 
 Use /start to see available commands or /help for more information.`;
 
-              await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  chat_id: chatId,
-                  text: unknownMessage
-                })
-              });
+              try {
+                await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    chat_id: chatId,
+                    text: unknownMessage
+                  })
+                });
+                console.log('✅ Unknown command response sent');
+              } catch (telegramError) {
+                console.error('❌ Telegram API error sending unknown command response:', telegramError);
+              }
             }
           }
           
@@ -143,14 +157,19 @@ Use /start to see available commands or /help for more information.`;
             console.log(`Processing callback: ${data} in chat ${chatId}`);
             
             // Answer the callback query to remove loading state
-            await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                callback_query_id: callbackQuery.id,
-                text: `Processing ${data}...`
-              })
-            });
+            try {
+              await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  callback_query_id: callbackQuery.id,
+                  text: `Processing ${data}...`
+                })
+              });
+              console.log('✅ Callback query answered');
+            } catch (telegramError) {
+              console.error('❌ Error answering callback query:', telegramError);
+            }
             
             // Handle different callback data
             let responseMessage = '';
@@ -178,15 +197,20 @@ Use /start to see available commands or /help for more information.`;
             }
             
             if (chatId) {
-              await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  chat_id: chatId,
-                  text: responseMessage,
-                  parse_mode: 'Markdown'
-                })
-              });
+              try {
+                await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    chat_id: chatId,
+                    text: responseMessage,
+                    parse_mode: 'Markdown'
+                  })
+                });
+                console.log('✅ Callback response sent');
+              } catch (telegramError) {
+                console.error('❌ Error sending callback response:', telegramError);
+              }
             }
           }
           
