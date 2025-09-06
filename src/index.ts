@@ -28,199 +28,27 @@ export default {
         console.log('Received Telegram webhook request');
         
         try {
-          const update: TelegramUpdate = await request.json();
-          console.log('Webhook update received:', JSON.stringify(update, null, 2));
+          // Initialize services for the bot
+          const userManager = new UserManager(env.LEITNER_DB);
+          const wordExtractor = new WordExtractor(env.GEMINI_API_KEY);
+          const scheduleManager = new ScheduleManager(env.LEITNER_DB);
           
-          // Handle messages directly for immediate bot functionality
-          if (update.message) {
-            const message = update.message;
-            const chatId = message.chat.id;
-            const text = message.text;
-            const userId = message.from?.id;
-            
-            console.log(`Processing message: ${text} from user ${userId} in chat ${chatId}`);
-            
-            // Handle /start command
-            if (text === '/start') {
-              console.log('Processing /start command');
-              
-              const welcomeMessage = `🎯 *Welcome to Leitner Bot!*
-
-This bot helps you learn languages using the proven Leitner spaced repetition system.
-
-*Available Commands:*
-/start - Show this welcome message
-/register - Register and set up your learning profile
-/study - Start studying your flashcards
-/add - Add new words to learn
-/stats - View your learning statistics
-/settings - Configure your preferences
-/help - Get help and support
-
-Choose an option below to get started:`;
-
-              const keyboard = {
-                inline_keyboard: [
-                  [{ text: '🆕 Register', callback_data: 'register' }],
-                  [{ text: '📚 Study Words', callback_data: 'study' }],
-                  [{ text: '➕ Add Words', callback_data: 'add_words' }],
-                  [{ text: '📊 Statistics', callback_data: 'stats' }],
-                  [{ text: '⚙️ Settings', callback_data: 'settings' }],
-                  [{ text: '❓ Help', callback_data: 'help' }]
-                ]
-              };
-              
-              // Send welcome message with error handling
-              try {
-                const telegramResponse = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    chat_id: chatId,
-                    text: welcomeMessage,
-                    parse_mode: 'Markdown',
-                    reply_markup: keyboard
-                  })
-                });
-                
-                if (telegramResponse.ok) {
-                  console.log('✅ Welcome message sent successfully');
-                } else {
-                  const errorText = await telegramResponse.text();
-                  console.error('❌ Failed to send message:', errorText);
-                }
-              } catch (telegramError) {
-                console.error('❌ Telegram API error:', telegramError);
-              }
-            }
-            // Handle other commands
-            else if (text === '/help') {
-              const helpMessage = `🆘 *Leitner Bot Help*
-
-*How it works:*
-The Leitner system uses spaced repetition to help you learn efficiently. Words you know well are reviewed less frequently, while difficult words are practiced more often.
-
-*Commands:*
-/start - Welcome and main menu
-/register - Set up your learning profile
-/study - Practice your flashcards
-/add - Add new words to learn
-/stats - View your progress
-/settings - Configure preferences
-
-*Need more help?*
-Contact support: @your_support_channel`;
-
-              try {
-                await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    chat_id: chatId,
-                    text: helpMessage,
-                    parse_mode: 'Markdown'
-                  })
-                });
-                console.log('✅ Help message sent');
-              } catch (telegramError) {
-                console.error('❌ Telegram API error sending help:', telegramError);
-              }
-            }
-            // Handle other basic commands
-            else {
-              const unknownMessage = `❓ Unknown command: ${text}
-
-Use /start to see available commands or /help for more information.`;
-
-              try {
-                await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    chat_id: chatId,
-                    text: unknownMessage
-                  })
-                });
-                console.log('✅ Unknown command response sent');
-              } catch (telegramError) {
-                console.error('❌ Telegram API error sending unknown command response:', telegramError);
-              }
-            }
-          }
+          // Create LeitnerBot instance with correct parameters
+          const bot = new LeitnerBot(
+            env.TELEGRAM_BOT_TOKEN,
+            userManager,
+            wordExtractor,
+            scheduleManager,
+            env.LEITNER_DB,
+            env
+          );
           
-          // Handle callback queries (button presses)
-          if (update.callback_query) {
-            const callbackQuery = update.callback_query;
-            const chatId = callbackQuery.message?.chat.id;
-            const data = callbackQuery.data;
-            
-            console.log(`Processing callback: ${data} in chat ${chatId}`);
-            
-            // Answer the callback query to remove loading state
-            try {
-              await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  callback_query_id: callbackQuery.id,
-                  text: `Processing ${data}...`
-                })
-              });
-              console.log('✅ Callback query answered');
-            } catch (telegramError) {
-              console.error('❌ Error answering callback query:', telegramError);
-            }
-            
-            // Handle different callback data
-            let responseMessage = '';
-            switch (data) {
-              case 'register':
-                responseMessage = '🆕 *Registration*\n\nTo register, please use the /register command or contact admin for setup.';
-                break;
-              case 'study':
-                responseMessage = '📚 *Study Mode*\n\nUse /study to start learning your flashcards.';
-                break;
-              case 'add_words':
-                responseMessage = '➕ *Add Words*\n\nUse /add to add new words to your learning collection.';
-                break;
-              case 'stats':
-                responseMessage = '📊 *Statistics*\n\nUse /stats to view your learning progress.';
-                break;
-              case 'settings':
-                responseMessage = '⚙️ *Settings*\n\nUse /settings to configure your preferences.';
-                break;
-              case 'help':
-                responseMessage = '❓ *Help*\n\nUse /help for detailed information about using this bot.';
-                break;
-              default:
-                responseMessage = `Processing: ${data}`;
-            }
-            
-            if (chatId) {
-              try {
-                await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    chat_id: chatId,
-                    text: responseMessage,
-                    parse_mode: 'Markdown'
-                  })
-                });
-                console.log('✅ Callback response sent');
-              } catch (telegramError) {
-                console.error('❌ Error sending callback response:', telegramError);
-              }
-            }
-          }
-          
-          return new Response('OK', { status: 200 });
+          // Let the bot handle the entire update
+          return await bot.handleWebhook(request);
           
         } catch (error) {
           console.error('Webhook error:', error);
-          return new Response(`Webhook Error: ${error instanceof Error ? error.message : String(error)}`, { 
-            status: 500 
-          });
+          return new Response('Error', { status: 500 });
         }
       }
       // Admin panel and API routes
