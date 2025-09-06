@@ -440,11 +440,11 @@ export class AdminService {
       for (const userId of targetUserIds) {
         for (const wordData of words) {
           try {
-            // Check if card already exists for this user and word
-            const existingCardKey = `card:${userId}:${wordData.word.toLowerCase()}`;
-            const existingCard = await this.kv.get(existingCardKey);
-            
-            if (!existingCard) {
+            // Use a dedicated index prefix so we don't pollute real card namespace with non-JSON values
+            const indexKey = `card_index:${userId}:${wordData.word.toLowerCase()}`;
+            const existingIndex = await this.kv.get(indexKey);
+
+            if (!existingIndex) {
               const cardId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
               const card = {
                 id: cardId,
@@ -465,9 +465,10 @@ export class AdminService {
                 difficulty: 'normal',
                 isMastered: false
               };
-              
+
               await this.kv.put(`card:${userId}:${cardId}`, JSON.stringify(card));
-              await this.kv.put(existingCardKey, cardId); // For duplicate checking
+              // Store lightweight index value (card id) under separate prefix
+              await this.kv.put(indexKey, cardId);
               cardsCreated++;
             }
           } catch (error) {

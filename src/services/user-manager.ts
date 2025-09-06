@@ -6,7 +6,13 @@ export class UserManager {
   async getUser(userId: number): Promise<User | null> {
     const userKey = `user:${userId}`;
     const userData = await this.kv.get(userKey);
-    return userData ? JSON.parse(userData) : null;
+    if (!userData) return null;
+    try {
+      return JSON.parse(userData);
+    } catch (e) {
+      console.error('Malformed user JSON for', userKey, e);
+      return null;
+    }
   }
 
   async createUser(userData: Partial<User>): Promise<User> {
@@ -45,11 +51,12 @@ export class UserManager {
 
     for (const key of list.keys) {
       const userData = await this.kv.get(key.name);
-      if (userData) {
+      if (!userData) continue;
+      try {
         const user = JSON.parse(userData) as User;
-        if (user.isActive) {
-          users.push(user);
-        }
+        if (user.isActive) users.push(user);
+      } catch (e) {
+        console.error('Skipping malformed user record', key.name);
       }
     }
 
@@ -63,11 +70,12 @@ export class UserManager {
 
     for (const key of list.keys) {
       const cardData = await this.kv.get(key.name);
-      if (cardData) {
+      if (!cardData) continue;
+      try {
         const card = JSON.parse(cardData) as Card;
-        if (!box || card.box === box) {
-          cards.push(card);
-        }
+        if (!box || card.box === box) cards.push(card);
+      } catch (e) {
+        console.error('Skipping malformed card', key.name);
       }
     }
 
@@ -136,8 +144,11 @@ export class UserManager {
 
     for (const key of list.keys) {
       const topicData = await this.kv.get(key.name);
-      if (topicData) {
+      if (!topicData) continue;
+      try {
         topics.push(JSON.parse(topicData) as Topic);
+      } catch (e) {
+        console.error('Skipping malformed topic', key.name);
       }
     }
 

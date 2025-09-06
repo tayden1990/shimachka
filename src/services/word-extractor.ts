@@ -74,7 +74,13 @@ Return only the JSON array, with no extra text or explanation.
         throw new Error('No valid JSON found in response');
       }
 
-      const wordsData = JSON.parse(jsonMatch[0]);
+      let wordsData: any;
+      try {
+        wordsData = JSON.parse(jsonMatch[0]);
+      } catch (e) {
+        console.error('Primary JSON parse failed (extractWords). Raw slice length:', jsonMatch[0].length);
+        throw new Error('Invalid JSON from AI response');
+      }
       
       if (!Array.isArray(wordsData)) {
         throw new Error('Response is not an array');
@@ -130,7 +136,13 @@ Return only the JSON object, no additional text.
         throw new Error('No valid JSON found in response');
       }
 
-      const wordData = JSON.parse(jsonMatch[0]);
+      let wordData: any;
+      try {
+        wordData = JSON.parse(jsonMatch[0]);
+      } catch (e) {
+        console.error('Primary JSON parse failed (translateWord). Raw slice length:', jsonMatch[0].length);
+        throw new Error('Invalid JSON from AI response');
+      }
       
       return {
         word: wordData.word || word,
