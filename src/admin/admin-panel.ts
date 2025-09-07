@@ -428,81 +428,547 @@ export function getAdminPanelHTML(): string {
                         </div>
                     </div>
 
-                    <!-- Users Tab -->
+                    <!-- Users Tab - Comprehensive User Management -->
                     <div x-show="activeTab === 'users'" class="space-y-6">
+                        <!-- User Management Header with Advanced Controls -->
                         <div class="bg-white rounded-xl shadow-sm">
                             <div class="p-6 border-b border-gray-200">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="text-lg font-semibold text-gray-900">User Management</h3>
-                                    <div class="flex items-center space-x-3">
-                                        <input type="text" x-model="userSearch" @input="searchUsers()"
-                                               class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                               placeholder="Search users...">
+                                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900">User Management</h3>
+                                        <p class="text-sm text-gray-600 mt-1">Manage bot users, track progress, and analyze learning patterns</p>
+                                    </div>
+                                    <div class="flex flex-col sm:flex-row gap-3 mt-4 lg:mt-0">
+                                        <button @click="exportUsers()" 
+                                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200">
+                                            <i class="fas fa-download mr-2"></i>
+                                            Export
+                                        </button>
                                         <button @click="refreshUsers()" 
                                                 class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200">
                                             <i class="fas fa-sync-alt mr-2"></i>
                                             Refresh
                                         </button>
+                                        <button @click="showBulkActions = !showBulkActions" 
+                                                class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition duration-200">
+                                            <i class="fas fa-tasks mr-2"></i>
+                                            Bulk Actions
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                             
-                            <!-- Users Table -->
+                            <!-- Advanced Search and Filters -->
+                            <div class="p-6 bg-gray-50 border-b border-gray-200">
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <!-- Search Input -->
+                                    <div class="relative">
+                                        <input type="text" x-model="userSearch" @input="searchUsers()"
+                                               class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                               placeholder="Search users...">
+                                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                    </div>
+                                    
+                                    <!-- Registration Status Filter -->
+                                    <select x-model="userFilters.registrationStatus" @change="filterUsers()"
+                                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                        <option value="">All Registration Status</option>
+                                        <option value="complete">Registration Complete</option>
+                                        <option value="pending">Pending Registration</option>
+                                    </select>
+                                    
+                                    <!-- Activity Status Filter -->
+                                    <select x-model="userFilters.activityStatus" @change="filterUsers()"
+                                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                        <option value="">All Activity Status</option>
+                                        <option value="active">Active Users</option>
+                                        <option value="inactive">Inactive Users</option>
+                                        <option value="recent">Active Last 7 Days</option>
+                                    </select>
+                                    
+                                    <!-- Language Filter -->
+                                    <select x-model="userFilters.language" @change="filterUsers()"
+                                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                        <option value="">All Languages</option>
+                                        <option value="en">English</option>
+                                        <option value="es">Spanish</option>
+                                        <option value="fr">French</option>
+                                        <option value="de">German</option>
+                                        <option value="it">Italian</option>
+                                        <option value="pt">Portuguese</option>
+                                        <option value="ru">Russian</option>
+                                        <option value="ar">Arabic</option>
+                                        <option value="fa">Persian</option>
+                                        <option value="zh">Chinese</option>
+                                        <option value="ja">Japanese</option>
+                                        <option value="ko">Korean</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Additional Filters Row -->
+                                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
+                                    <!-- Progress Range -->
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Learning Progress</label>
+                                        <select x-model="userFilters.progressRange" @change="filterUsers()"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                                            <option value="">Any Progress</option>
+                                            <option value="0-20">0-20% Progress</option>
+                                            <option value="21-50">21-50% Progress</option>
+                                            <option value="51-80">51-80% Progress</option>
+                                            <option value="81-100">81-100% Progress</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Word Count Range -->
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Word Count</label>
+                                        <select x-model="userFilters.wordCountRange" @change="filterUsers()"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                                            <option value="">Any Count</option>
+                                            <option value="0">No Words</option>
+                                            <option value="1-10">1-10 Words</option>
+                                            <option value="11-50">11-50 Words</option>
+                                            <option value="51-100">51-100 Words</option>
+                                            <option value="100+">100+ Words</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Join Date Range -->
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Joined</label>
+                                        <select x-model="userFilters.joinDateRange" @change="filterUsers()"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                                            <option value="">Any Time</option>
+                                            <option value="today">Today</option>
+                                            <option value="week">This Week</option>
+                                            <option value="month">This Month</option>
+                                            <option value="3months">Last 3 Months</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Study Frequency -->
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Study Activity</label>
+                                        <select x-model="userFilters.studyFrequency" @change="filterUsers()"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                                            <option value="">Any Activity</option>
+                                            <option value="daily">Daily Studiers</option>
+                                            <option value="weekly">Weekly Studiers</option>
+                                            <option value="inactive">Inactive Studiers</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Clear Filters -->
+                                    <div class="flex items-end">
+                                        <button @click="clearFilters()" 
+                                                class="w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-200 text-sm">
+                                            <i class="fas fa-times mr-1"></i>
+                                            Clear
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- User Statistics Summary -->
+                            <div class="p-6 bg-blue-50 border-b border-gray-200">
+                                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-blue-600" x-text="userStats.total"></div>
+                                        <div class="text-xs text-gray-600">Total Users</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-green-600" x-text="userStats.active"></div>
+                                        <div class="text-xs text-gray-600">Active</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-purple-600" x-text="userStats.registrationComplete"></div>
+                                        <div class="text-xs text-gray-600">Registered</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-indigo-600" x-text="userStats.studyingToday"></div>
+                                        <div class="text-xs text-gray-600">Studying Today</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-orange-600" x-text="userStats.averageWords"></div>
+                                        <div class="text-xs text-gray-600">Avg Words</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-red-600" x-text="userStats.filtered"></div>
+                                        <div class="text-xs text-gray-600">Filtered</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Bulk Actions Panel -->
+                            <div x-show="showBulkActions" x-transition class="p-6 bg-purple-50 border-b border-gray-200">
+                                <div class="flex flex-wrap gap-4">
+                                    <button @click="bulkMessageUsers()" 
+                                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200">
+                                        <i class="fas fa-envelope mr-2"></i>
+                                        Message Selected
+                                    </button>
+                                    <button @click="bulkExportUsers()" 
+                                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition duration-200">
+                                        <i class="fas fa-download mr-2"></i>
+                                        Export Selected
+                                    </button>
+                                    <button @click="bulkAssignWords()" 
+                                            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition duration-200">
+                                        <i class="fas fa-plus mr-2"></i>
+                                        Assign Words
+                                    </button>
+                                    <button @click="bulkUpdateSettings()" 
+                                            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-200">
+                                        <i class="fas fa-cog mr-2"></i>
+                                        Update Settings
+                                    </button>
+                                    <div class="text-sm text-gray-600 flex items-center">
+                                        <span x-text="selectedUsers.length"></span> users selected
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                            
+                            <!-- Enhanced Users Table -->
                             <div class="overflow-x-auto">
-                                <table class="w-full">
+                                <table class="min-w-full">
                                     <thead class="bg-gray-50">
                                         <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Language</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                            <th class="px-6 py-3 text-left">
+                                                <input type="checkbox" @change="toggleAllUsers($event.target.checked)"
+                                                       class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                                                @click="sortUsers('name')">
+                                                User Info
+                                                <i class="fas fa-sort ml-1"></i>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                                                @click="sortUsers('registrationComplete')">
+                                                Status
+                                                <i class="fas fa-sort ml-1"></i>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                                                @click="sortUsers('totalWords')">
+                                                Learning Progress
+                                                <i class="fas fa-sort ml-1"></i>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                                                @click="sortUsers('accuracy')">
+                                                Performance
+                                                <i class="fas fa-sort ml-1"></i>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                                                @click="sortUsers('lastActive')">
+                                                Activity
+                                                <i class="fas fa-sort ml-1"></i>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Actions
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
-                                        <template x-for="user in filteredUsers" :key="user.id">
-                                            <tr class="hover:bg-gray-50">
+                                        <template x-for="user in paginatedUsers" :key="user.telegramId">
+                                            <tr class="hover:bg-gray-50 transition duration-150">
+                                                <!-- Checkbox -->
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <input type="checkbox" :value="user.telegramId" 
+                                                           @change="toggleUserSelection(user.telegramId, $event.target.checked)"
+                                                           :checked="selectedUsers.includes(user.telegramId)"
+                                                           class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                                                </td>
+                                                
+                                                <!-- User Info -->
                                                 <td class="px-6 py-4 whitespace-nowrap">
                                                     <div class="flex items-center">
-                                                        <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
-                                                            <span class="text-white font-medium" x-text="(user.firstName?.charAt(0) || user.username?.charAt(0) || '?')"></span>
+                                                        <div class="flex-shrink-0 h-10 w-10">
+                                                            <div class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                                                                <span class="text-sm font-medium text-white" 
+                                                                      x-text="(user.firstName?.charAt(0) || 'U').toUpperCase()"></span>
+                                                            </div>
                                                         </div>
                                                         <div class="ml-4">
-                                                            <div class="text-sm font-medium text-gray-900" x-text="user.fullName || user.firstName || user.username || 'Unknown User'"></div>
-                                                            <div class="text-sm text-gray-500" x-text="'@' + (user.username || 'no_username')"></div>
+                                                            <div class="text-sm font-medium text-gray-900">
+                                                                <span x-text="user.firstName || 'Unknown'"></span>
+                                                                <span x-text="user.lastName || ''"></span>
+                                                            </div>
+                                                            <div class="text-sm text-gray-500">
+                                                                ID: <span x-text="user.telegramId"></span>
+                                                            </div>
+                                                            <div class="text-xs text-gray-400">
+                                                                @<span x-text="user.username || 'No username'"></span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </td>
+                                                
+                                                <!-- Status -->
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                                          :class="user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
-                                                        <div class="w-1.5 h-1.5 rounded-full mr-1" 
-                                                             :class="user.isActive ? 'bg-green-400' : 'bg-red-400'"></div>
-                                                        <span x-text="user.isActive ? 'Active' : 'Inactive'"></span>
-                                                    </span>
+                                                    <div class="space-y-2">
+                                                        <!-- Registration Status -->
+                                                        <span :class="{
+                                                            'bg-green-100 text-green-800': user.registrationComplete,
+                                                            'bg-yellow-100 text-yellow-800': !user.registrationComplete
+                                                        }" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+                                                            <i :class="{
+                                                                'fas fa-check-circle': user.registrationComplete,
+                                                                'fas fa-clock': !user.registrationComplete
+                                                            }" class="mr-1"></i>
+                                                            <span x-text="user.registrationComplete ? 'Registered' : 'Pending'"></span>
+                                                        </span>
+                                                        
+                                                        <!-- Activity Status -->
+                                                        <div>
+                                                            <span :class="{
+                                                                'bg-blue-100 text-blue-800': user.lastActive && isActiveUser(user.lastActive),
+                                                                'bg-gray-100 text-gray-800': !user.lastActive || !isActiveUser(user.lastActive)
+                                                            }" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+                                                                <i :class="{
+                                                                    'fas fa-circle text-green-500': user.lastActive && isActiveUser(user.lastActive),
+                                                                    'fas fa-circle text-gray-400': !user.lastActive || !isActiveUser(user.lastActive)
+                                                                }" class="mr-1 text-xs"></i>
+                                                                <span x-text="user.lastActive && isActiveUser(user.lastActive) ? 'Active' : 'Inactive'"></span>
+                                                            </span>
+                                                        </div>
+                                                        
+                                                        <!-- Language -->
+                                                        <div class="text-xs text-gray-600">
+                                                            <i class="fas fa-language mr-1"></i>
+                                                            <span x-text="getLanguageName(user.nativeLanguage)"></span>
+                                                        </div>
+                                                    </div>
                                                 </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="user.language || 'Not set'"></td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="formatDate(user.createdAt)"></td>
+                                                
+                                                <!-- Learning Progress -->
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="space-y-2">
+                                                        <!-- Word Count -->
+                                                        <div class="flex items-center">
+                                                            <i class="fas fa-book text-purple-500 mr-2"></i>
+                                                            <span class="text-sm font-medium text-gray-900" x-text="user.totalWords || 0"></span>
+                                                            <span class="text-xs text-gray-500 ml-1">words</span>
+                                                        </div>
+                                                        
+                                                        <!-- Study Progress Bar -->
+                                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                                            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                                                 :style="'width: ' + (user.studyProgress || 0) + '%'"></div>
+                                                        </div>
+                                                        <div class="text-xs text-gray-600">
+                                                            <span x-text="user.studyProgress || 0"></span>% Complete
+                                                        </div>
+                                                        
+                                                        <!-- Due for Review -->
+                                                        <div x-show="user.dueForReview > 0" class="text-xs text-orange-600">
+                                                            <i class="fas fa-clock mr-1"></i>
+                                                            <span x-text="user.dueForReview"></span> due for review
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                
+                                                <!-- Performance -->
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="space-y-2">
+                                                        <!-- Accuracy -->
+                                                        <div class="flex items-center">
+                                                            <i class="fas fa-target text-green-500 mr-2"></i>
+                                                            <span class="text-sm font-medium" 
+                                                                  :class="{
+                                                                      'text-green-600': (user.accuracy || 0) >= 80,
+                                                                      'text-yellow-600': (user.accuracy || 0) >= 60 && (user.accuracy || 0) < 80,
+                                                                      'text-red-600': (user.accuracy || 0) < 60
+                                                                  }"
+                                                                  x-text="(user.accuracy || 0) + '%'"></span>
+                                                        </div>
+                                                        
+                                                        <!-- Study Streak -->
+                                                        <div class="flex items-center text-xs text-gray-600">
+                                                            <i class="fas fa-fire text-orange-500 mr-1"></i>
+                                                            <span x-text="user.studyStreak || 0"></span> day streak
+                                                        </div>
+                                                        
+                                                        <!-- Total Reviews -->
+                                                        <div class="text-xs text-gray-600">
+                                                            <i class="fas fa-redo mr-1"></i>
+                                                            <span x-text="user.totalReviews || 0"></span> reviews
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                
+                                                <!-- Activity -->
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="space-y-1">
+                                                        <!-- Join Date -->
+                                                        <div class="text-sm text-gray-900">
+                                                            <i class="fas fa-calendar-plus text-blue-500 mr-1"></i>
+                                                            <span x-text="formatDate(user.joinedAt)"></span>
+                                                        </div>
+                                                        
+                                                        <!-- Last Activity -->
+                                                        <div class="text-xs text-gray-600">
+                                                            <i class="fas fa-clock mr-1"></i>
+                                                            <span x-show="user.lastActive">
+                                                                Last active: <span x-text="formatRelativeTime(user.lastActive)"></span>
+                                                            </span>
+                                                            <span x-show="!user.lastActive">Never active</span>
+                                                        </div>
+                                                        
+                                                        <!-- Last Study Session -->
+                                                        <div class="text-xs text-gray-600" x-show="user.lastStudySession">
+                                                            <i class="fas fa-graduation-cap mr-1"></i>
+                                                            Study: <span x-text="formatRelativeTime(user.lastStudySession)"></span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                
+                                                <!-- Actions -->
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                     <div class="flex items-center space-x-2">
-                                                        <button @click="viewUser(user)" 
-                                                                class="text-blue-600 hover:text-blue-900">
+                                                        <!-- View Details -->
+                                                        <button @click="viewUserDetails(user)" 
+                                                                class="text-blue-600 hover:text-blue-900 transition duration-200"
+                                                                title="View Details">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
-                                                        <button @click="editUser(user)" 
-                                                                class="text-indigo-600 hover:text-indigo-900">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
+                                                        
+                                                        <!-- Send Message -->
                                                         <button @click="messageUser(user)" 
-                                                                class="text-green-600 hover:text-green-900">
+                                                                class="text-green-600 hover:text-green-900 transition duration-200"
+                                                                title="Send Message">
                                                             <i class="fas fa-envelope"></i>
                                                         </button>
+                                                        
+                                                        <!-- View Progress -->
+                                                        <button @click="viewUserProgress(user)" 
+                                                                class="text-purple-600 hover:text-purple-900 transition duration-200"
+                                                                title="View Learning Progress">
+                                                            <i class="fas fa-chart-line"></i>
+                                                        </button>
+                                                        
+                                                        <!-- Manage Words -->
+                                                        <button @click="manageUserWords(user)" 
+                                                                class="text-indigo-600 hover:text-indigo-900 transition duration-200"
+                                                                title="Manage Vocabulary">
+                                                            <i class="fas fa-book-open"></i>
+                                                        </button>
+                                                        
+                                                        <!-- More Actions Menu -->
+                                                        <div class="relative" x-data="{ open: false }">
+                                                            <button @click="open = !open" 
+                                                                    class="text-gray-600 hover:text-gray-900 transition duration-200"
+                                                                    title="More Actions">
+                                                                <i class="fas fa-ellipsis-v"></i>
+                                                            </button>
+                                                            
+                                                            <!-- Dropdown Menu -->
+                                                            <div x-show="open" @click.outside="open = false" x-transition
+                                                                 class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                                                                <div class="py-1">
+                                                                    <button @click="editUser(user); open = false" 
+                                                                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                                        <i class="fas fa-edit mr-2"></i>
+                                                                        Edit User
+                                                                    </button>
+                                                                    <button @click="resetUserProgress(user); open = false" 
+                                                                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                                        <i class="fas fa-undo mr-2"></i>
+                                                                        Reset Progress
+                                                                    </button>
+                                                                    <button @click="exportUserData(user); open = false" 
+                                                                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                                        <i class="fas fa-download mr-2"></i>
+                                                                        Export Data
+                                                                    </button>
+                                                                    <button @click="viewUserActivity(user); open = false" 
+                                                                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                                        <i class="fas fa-history mr-2"></i>
+                                                                        Activity Log
+                                                                    </button>
+                                                                    <hr class="my-1">
+                                                                    <button @click="blockUser(user); open = false" 
+                                                                            class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                                                        <i class="fas fa-ban mr-2"></i>
+                                                                        Block User
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </td>
                                             </tr>
                                         </template>
                                     </tbody>
                                 </table>
+                                
+                                <!-- Empty State -->
+                                <div x-show="filteredUsers.length === 0" class="text-center py-12">
+                                    <i class="fas fa-users text-gray-300 text-4xl mb-4"></i>
+                                    <h3 class="text-lg font-medium text-gray-900 mb-2">No users found</h3>
+                                    <p class="text-gray-500">
+                                        <span x-show="userSearch || Object.values(userFilters).some(v => v)">
+                                            Try adjusting your search criteria or filters.
+                                        </span>
+                                        <span x-show="!userSearch && !Object.values(userFilters).some(v => v)">
+                                            No users have registered with the bot yet.
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <!-- Pagination -->
+                            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                                <div class="flex items-center justify-between">
+                                    <div class="text-sm text-gray-700">
+                                        Showing <span class="font-medium" x-text="Math.min((currentPage - 1) * pageSize + 1, filteredUsers.length)"></span>
+                                        to <span class="font-medium" x-text="Math.min(currentPage * pageSize, filteredUsers.length)"></span>
+                                        of <span class="font-medium" x-text="filteredUsers.length"></span> results
+                                    </div>
+                                    
+                                    <div class="flex items-center space-x-2">
+                                        <!-- Page Size Selector -->
+                                        <select x-model="pageSize" @change="currentPage = 1; updatePagination()"
+                                                class="px-3 py-1 border border-gray-300 rounded text-sm">
+                                            <option value="10">10 per page</option>
+                                            <option value="25">25 per page</option>
+                                            <option value="50">50 per page</option>
+                                            <option value="100">100 per page</option>
+                                        </select>
+                                        
+                                        <!-- Pagination Controls -->
+                                        <nav class="flex items-center space-x-1">
+                                            <button @click="goToPage(1)" :disabled="currentPage === 1"
+                                                    class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                First
+                                            </button>
+                                            <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1"
+                                                    class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                Previous
+                                            </button>
+                                            
+                                            <!-- Page Numbers -->
+                                            <template x-for="page in getVisiblePages()" :key="page">
+                                                <button @click="goToPage(page)" 
+                                                        :class="{
+                                                            'bg-blue-600 text-white border-blue-600': page === currentPage,
+                                                            'border-gray-300 hover:bg-gray-50': page !== currentPage
+                                                        }"
+                                                        class="px-3 py-1 text-sm border rounded"
+                                                        x-text="page"></button>
+                                            </template>
+                                            
+                                            <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages"
+                                                    class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                Next
+                                            </button>
+                                            <button @click="goToPage(totalPages)" :disabled="currentPage === totalPages"
+                                                    class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                Last
+                                            </button>
+                                        </nav>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1067,6 +1533,212 @@ export function getAdminPanelHTML(): string {
                 </div>
             </template>
         </div>
+        
+        <!-- ==================== USER DETAIL MODALS ==================== -->
+        
+        <!-- User Details Modal -->
+        <div x-show="showUserDetailsModal" x-transition class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-white border-b border-gray-200 p-6">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-semibold text-gray-900">User Details</h2>
+                        <button @click="showUserDetailsModal = false" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6" x-show="selectedUserDetails">
+                    <!-- User Profile Section -->
+                    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white mb-6">
+                        <div class="flex items-center">
+                            <div class="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mr-4">
+                                <span class="text-2xl font-bold" x-text="(selectedUserDetails?.firstName?.charAt(0) || 'U').toUpperCase()"></span>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-semibold" x-text="(selectedUserDetails?.firstName || '') + ' ' + (selectedUserDetails?.lastName || '')"></h3>
+                                <p class="text-blue-100">@<span x-text="selectedUserDetails?.username || 'No username'"></span></p>
+                                <p class="text-blue-100">ID: <span x-text="selectedUserDetails?.telegramId"></span></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tabs for different sections -->
+                    <div class="border-b border-gray-200 mb-6">
+                        <nav class="-mb-px flex space-x-8">
+                            <button @click="userDetailsTab = 'overview'" 
+                                    :class="userDetailsTab === 'overview' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                    class="py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap">
+                                Overview
+                            </button>
+                            <button @click="userDetailsTab = 'progress'" 
+                                    :class="userDetailsTab === 'progress' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                    class="py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap">
+                                Learning Progress
+                            </button>
+                            <button @click="userDetailsTab = 'vocabulary'" 
+                                    :class="userDetailsTab === 'vocabulary' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                    class="py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap">
+                                Vocabulary
+                            </button>
+                            <button @click="userDetailsTab = 'activity'" 
+                                    :class="userDetailsTab === 'activity' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                    class="py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap">
+                                Activity Log
+                            </button>
+                        </nav>
+                    </div>
+                    
+                    <!-- Overview Tab -->
+                    <div x-show="userDetailsTab === 'overview'" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- Basic Information -->
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900 mb-3">Basic Information</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Registration Status:</span>
+                                        <span :class="selectedUserDetails?.registrationComplete ? 'text-green-600' : 'text-yellow-600'"
+                                              x-text="selectedUserDetails?.registrationComplete ? 'Complete' : 'Pending'"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Native Language:</span>
+                                        <span x-text="getLanguageName(selectedUserDetails?.nativeLanguage)"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Joined:</span>
+                                        <span x-text="formatDate(selectedUserDetails?.joinedAt)"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Last Active:</span>
+                                        <span x-text="formatRelativeTime(selectedUserDetails?.lastActive)"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Learning Statistics -->
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900 mb-3">Learning Stats</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Total Words:</span>
+                                        <span class="font-medium" x-text="selectedUserDetails?.totalWords || 0"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Study Progress:</span>
+                                        <span class="font-medium" x-text="(selectedUserDetails?.studyProgress || 0) + '%'"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Accuracy:</span>
+                                        <span class="font-medium" x-text="(selectedUserDetails?.accuracy || 0) + '%'"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Study Streak:</span>
+                                        <span class="font-medium" x-text="(selectedUserDetails?.studyStreak || 0) + ' days'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Review Statistics -->
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900 mb-3">Review Stats</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Total Reviews:</span>
+                                        <span class="font-medium" x-text="selectedUserDetails?.totalReviews || 0"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Due for Review:</span>
+                                        <span class="font-medium text-orange-600" x-text="selectedUserDetails?.dueForReview || 0"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Last Study:</span>
+                                        <span x-text="formatRelativeTime(selectedUserDetails?.lastStudySession)"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress Tab -->
+                    <div x-show="userDetailsTab === 'progress'" class="space-y-6">
+                        <div class="text-center text-gray-600">
+                            <i class="fas fa-chart-line text-4xl text-gray-300 mb-4"></i>
+                            <p>Detailed progress charts and analytics would be displayed here</p>
+                            <p class="text-sm mt-2">Including Leitner box distribution, accuracy trends, and study patterns</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Vocabulary Tab -->
+                    <div x-show="userDetailsTab === 'vocabulary'" class="space-y-6">
+                        <div class="text-center text-gray-600">
+                            <i class="fas fa-book text-4xl text-gray-300 mb-4"></i>
+                            <p>User's vocabulary management interface would be displayed here</p>
+                            <p class="text-sm mt-2">Including word lists, difficulty levels, and learning status</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Activity Tab -->
+                    <div x-show="userDetailsTab === 'activity'" class="space-y-6">
+                        <div class="text-center text-gray-600">
+                            <i class="fas fa-history text-4xl text-gray-300 mb-4"></i>
+                            <p>User activity timeline would be displayed here</p>
+                            <p class="text-sm mt-2">Including command usage, study sessions, and bot interactions</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bulk Message Modal -->
+        <div x-show="showBulkMessageModal" x-transition class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-semibold text-gray-900">Send Bulk Message</h2>
+                        <button @click="showBulkMessageModal = false" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-600 mb-2">
+                            Sending message to <span class="font-medium" x-text="selectedUsers.length"></span> selected users
+                        </p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Message Content</label>
+                        <textarea x-model="bulkMessageContent" 
+                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                  rows="4" 
+                                  placeholder="Enter your message here..."></textarea>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <input type="checkbox" x-model="bulkMessageSchedule" id="scheduleMessage" class="mr-2">
+                            <label for="scheduleMessage" class="text-sm text-gray-700">Schedule for later</label>
+                        </div>
+                        
+                        <div class="flex space-x-3">
+                            <button @click="showBulkMessageModal = false" 
+                                    class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                                Cancel
+                            </button>
+                            <button @click="sendBulkMessage()" 
+                                    :disabled="!bulkMessageContent.trim()"
+                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                                <i class="fas fa-paper-plane mr-2"></i>
+                                Send Message
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1094,11 +1766,46 @@ export function getAdminPanelHTML(): string {
                 dashboardStats: [],
                 users: [],
                 filteredUsers: [],
+                paginatedUsers: [],
                 toasts: [],
                 recentActivity: [],
                 systemStatus: { online: true },
                 systemHealth: [],
                 userSearch: '',
+                
+                // User Management Enhanced Data
+                userFilters: {
+                    registrationStatus: '',
+                    activityStatus: '',
+                    language: '',
+                    progressRange: '',
+                    wordCountRange: '',
+                    joinDateRange: '',
+                    studyFrequency: ''
+                },
+                userStats: {
+                    total: 0,
+                    active: 0,
+                    registrationComplete: 0,
+                    studyingToday: 0,
+                    averageWords: 0,
+                    filtered: 0
+                },
+                selectedUsers: [],
+                showBulkActions: false,
+                sortField: 'joinedAt',
+                sortDirection: 'desc',
+                currentPage: 1,
+                pageSize: 25,
+                totalPages: 1,
+                
+                // Modal state
+                showUserDetailsModal: false,
+                showBulkMessageModal: false,
+                selectedUserDetails: null,
+                userDetailsTab: 'overview',
+                bulkMessageContent: '',
+                bulkMessageSchedule: false,
                 
                 // Navigation
                 navigationItems: [
@@ -1492,52 +2199,511 @@ export function getAdminPanelHTML(): string {
                     }
                 },
                 
+                // ==================== ENHANCED USER MANAGEMENT METHODS ====================
+                
                 async loadUsers() {
                     try {
                         const response = await this.apiCall('/admin/users');
                         if (response.ok) {
                             const data = await response.json();
-                            this.users = data.users || this.generateMockUsers();
+                            this.users = data.users || [];
+                            this.calculateUserStats();
                             this.filterUsers();
+                            this.updatePagination();
                         }
                     } catch (error) {
                         console.error('Failed to load users:', error);
-                        this.users = this.generateMockUsers();
-                        this.filterUsers();
+                        this.showToast('error', 'Load Failed', 'Could not load users');
                     }
                 },
                 
-                generateMockUsers() {
-                    const users = [];
-                    for (let i = 1; i <= 10; i++) {
-                        users.push({
-                            id: i,
-                            username: 'user' + i,
-                            firstName: 'User' + i,
-                            fullName: 'User ' + i + ' Name',
-                            language: ['en', 'es', 'fr', 'de'][Math.floor(Math.random() * 4)],
-                            isActive: Math.random() > 0.2,
-                            createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
-                        });
-                    }
-                    return users;
+                calculateUserStats() {
+                    const now = Date.now();
+                    const dayMs = 24 * 60 * 60 * 1000;
+                    
+                    this.userStats = {
+                        total: this.users.length,
+                        active: this.users.filter(u => u.lastActive && (now - new Date(u.lastActive).getTime()) < 7 * dayMs).length,
+                        registrationComplete: this.users.filter(u => u.registrationComplete).length,
+                        studyingToday: this.users.filter(u => u.lastStudySession && (now - new Date(u.lastStudySession).getTime()) < dayMs).length,
+                        averageWords: this.users.length > 0 ? Math.round(this.users.reduce((sum, u) => sum + (u.totalWords || 0), 0) / this.users.length) : 0,
+                        filtered: this.filteredUsers.length
+                    };
                 },
                 
                 filterUsers() {
-                    if (!this.userSearch.trim()) {
-                        this.filteredUsers = this.users;
-                    } else {
+                    let filtered = [...this.users];
+                    
+                    // Search filter
+                    if (this.userSearch.trim()) {
                         const search = this.userSearch.toLowerCase();
-                        this.filteredUsers = this.users.filter(user => 
-                            (user.username && user.username.toLowerCase().includes(search)) ||
+                        filtered = filtered.filter(user => 
                             (user.firstName && user.firstName.toLowerCase().includes(search)) ||
-                            (user.fullName && user.fullName.toLowerCase().includes(search))
+                            (user.lastName && user.lastName.toLowerCase().includes(search)) ||
+                            (user.username && user.username.toLowerCase().includes(search)) ||
+                            (user.telegramId && user.telegramId.toString().includes(search))
                         );
                     }
+                    
+                    // Registration status filter
+                    if (this.userFilters.registrationStatus) {
+                        if (this.userFilters.registrationStatus === 'complete') {
+                            filtered = filtered.filter(u => u.registrationComplete);
+                        } else if (this.userFilters.registrationStatus === 'pending') {
+                            filtered = filtered.filter(u => !u.registrationComplete);
+                        }
+                    }
+                    
+                    // Activity status filter
+                    if (this.userFilters.activityStatus) {
+                        const now = Date.now();
+                        const dayMs = 24 * 60 * 60 * 1000;
+                        
+                        if (this.userFilters.activityStatus === 'active') {
+                            filtered = filtered.filter(u => u.lastActive && (now - new Date(u.lastActive).getTime()) < 7 * dayMs);
+                        } else if (this.userFilters.activityStatus === 'inactive') {
+                            filtered = filtered.filter(u => !u.lastActive || (now - new Date(u.lastActive).getTime()) >= 7 * dayMs);
+                        } else if (this.userFilters.activityStatus === 'recent') {
+                            filtered = filtered.filter(u => u.lastActive && (now - new Date(u.lastActive).getTime()) < 7 * dayMs);
+                        }
+                    }
+                    
+                    // Language filter
+                    if (this.userFilters.language) {
+                        filtered = filtered.filter(u => u.nativeLanguage === this.userFilters.language);
+                    }
+                    
+                    // Progress range filter
+                    if (this.userFilters.progressRange) {
+                        const [min, max] = this.userFilters.progressRange.split('-').map(n => parseInt(n));
+                        filtered = filtered.filter(u => {
+                            const progress = u.studyProgress || 0;
+                            return progress >= min && progress <= (max || 100);
+                        });
+                    }
+                    
+                    // Word count filter
+                    if (this.userFilters.wordCountRange) {
+                        if (this.userFilters.wordCountRange === '0') {
+                            filtered = filtered.filter(u => (u.totalWords || 0) === 0);
+                        } else if (this.userFilters.wordCountRange === '100+') {
+                            filtered = filtered.filter(u => (u.totalWords || 0) >= 100);
+                        } else {
+                            const [min, max] = this.userFilters.wordCountRange.split('-').map(n => parseInt(n));
+                            filtered = filtered.filter(u => {
+                                const words = u.totalWords || 0;
+                                return words >= min && words <= max;
+                            });
+                        }
+                    }
+                    
+                    // Join date filter
+                    if (this.userFilters.joinDateRange) {
+                        const now = Date.now();
+                        const dayMs = 24 * 60 * 60 * 1000;
+                        
+                        if (this.userFilters.joinDateRange === 'today') {
+                            filtered = filtered.filter(u => u.joinedAt && (now - new Date(u.joinedAt).getTime()) < dayMs);
+                        } else if (this.userFilters.joinDateRange === 'week') {
+                            filtered = filtered.filter(u => u.joinedAt && (now - new Date(u.joinedAt).getTime()) < 7 * dayMs);
+                        } else if (this.userFilters.joinDateRange === 'month') {
+                            filtered = filtered.filter(u => u.joinedAt && (now - new Date(u.joinedAt).getTime()) < 30 * dayMs);
+                        } else if (this.userFilters.joinDateRange === '3months') {
+                            filtered = filtered.filter(u => u.joinedAt && (now - new Date(u.joinedAt).getTime()) < 90 * dayMs);
+                        }
+                    }
+                    
+                    // Study frequency filter
+                    if (this.userFilters.studyFrequency) {
+                        const now = Date.now();
+                        const dayMs = 24 * 60 * 60 * 1000;
+                        
+                        if (this.userFilters.studyFrequency === 'daily') {
+                            filtered = filtered.filter(u => u.studyStreak >= 7);
+                        } else if (this.userFilters.studyFrequency === 'weekly') {
+                            filtered = filtered.filter(u => u.lastStudySession && (now - new Date(u.lastStudySession).getTime()) < 7 * dayMs);
+                        } else if (this.userFilters.studyFrequency === 'inactive') {
+                            filtered = filtered.filter(u => !u.lastStudySession || (now - new Date(u.lastStudySession).getTime()) >= 14 * dayMs);
+                        }
+                    }
+                    
+                    // Apply sorting
+                    filtered.sort((a, b) => {
+                        let aVal = a[this.sortField];
+                        let bVal = b[this.sortField];
+                        
+                        // Handle special cases
+                        if (this.sortField === 'name') {
+                            aVal = a.firstName || a.username || '';
+                            bVal = b.firstName || b.username || '';
+                        } else if (this.sortField === 'registrationComplete') {
+                            aVal = a.registrationComplete ? 1 : 0;
+                            bVal = b.registrationComplete ? 1 : 0;
+                        }
+                        
+                        // Convert to comparable values
+                        if (typeof aVal === 'string') {
+                            aVal = aVal.toLowerCase();
+                            bVal = bVal ? bVal.toLowerCase() : '';
+                        }
+                        
+                        let result = 0;
+                        if (aVal < bVal) result = -1;
+                        else if (aVal > bVal) result = 1;
+                        
+                        return this.sortDirection === 'asc' ? result : -result;
+                    });
+                    
+                    this.filteredUsers = filtered;
+                    this.userStats.filtered = filtered.length;
+                    this.currentPage = 1; // Reset to first page when filtering
+                    this.updatePagination();
+                },
+                
+                updatePagination() {
+                    this.totalPages = Math.ceil(this.filteredUsers.length / this.pageSize) || 1;
+                    const start = (this.currentPage - 1) * this.pageSize;
+                    const end = start + this.pageSize;
+                    this.paginatedUsers = this.filteredUsers.slice(start, end);
                 },
                 
                 searchUsers() {
                     this.filterUsers();
+                },
+                
+                clearFilters() {
+                    this.userFilters = {
+                        registrationStatus: '',
+                        activityStatus: '',
+                        language: '',
+                        progressRange: '',
+                        wordCountRange: '',
+                        joinDateRange: '',
+                        studyFrequency: ''
+                    };
+                    this.userSearch = '';
+                    this.filterUsers();
+                    this.showToast('info', 'Filters Cleared', 'All filters have been reset');
+                },
+                
+                sortUsers(field) {
+                    if (this.sortField === field) {
+                        this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        this.sortField = field;
+                        this.sortDirection = 'asc';
+                    }
+                    this.filterUsers();
+                },
+                
+                // Pagination methods
+                goToPage(page) {
+                    if (page >= 1 && page <= this.totalPages) {
+                        this.currentPage = page;
+                        this.updatePagination();
+                    }
+                },
+                
+                getVisiblePages() {
+                    const visible = [];
+                    const start = Math.max(1, this.currentPage - 2);
+                    const end = Math.min(this.totalPages, this.currentPage + 2);
+                    
+                    for (let i = start; i <= end; i++) {
+                        visible.push(i);
+                    }
+                    
+                    return visible;
+                },
+                
+                // Selection methods
+                toggleAllUsers(checked) {
+                    if (checked) {
+                        this.selectedUsers = this.paginatedUsers.map(u => u.telegramId);
+                    } else {
+                        this.selectedUsers = [];
+                    }
+                },
+                
+                toggleUserSelection(telegramId, checked) {
+                    if (checked) {
+                        if (!this.selectedUsers.includes(telegramId)) {
+                            this.selectedUsers.push(telegramId);
+                        }
+                    } else {
+                        this.selectedUsers = this.selectedUsers.filter(id => id !== telegramId);
+                    }
+                },
+                
+                // User action methods
+                async viewUserDetails(user) {
+                    try {
+                        this.selectedUserDetails = user;
+                        this.userDetailsTab = 'overview';
+                        this.showUserDetailsModal = true;
+                        
+                        // Optionally load additional details from API
+                        const response = await this.apiCall('/admin/users/' + user.telegramId + '/details');
+                        if (response.ok) {
+                            const details = await response.json();
+                            this.selectedUserDetails = { ...user, ...details };
+                        }
+                    } catch (error) {
+                        console.error('Failed to load user details:', error);
+                        // Still show modal with basic user data
+                        this.selectedUserDetails = user;
+                        this.userDetailsTab = 'overview';
+                        this.showUserDetailsModal = true;
+                    }
+                },
+                
+                showUserModal(user, details) {
+                    this.selectedUserDetails = { ...user, ...details };
+                    this.userDetailsTab = 'overview';
+                    this.showUserDetailsModal = true;
+                },
+                
+                async viewUserProgress(user) {
+                    try {
+                        const response = await this.apiCall('/admin/users/' + user.telegramId + '/progress');
+                        if (response.ok) {
+                            const progress = await response.json();
+                            this.showProgressModal(user, progress);
+                        } else {
+                            this.showToast('error', 'Load Failed', 'Could not load user progress');
+                        }
+                    } catch (error) {
+                        console.error('Failed to load user progress:', error);
+                        this.showToast('error', 'Error', 'Network error occurred');
+                    }
+                },
+                
+                showProgressModal(user, progress) {
+                    // Show detailed progress with Leitner box distribution, accuracy trends, etc.
+                    this.showToast('info', 'Learning Progress', 'Progress details for ' + (user.firstName || user.username));
+                },
+                
+                async manageUserWords(user) {
+                    try {
+                        const response = await this.apiCall('/admin/users/' + user.telegramId + '/words');
+                        if (response.ok) {
+                            const words = await response.json();
+                            this.showWordsModal(user, words);
+                        } else {
+                            this.showToast('error', 'Load Failed', 'Could not load user words');
+                        }
+                    } catch (error) {
+                        console.error('Failed to load user words:', error);
+                        this.showToast('error', 'Error', 'Network error occurred');
+                    }
+                },
+                
+                showWordsModal(user, words) {
+                    // Show word management interface with add/edit/delete capabilities
+                    this.showToast('info', 'Vocabulary Management', 'Managing words for ' + (user.firstName || user.username));
+                },
+                
+                async viewUserActivity(user) {
+                    try {
+                        const response = await this.apiCall('/admin/users/' + user.telegramId + '/activity');
+                        if (response.ok) {
+                            const activity = await response.json();
+                            this.showActivityModal(user, activity);
+                        } else {
+                            this.showToast('error', 'Load Failed', 'Could not load user activity');
+                        }
+                    } catch (error) {
+                        console.error('Failed to load user activity:', error);
+                        this.showToast('error', 'Error', 'Network error occurred');
+                    }
+                },
+                
+                showActivityModal(user, activity) {
+                    // Show timeline of user activities: commands used, study sessions, etc.
+                    this.showToast('info', 'Activity Log', 'Activity history for ' + (user.firstName || user.username));
+                },
+                
+                async editUser(user) {
+                    // Show edit user form
+                    this.showToast('info', 'Edit User', 'Editing ' + (user.firstName || user.username));
+                },
+                
+                async resetUserProgress(user) {
+                    if (confirm('Are you sure you want to reset all progress for ' + (user.firstName || user.username) + '? This action cannot be undone.')) {
+                        try {
+                            const response = await this.apiCall('/admin/users/' + user.telegramId + '/reset-progress', {
+                                method: 'POST'
+                            });
+                            
+                            if (response.ok) {
+                                await this.loadUsers();
+                                this.showToast('success', 'Progress Reset', 'Progress reset for ' + (user.firstName || user.username));
+                            } else {
+                                this.showToast('error', 'Reset Failed', 'Could not reset user progress');
+                            }
+                        } catch (error) {
+                            console.error('Failed to reset user progress:', error);
+                            this.showToast('error', 'Error', 'Network error occurred');
+                        }
+                    }
+                },
+                
+                async exportUserData(user) {
+                    try {
+                        const response = await this.apiCall('/admin/users/' + user.telegramId + '/export');
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'user_' + user.telegramId + '_data.json';
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            this.showToast('success', 'Export Complete', 'Data exported for ' + (user.firstName || user.username));
+                        } else {
+                            this.showToast('error', 'Export Failed', 'Could not export user data');
+                        }
+                    } catch (error) {
+                        console.error('Failed to export user data:', error);
+                        this.showToast('error', 'Error', 'Network error occurred');
+                    }
+                },
+                
+                async blockUser(user) {
+                    if (confirm('Are you sure you want to block ' + (user.firstName || user.username) + '? They will no longer be able to use the bot.')) {
+                        try {
+                            const response = await this.apiCall('/admin/users/' + user.telegramId + '/block', {
+                                method: 'POST'
+                            });
+                            
+                            if (response.ok) {
+                                await this.loadUsers();
+                                this.showToast('success', 'User Blocked', (user.firstName || user.username) + ' has been blocked');
+                            } else {
+                                this.showToast('error', 'Block Failed', 'Could not block user');
+                            }
+                        } catch (error) {
+                            console.error('Failed to block user:', error);
+                            this.showToast('error', 'Error', 'Network error occurred');
+                        }
+                    }
+                },
+                
+                // Bulk operations
+                async bulkMessageUsers() {
+                    if (this.selectedUsers.length === 0) {
+                        this.showToast('warning', 'No Selection', 'Please select users to message');
+                        return;
+                    }
+                    
+                    this.showBulkMessageModal = true;
+                },
+                
+                async sendBulkMessage() {
+                    if (!this.bulkMessageContent.trim()) {
+                        this.showToast('warning', 'No Message', 'Please enter a message to send');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await this.apiCall('/admin/bulk-message', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                userIds: this.selectedUsers,
+                                message: this.bulkMessageContent,
+                                schedule: this.bulkMessageSchedule
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            this.showToast('success', 'Messages Sent', 'Message sent to ' + this.selectedUsers.length + ' users');
+                            this.selectedUsers = [];
+                            this.showBulkMessageModal = false;
+                            this.bulkMessageContent = '';
+                            this.bulkMessageSchedule = false;
+                        } else {
+                            this.showToast('error', 'Send Failed', 'Could not send messages');
+                        }
+                    } catch (error) {
+                        console.error('Failed to send bulk messages:', error);
+                        this.showToast('error', 'Error', 'Network error occurred');
+                    }
+                },
+                
+                async bulkExportUsers() {
+                    if (this.selectedUsers.length === 0) {
+                        this.showToast('warning', 'No Selection', 'Please select users to export');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await this.apiCall('/admin/users/bulk-export', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                userIds: this.selectedUsers
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'selected_users_' + Date.now() + '.json';
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            this.showToast('success', 'Export Complete', this.selectedUsers.length + ' users exported');
+                        } else {
+                            this.showToast('error', 'Export Failed', 'Could not export selected users');
+                        }
+                    } catch (error) {
+                        console.error('Failed to bulk export users:', error);
+                        this.showToast('error', 'Error', 'Network error occurred');
+                    }
+                },
+                
+                async bulkAssignWords() {
+                    if (this.selectedUsers.length === 0) {
+                        this.showToast('warning', 'No Selection', 'Please select users to assign words to');
+                        return;
+                    }
+                    
+                    // Switch to bulk words tab and pre-select these users
+                    this.activeTab = 'bulk-words';
+                    this.showToast('info', 'Bulk Words', this.selectedUsers.length + ' users pre-selected for word assignment');
+                },
+                
+                async bulkUpdateSettings() {
+                    if (this.selectedUsers.length === 0) {
+                        this.showToast('warning', 'No Selection', 'Please select users to update settings for');
+                        return;
+                    }
+                    
+                    this.showToast('info', 'Bulk Settings', 'Settings update for ' + this.selectedUsers.length + ' users');
+                },
+                
+                // Export/Import methods
+                async exportUsers() {
+                    try {
+                        const response = await this.apiCall('/admin/users/export');
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'all_users_' + Date.now() + '.json';
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            this.showToast('success', 'Export Complete', 'All users exported successfully');
+                        } else {
+                            this.showToast('error', 'Export Failed', 'Could not export users');
+                        }
+                    } catch (error) {
+                        console.error('Failed to export users:', error);
+                        this.showToast('error', 'Error', 'Network error occurred');
+                    }
                 },
                 
                 async refreshUsers() {
@@ -1545,18 +2711,52 @@ export function getAdminPanelHTML(): string {
                     this.showToast('success', 'Users Refreshed', 'User list has been updated');
                 },
                 
-                // User actions
-                viewUser(user) {
-                    this.showToast('info', 'View User', 'Viewing user: ' + (user.fullName || user.username));
+                // Utility methods
+                isActiveUser(lastActive) {
+                    if (!lastActive) return false;
+                    const now = Date.now();
+                    const lastActiveTime = new Date(lastActive).getTime();
+                    return (now - lastActiveTime) < 7 * 24 * 60 * 60 * 1000; // 7 days
                 },
                 
-                editUser(user) {
-                    this.showToast('info', 'Edit User', 'Editing user: ' + (user.fullName || user.username));
+                getLanguageName(code) {
+                    const languages = {
+                        'en': 'English',
+                        'es': 'Spanish', 
+                        'fr': 'French',
+                        'de': 'German',
+                        'it': 'Italian',
+                        'pt': 'Portuguese',
+                        'ru': 'Russian',
+                        'ar': 'Arabic',
+                        'fa': 'Persian',
+                        'zh': 'Chinese',
+                        'ja': 'Japanese',
+                        'ko': 'Korean'
+                    };
+                    return languages[code] || code || 'Unknown';
                 },
                 
-                messageUser(user) {
-                    this.showToast('info', 'Message User', 'Messaging user: ' + (user.fullName || user.username));
+                formatRelativeTime(timestamp) {
+                    if (!timestamp) return 'Never';
+                    
+                    const now = Date.now();
+                    const time = new Date(timestamp).getTime();
+                    const diff = now - time;
+                    
+                    const minute = 60 * 1000;
+                    const hour = 60 * minute;
+                    const day = 24 * hour;
+                    const week = 7 * day;
+                    
+                    if (diff < minute) return 'Just now';
+                    if (diff < hour) return Math.floor(diff / minute) + 'm ago';
+                    if (diff < day) return Math.floor(diff / hour) + 'h ago';
+                    if (diff < week) return Math.floor(diff / day) + 'd ago';
+                    return Math.floor(diff / week) + 'w ago';
                 },
+                
+                // ==================== END USER MANAGEMENT METHODS ====================
                 
                 // Bulk words methods
                 getWordCount() {
