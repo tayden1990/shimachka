@@ -538,18 +538,30 @@ export class AdminAPI {
     try {
       const url = new URL(request.url);
       const page = parseInt(url.searchParams.get('page') || '1');
-      const limit = parseInt(url.searchParams.get('limit') || '10');
+      const limit = parseInt(url.searchParams.get('limit') || '20');
       const search = url.searchParams.get('search') || '';
+      const forceReal = url.searchParams.get('forceReal') === 'true';
       
-      console.log(`Loading users with page=${page}, limit=${limit}, search="${search}"`);
+      console.log(`Loading users with page=${page}, limit=${limit}, search="${search}", forceReal=${forceReal}`);
       
-      let allUsers = await this.userManager.getAllUsers();
+      let allUsers = await this.userManager.getAllUsers({ limit: 1000 }); // Get more users to show real data
       console.log(`Found ${allUsers.length} total users`);
+      
+      // Check if we have real users (not mock users)
+      const hasRealUsers = allUsers.length > 0 && !allUsers[0].id.toString().startsWith('1000000');
+      console.log(`Has real users: ${hasRealUsers}`);
+      
+      // If no real users and not forced, create some demo data but mark them clearly
+      if (!hasRealUsers && !forceReal) {
+        console.log('No real users found, creating demo users for display');
+        allUsers = this.createDemoUsers();
+      }
       
       // Apply search filter if provided
       if (search) {
         allUsers = allUsers.filter(user => 
           (user.firstName && user.firstName.toLowerCase().includes(search.toLowerCase())) ||
+          (user.fullName && user.fullName.toLowerCase().includes(search.toLowerCase())) ||
           (user.username && user.username.toLowerCase().includes(search.toLowerCase())) ||
           user.id.toString().includes(search)
         );
@@ -564,40 +576,61 @@ export class AdminAPI {
       // Enhance user data with real statistics
       const enhancedUsers = await Promise.all(paginatedUsers.map(async (user) => {
         try {
-          const userCards = await this.userManager.getUserCards(user.id);
-          const totalReviews = userCards.reduce((sum, card) => sum + card.reviewCount, 0);
-          const correctReviews = userCards.reduce((sum, card) => sum + card.correctCount, 0);
-          const accuracy = totalReviews > 0 ? Math.round((correctReviews / totalReviews) * 100) : 0;
+          let userCards: any[] = [];
+          let totalReviews = 0;
+          let correctReviews = 0;
+          let dueCards: any[] = [];
           
-          // Check how many cards are due for review
-          const now = new Date();
-          const dueCards = userCards.filter(card => new Date(card.nextReviewAt) <= now);
+          // Only try to get cards for real users (not demo users)
+          if (hasRealUsers || !user.id.toString().startsWith('1000000')) {
+            try {
+              userCards = await this.userManager.getUserCards(user.id);
+              totalReviews = userCards.reduce((sum, card) => sum + (card.reviewCount || 0), 0);
+              correctReviews = userCards.reduce((sum, card) => sum + (card.correctCount || 0), 0);
+              
+              // Check how many cards are due for review
+              const now = new Date();
+              dueCards = userCards.filter(card => card.nextReviewAt && new Date(card.nextReviewAt) <= now);
+            } catch (cardError) {
+              console.log(`No cards found for user ${user.id} (this is normal for new users)`);
+            }
+          }
+          
+          const accuracy = totalReviews > 0 ? Math.round((correctReviews / totalReviews) * 100) : 0;
           
           return {
             ...user,
-            fullName: user.firstName || `User ${user.id}`,
+            fullName: user.firstName || user.username || `User ${user.id}`,
             totalCards: userCards.length,
+            totalWords: userCards.length, // Alias for compatibility
             totalReviews,
             accuracy,
             dueForReview: dueCards.length,
-            progress: userCards.length > 0 ? Math.round((userCards.filter(c => c.box >= 3).length / userCards.length) * 100) : 0,
+            progress: userCards.length > 0 ? Math.round((userCards.filter(c => (c.box || 0) >= 3).length / userCards.length) * 100) : 0,
             isActive: user.isActive !== false,
             registrationStatus: user.isRegistrationComplete ? 'Complete' : 'Pending',
-            lastActive: user.lastActiveAt || user.createdAt
+            status: user.isActive !== false ? 'Active' : 'Inactive',
+            lastActive: user.lastActiveAt || user.createdAt,
+            language: user.language || 'en',
+            isDemoUser: user.id.toString().startsWith('1000000') // Mark demo users
           };
         } catch (error) {
           console.error(`Error enhancing user ${user.id}:`, error);
           return {
             ...user,
-            fullName: user.firstName || `User ${user.id}`,
+            fullName: user.firstName || user.username || `User ${user.id}`,
             totalCards: 0,
+            totalWords: 0,
             totalReviews: 0,
             accuracy: 0,
             dueForReview: 0,
             progress: 0,
             isActive: user.isActive !== false,
             registrationStatus: user.isRegistrationComplete ? 'Complete' : 'Pending',
-            lastActive: user.lastActiveAt || user.createdAt
+            status: user.isActive !== false ? 'Active' : 'Inactive',
+            lastActive: user.lastActiveAt || user.createdAt,
+            language: user.language || 'en',
+            isDemoUser: user.id.toString().startsWith('1000000')
           };
         }
       }));
@@ -611,7 +644,9 @@ export class AdminAPI {
         limit,
         totalPages: Math.ceil(allUsers.length / limit),
         hasNext: endIndex < allUsers.length,
-        hasPrev: page > 1
+        hasPrev: page > 1,
+        hasRealUsers,
+        isDemoData: !hasRealUsers
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -624,12 +659,61 @@ export class AdminAPI {
         users: [],
         total: 0,
         page: 1,
-        limit: 10
+        limit: 20,
+        isDemoData: false,
+        hasRealUsers: false
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+  }
+
+  private createDemoUsers(): any[] {
+    return [
+      {
+        id: 1000001,
+        firstName: 'Demo User 1',
+        username: 'demo_user_1',
+        fullName: 'Demo User 1',
+        language: 'en',
+        interfaceLanguage: 'en',
+        timezone: 'UTC',
+        reminderTimes: ['08:00', '20:00'],
+        isActive: true,
+        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        lastActiveAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+        isRegistrationComplete: true
+      },
+      {
+        id: 1000002,
+        firstName: 'Demo User 2',
+        username: 'demo_user_2',
+        fullName: 'Demo User 2',
+        language: 'fa',
+        interfaceLanguage: 'en',
+        timezone: 'UTC',
+        reminderTimes: ['09:00', '18:00'],
+        isActive: true,
+        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        lastActiveAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+        isRegistrationComplete: true
+      },
+      {
+        id: 1000003,
+        firstName: 'Demo User 3',
+        username: 'demo_user_3',
+        fullName: 'Demo User 3',
+        language: 'ar',
+        interfaceLanguage: 'en',
+        timezone: 'UTC',
+        reminderTimes: ['07:00', '19:00'],
+        isActive: false,
+        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        lastActiveAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        isRegistrationComplete: false
+      }
+    ];
   }
 
   private async handleBulkWordsAI(request: Request, corsHeaders: any): Promise<Response> {
@@ -1630,15 +1714,170 @@ export class AdminAPI {
   }
 
   private async handleUpdateUser(request: Request, corsHeaders: any): Promise<Response> {
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    try {
+      const url = new URL(request.url);
+      const userId = parseInt(url.pathname.split('/').pop() || '');
+      
+      if (!userId) {
+        return new Response(JSON.stringify({ 
+          error: 'Invalid user ID',
+          success: false 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const body: any = await request.json();
+      console.log(`Updating user ${userId} with data:`, body);
+      
+      // Check if user exists
+      const existingUser = await this.userManager.getUser(userId);
+      if (!existingUser) {
+        return new Response(JSON.stringify({ 
+          error: 'User not found',
+          success: false 
+        }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Handle different types of updates
+      let updateResult: any = null;
+      let action = 'updated';
+
+      if (body.action === 'activate') {
+        const success = await this.userManager.activateUser(userId);
+        updateResult = success ? existingUser : null;
+        action = 'activated';
+      } else if (body.action === 'deactivate') {
+        const success = await this.userManager.deactivateUser(userId);
+        updateResult = success ? existingUser : null;
+        action = 'deactivated';
+      } else {
+        // General user update
+        const allowedFields = ['firstName', 'lastName', 'username', 'language', 'interfaceLanguage', 'timezone', 'reminderTimes', 'isActive'];
+        const updates: any = {};
+        
+        for (const field of allowedFields) {
+          if (body[field] !== undefined) {
+            updates[field] = body[field];
+          }
+        }
+        
+        if (Object.keys(updates).length === 0) {
+          return new Response(JSON.stringify({ 
+            error: 'No valid fields to update',
+            success: false 
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        
+        updateResult = await this.userManager.updateUser(userId, updates);
+      }
+      
+      if (updateResult) {
+        console.log(`Successfully ${action} user ${userId}`);
+        this.logger.info(`Admin ${action} user ${userId} (${existingUser.firstName || existingUser.username})`);
+        
+        return new Response(JSON.stringify({ 
+          success: true,
+          message: `User ${existingUser.firstName || existingUser.username} has been ${action}`,
+          user: updateResult
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else {
+        return new Response(JSON.stringify({ 
+          error: `Failed to ${action.replace('ed', '')} user`,
+          success: false 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    } catch (error) {
+      console.error('Update user error:', error);
+      this.logger.error('Failed to update user', error);
+      
+      return new Response(JSON.stringify({ 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : String(error),
+        success: false 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
   }
 
   private async handleDeleteUser(request: Request, corsHeaders: any): Promise<Response> {
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    try {
+      const url = new URL(request.url);
+      const userId = parseInt(url.pathname.split('/').pop() || '');
+      
+      if (!userId) {
+        return new Response(JSON.stringify({ 
+          error: 'Invalid user ID',
+          success: false 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      console.log(`Attempting to delete user ${userId}`);
+      
+      // Check if user exists
+      const user = await this.userManager.getUser(userId);
+      if (!user) {
+        return new Response(JSON.stringify({ 
+          error: 'User not found',
+          success: false 
+        }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Delete the user and all associated data
+      const deleted = await this.userManager.deleteUser(userId);
+      
+      if (deleted) {
+        console.log(`Successfully deleted user ${userId}`);
+        this.logger.info(`Admin deleted user ${userId} (${user.firstName || user.username})`);
+        
+        return new Response(JSON.stringify({ 
+          success: true,
+          message: `User ${user.firstName || user.username} has been permanently deleted`
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else {
+        return new Response(JSON.stringify({ 
+          error: 'Failed to delete user',
+          success: false 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    } catch (error) {
+      console.error('Delete user error:', error);
+      this.logger.error('Failed to delete user', error);
+      
+      return new Response(JSON.stringify({ 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : String(error),
+        success: false 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
   }
 
   private async handleGetBulkAssignments(corsHeaders: any): Promise<Response> {

@@ -449,6 +449,29 @@ export function getAdminPanelHTML(): string {
                                             <i class="fas fa-sync-alt mr-2"></i>
                                             Refresh
                                         </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Demo Data Notification -->
+                            <div x-show="userManagement.isDemoData" 
+                                 class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mx-6 mt-4 rounded-lg">
+                                <div class="flex">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-info-circle text-yellow-400"></i>
+                                    </div>
+                                    <div class="ml-3">
+                                        <p class="text-sm text-yellow-700">
+                                            <strong>Demo Mode:</strong> No real users found in database. Showing sample data for demonstration. 
+                                            Real users will appear here once they start using your Telegram bot.
+                                        </p>
+                                        <p class="text-xs text-yellow-600 mt-1">
+                                            To start getting real users, share your bot link: <code class="bg-yellow-100 px-1 rounded">https://t.me/your_bot_username</code>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                                        </button>
                                         <button @click="showBulkActions = !showBulkActions" 
                                                 class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition duration-200">
                                             <i class="fas fa-tasks mr-2"></i>
@@ -670,13 +693,14 @@ export function getAdminPanelHTML(): string {
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
-                                        <template x-for="user in paginatedUsers" :key="user.telegramId">
-                                            <tr class="hover:bg-gray-50 transition duration-150">
+                                        <template x-for="user in paginatedUsers" :key="user.id">
+                                            <tr class="hover:bg-gray-50 transition duration-150" 
+                                                :class="{'bg-yellow-25 border-l-4 border-yellow-300': user.isDemoUser}">
                                                 <!-- Checkbox -->
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <input type="checkbox" :value="user.telegramId" 
-                                                           @change="toggleUserSelection(user.telegramId, $event.target.checked)"
-                                                           :checked="selectedUsers.includes(user.telegramId)"
+                                                    <input type="checkbox" :value="user.id" 
+                                                           @change="toggleUserSelection(user.id, $event.target.checked)"
+                                                           :checked="selectedUsers.includes(user.id)"
                                                            class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
                                                 </td>
                                                 
@@ -684,18 +708,26 @@ export function getAdminPanelHTML(): string {
                                                 <td class="px-6 py-4 whitespace-nowrap">
                                                     <div class="flex items-center">
                                                         <div class="flex-shrink-0 h-10 w-10">
-                                                            <div class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                                                            <div class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center relative">
                                                                 <span class="text-sm font-medium text-white" 
-                                                                      x-text="(user.firstName?.charAt(0) || 'U').toUpperCase()"></span>
+                                                                      x-text="(user.firstName?.charAt(0) || user.fullName?.charAt(0) || 'U').toUpperCase()"></span>
+                                                                <!-- Demo user indicator -->
+                                                                <div x-show="user.isDemoUser" 
+                                                                     class="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
+                                                                    <i class="fas fa-flask text-xs text-white"></i>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                         <div class="ml-4">
-                                                            <div class="text-sm font-medium text-gray-900">
-                                                                <span x-text="user.firstName || 'Unknown'"></span>
-                                                                <span x-text="user.lastName || ''"></span>
+                                                            <div class="text-sm font-medium text-gray-900 flex items-center">
+                                                                <span x-text="user.fullName || user.firstName || 'Unknown User'"></span>
+                                                                <span x-show="user.isDemoUser" 
+                                                                      class="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+                                                                    Demo
+                                                                </span>
                                                             </div>
                                                             <div class="text-sm text-gray-500">
-                                                                ID: <span x-text="user.telegramId"></span>
+                                                                ID: <span x-text="user.id"></span>
                                                             </div>
                                                             <div class="text-xs text-gray-400">
                                                                 @<span x-text="user.username || 'No username'"></span>
@@ -871,6 +903,11 @@ export function getAdminPanelHTML(): string {
                                                                         <i class="fas fa-edit mr-2"></i>
                                                                         Edit User
                                                                     </button>
+                                                                    <button @click="viewUserDetails(user); open = false" 
+                                                                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                                        <i class="fas fa-eye mr-2"></i>
+                                                                        View Details
+                                                                    </button>
                                                                     <button @click="resetUserProgress(user); open = false" 
                                                                             class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                                                         <i class="fas fa-undo mr-2"></i>
@@ -887,10 +924,25 @@ export function getAdminPanelHTML(): string {
                                                                         Activity Log
                                                                     </button>
                                                                     <hr class="my-1">
-                                                                    <button @click="blockUser(user); open = false" 
+                                                                    <button x-show="user.isActive" @click="deactivateUser(user); open = false" 
+                                                                            class="block w-full text-left px-4 py-2 text-sm text-orange-600 hover:bg-orange-50">
+                                                                        <i class="fas fa-pause mr-2"></i>
+                                                                        Deactivate User
+                                                                    </button>
+                                                                    <button x-show="!user.isActive" @click="activateUser(user); open = false" 
+                                                                            class="block w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50">
+                                                                        <i class="fas fa-play mr-2"></i>
+                                                                        Activate User
+                                                                    </button>
+                                                                    <button x-show="!user.isDemoUser" @click="deleteUser(user); open = false" 
                                                                             class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                                                                        <i class="fas fa-ban mr-2"></i>
-                                                                        Block User
+                                                                        <i class="fas fa-trash mr-2"></i>
+                                                                        Delete User
+                                                                    </button>
+                                                                    <button x-show="user.isDemoUser" @click="open = false" 
+                                                                            class="block w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed">
+                                                                        <i class="fas fa-trash mr-2"></i>
+                                                                        Delete User (Demo)
                                                                     </button>
                                                                 </div>
                                                             </div>
@@ -1774,6 +1826,12 @@ export function getAdminPanelHTML(): string {
                 userSearch: '',
                 
                 // User Management Enhanced Data
+                userManagement: {
+                    isDemoData: false,
+                    hasRealUsers: true,
+                    totalCount: 0,
+                    lastUpdated: null
+                },
                 userFilters: {
                     registrationStatus: '',
                     activityStatus: '',
@@ -2203,10 +2261,17 @@ export function getAdminPanelHTML(): string {
                 
                 async loadUsers() {
                     try {
-                        const response = await this.apiCall('/admin/users');
+                        const response = await this.apiCall('/admin/users?limit=50');
                         if (response.ok) {
                             const data = await response.json();
                             this.users = data.users || [];
+                            this.userManagement.isDemoData = data.isDemoData || false;
+                            this.userManagement.hasRealUsers = data.hasRealUsers || false;
+                            this.userManagement.totalCount = data.total || 0;
+                            this.userManagement.lastUpdated = new Date().toISOString();
+                            
+                            console.log('Loaded ' + this.users.length + ' users, isDemoData: ' + this.userManagement.isDemoData);
+                            
                             this.calculateUserStats();
                             this.filterUsers();
                             this.updatePagination();
@@ -2529,15 +2594,21 @@ export function getAdminPanelHTML(): string {
                 },
                 
                 async resetUserProgress(user) {
-                    if (confirm('Are you sure you want to reset all progress for ' + (user.firstName || user.username) + '? This action cannot be undone.')) {
+                    if (user.isDemoUser) {
+                        this.showToast('warning', 'Demo User', 'Demo users cannot be modified');
+                        return;
+                    }
+                    
+                    const userName = user.fullName || user.firstName || user.username || ('User ' + user.id);
+                    if (confirm('Are you sure you want to reset all progress for ' + userName + '? This action cannot be undone.')) {
                         try {
-                            const response = await this.apiCall('/admin/users/' + user.telegramId + '/reset-progress', {
+                            const response = await this.apiCall('/admin/users/' + user.id + '/reset-progress', {
                                 method: 'POST'
                             });
                             
                             if (response.ok) {
                                 await this.loadUsers();
-                                this.showToast('success', 'Progress Reset', 'Progress reset for ' + (user.firstName || user.username));
+                                this.showToast('success', 'Progress Reset', 'Progress reset for ' + userName);
                             } else {
                                 this.showToast('error', 'Reset Failed', 'Could not reset user progress');
                             }
@@ -2549,17 +2620,24 @@ export function getAdminPanelHTML(): string {
                 },
                 
                 async exportUserData(user) {
+                    if (user.isDemoUser) {
+                        this.showToast('warning', 'Demo User', 'Demo user data cannot be exported');
+                        return;
+                    }
+                    
                     try {
-                        const response = await this.apiCall('/admin/users/' + user.telegramId + '/export');
+                        const response = await this.apiCall('/admin/users/' + user.id + '/export');
                         if (response.ok) {
                             const blob = await response.blob();
                             const url = window.URL.createObjectURL(blob);
                             const a = document.createElement('a');
                             a.href = url;
-                            a.download = 'user_' + user.telegramId + '_data.json';
+                            a.download = 'user_' + user.id + '_data.json';
                             a.click();
                             window.URL.revokeObjectURL(url);
-                            this.showToast('success', 'Export Complete', 'Data exported for ' + (user.firstName || user.username));
+                            
+                            const userName = user.fullName || user.firstName || user.username || ('User ' + user.id);
+                            this.showToast('success', 'Export Complete', 'Data exported for ' + userName);
                         } else {
                             this.showToast('error', 'Export Failed', 'Could not export user data');
                         }
@@ -2569,16 +2647,113 @@ export function getAdminPanelHTML(): string {
                     }
                 },
                 
-                async blockUser(user) {
-                    if (confirm('Are you sure you want to block ' + (user.firstName || user.username) + '? They will no longer be able to use the bot.')) {
+                async deleteUser(user) {
+                    if (user.isDemoUser) {
+                        this.showToast('warning', 'Demo User', 'Demo users cannot be deleted');
+                        return;
+                    }
+                    
+                    const userName = user.fullName || user.firstName || user.username || ('User ' + user.id);
+                    if (confirm('Are you sure you want to permanently delete ' + userName + '? This action cannot be undone and will remove all user data including cards, progress, and settings.')) {
                         try {
-                            const response = await this.apiCall('/admin/users/' + user.telegramId + '/block', {
+                            const response = await this.apiCall('/admin/users/' + user.id, {
+                                method: 'DELETE'
+                            });
+                            
+                            if (response.ok) {
+                                const result = await response.json();
+                                await this.loadUsers();
+                                this.showToast('success', 'User Deleted', result.message || (userName + ' has been permanently deleted'));
+                            } else {
+                                const error = await response.json();
+                                this.showToast('error', 'Delete Failed', error.error || 'Could not delete user');
+                            }
+                        } catch (error) {
+                            console.error('Failed to delete user:', error);
+                            this.showToast('error', 'Error', 'Network error occurred while deleting user');
+                        }
+                    }
+                },
+                
+                async activateUser(user) {
+                    if (user.isDemoUser) {
+                        this.showToast('warning', 'Demo User', 'Demo users cannot be modified');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await this.apiCall('/admin/users/' + user.id, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'activate' })
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            await this.loadUsers();
+                            this.showToast('success', 'User Activated', result.message || 'User has been activated');
+                        } else {
+                            const error = await response.json();
+                            this.showToast('error', 'Activation Failed', error.error || 'Could not activate user');
+                        }
+                    } catch (error) {
+                        console.error('Failed to activate user:', error);
+                        this.showToast('error', 'Error', 'Network error occurred');
+                    }
+                },
+                
+                async deactivateUser(user) {
+                    if (user.isDemoUser) {
+                        this.showToast('warning', 'Demo User', 'Demo users cannot be modified');
+                        return;
+                    }
+                    
+                    const userName = user.fullName || user.firstName || user.username || ('User ' + user.id);
+                    if (confirm('Are you sure you want to deactivate ' + userName + '? They will not be able to use the bot while deactivated.')) {
+                        try {
+                            const response = await this.apiCall('/admin/users/' + user.id, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'deactivate' })
+                            });
+                            
+                            if (response.ok) {
+                                const result = await response.json();
+                                await this.loadUsers();
+                                this.showToast('success', 'User Deactivated', result.message || 'User has been deactivated');
+                            } else {
+                                const error = await response.json();
+                                this.showToast('error', 'Deactivation Failed', error.error || 'Could not deactivate user');
+                            }
+                        } catch (error) {
+                            console.error('Failed to deactivate user:', error);
+                            this.showToast('error', 'Error', 'Network error occurred');
+                        }
+                    }
+                },
+                
+                async viewUserDetails(user) {
+                    this.selectedUserDetails = user;
+                    this.showUserDetailsModal = true;
+                    this.userDetailsTab = 'overview';
+                },
+
+                async blockUser(user) {
+                    if (user.isDemoUser) {
+                        this.showToast('warning', 'Demo User', 'Demo users cannot be modified');
+                        return;
+                    }
+                    
+                    const userName = user.fullName || user.firstName || user.username || ('User ' + user.id);
+                    if (confirm('Are you sure you want to block ' + userName + '? They will no longer be able to use the bot.')) {
+                        try {
+                            const response = await this.apiCall('/admin/users/' + user.id + '/block', {
                                 method: 'POST'
                             });
                             
                             if (response.ok) {
                                 await this.loadUsers();
-                                this.showToast('success', 'User Blocked', (user.firstName || user.username) + ' has been blocked');
+                                this.showToast('success', 'User Blocked', userName + ' has been blocked');
                             } else {
                                 this.showToast('error', 'Block Failed', 'Could not block user');
                             }

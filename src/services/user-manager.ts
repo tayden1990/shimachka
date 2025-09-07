@@ -216,15 +216,86 @@ export class UserManager {
     }
   }
 
+  async deleteUser(userId: number): Promise<boolean> {
+    try {
+      // Delete user record
+      const userKey = `user:${userId}`;
+      await this.kv.delete(userKey);
+
+      // Delete all user's cards
+      const cardPrefix = `card:${userId}:`;
+      const cardList = await this.kv.list({ prefix: cardPrefix });
+      for (const key of cardList.keys) {
+        await this.kv.delete(key.name);
+      }
+
+      // Delete all user's sessions
+      const sessionPrefix = `session:${userId}:`;
+      const sessionList = await this.kv.list({ prefix: sessionPrefix });
+      for (const key of sessionList.keys) {
+        await this.kv.delete(key.name);
+      }
+
+      // Delete user's topics
+      const topicPrefix = `topic:${userId}:`;
+      const topicList = await this.kv.list({ prefix: topicPrefix });
+      for (const key of topicList.keys) {
+        await this.kv.delete(key.name);
+      }
+
+      console.log(`Successfully deleted user ${userId} and all associated data`);
+      return true;
+    } catch (error) {
+      console.error(`Error deleting user ${userId}:`, error);
+      return false;
+    }
+  }
+
+  async getUserCount(): Promise<number> {
+    try {
+      const list = await this.kv.list({ prefix: 'user:' });
+      return list.keys.length;
+    } catch (error) {
+      console.error('Error getting user count:', error);
+      return 0;
+    }
+  }
+
+  async deactivateUser(userId: number): Promise<boolean> {
+    try {
+      const user = await this.getUser(userId);
+      if (!user) return false;
+      
+      await this.updateUser(userId, { isActive: false });
+      return true;
+    } catch (error) {
+      console.error(`Error deactivating user ${userId}:`, error);
+      return false;
+    }
+  }
+
+  async activateUser(userId: number): Promise<boolean> {
+    try {
+      const user = await this.getUser(userId);
+      if (!user) return false;
+      
+      await this.updateUser(userId, { isActive: true });
+      return true;
+    } catch (error) {
+      console.error(`Error activating user ${userId}:`, error);
+      return false;
+    }
+  }
+
   private generateMockUsers(count: number): User[] {
     const mockUsers: User[] = [];
     for (let i = 1; i <= count; i++) {
       mockUsers.push({
         id: 1000000 + i,
-        firstName: `User${i}`,
-        username: `user${i}`,
+        firstName: `Mock User ${i}`,
+        username: `mockuser${i}`,
         fullName: `Mock User ${i}`,
-        email: `user${i}@example.com`,
+        email: `mockuser${i}@example.com`,
         language: 'en',
         interfaceLanguage: 'en',
         timezone: 'UTC',
