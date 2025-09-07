@@ -1266,9 +1266,144 @@ export class AdminAPI {
 
   // Add other placeholder methods...
   private async handleGetUser(request: Request, corsHeaders: any): Promise<Response> {
-    return new Response(JSON.stringify({ user: {} }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    try {
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      const userId = parseInt(pathParts[pathParts.length - 1]);
+      
+      if (isNaN(userId)) {
+        return new Response(JSON.stringify({ error: 'Invalid user ID' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      console.log(`Loading detailed user data for user ID: ${userId}`);
+      
+      // Get user details
+      const users = await this.userManager.getAllUsers();
+      const user = users.find(u => u.id === userId);
+      
+      if (!user) {
+        return new Response(JSON.stringify({ error: 'User not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Get user's cards/words
+      const userCards = await this.userManager.getUserCards(userId);
+      
+      // Calculate detailed statistics
+      const totalReviews = userCards.reduce((sum, card) => sum + card.reviewCount, 0);
+      const correctReviews = userCards.reduce((sum, card) => sum + card.correctCount, 0);
+      const accuracy = totalReviews > 0 ? Math.round((correctReviews / totalReviews) * 100) : 0;
+      
+      // Count cards in each box
+      const boxCounts = [1, 2, 3, 4, 5].map(boxNum => 
+        userCards.filter(card => card.box === boxNum).length
+      );
+      
+      // Get cards due for review
+      const now = new Date();
+      const dueCards = userCards.filter(card => new Date(card.nextReviewAt) <= now);
+      
+      // Calculate study streak and activity
+      const reviewDates = userCards
+        .filter(card => card.reviewCount > 0)
+        .map(card => card.updatedAt)
+        .map(date => new Date(date).toDateString())
+        .filter((date, index, arr) => arr.indexOf(date) === index)
+        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+      
+      // Group cards by language
+      const cardsByLanguage = userCards.reduce((acc, card) => {
+        const key = `${card.sourceLanguage}-${card.targetLanguage}`;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(card);
+        return acc;
+      }, {} as Record<string, any[]>);
+      
+      // Get recent activity (last 7 days)
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const recentCards = userCards.filter(card => 
+        new Date(card.updatedAt) > sevenDaysAgo && card.reviewCount > 0
+      );
+      
+      const userDetails = {
+        ...user,
+        fullName: user.firstName || `User ${user.id}`,
+        
+        // Card statistics
+        totalCards: userCards.length,
+        totalReviews,
+        correctReviews,
+        accuracy,
+        
+        // Box distribution
+        boxCounts: {
+          box1: boxCounts[0],
+          box2: boxCounts[1], 
+          box3: boxCounts[2],
+          box4: boxCounts[3],
+          box5: boxCounts[4]
+        },
+        
+        // Due cards
+        dueForReview: dueCards.length,
+        
+        // Study activity
+        studyDays: reviewDates.length,
+        recentActivity: recentCards.length,
+        
+        // Language breakdown
+        languages: Object.keys(cardsByLanguage).map(key => {
+          const [source, target] = key.split('-');
+          const cards = cardsByLanguage[key];
+          return {
+            sourceLanguage: source,
+            targetLanguage: target,
+            cardCount: cards.length,
+            avgBox: cards.length > 0 ? Math.round(cards.reduce((sum, c) => sum + c.box, 0) / cards.length) : 0
+          };
+        }),
+        
+        // All words with details
+        words: userCards.map(card => ({
+          id: card.id,
+          word: card.word,
+          translation: card.translation,
+          definition: card.definition,
+          sourceLanguage: card.sourceLanguage,
+          targetLanguage: card.targetLanguage,
+          box: card.box,
+          reviewCount: card.reviewCount,
+          correctCount: card.correctCount,
+          accuracy: card.reviewCount > 0 ? Math.round((card.correctCount / card.reviewCount) * 100) : 0,
+          nextReviewAt: card.nextReviewAt,
+          createdAt: card.createdAt,
+          updatedAt: card.updatedAt,
+          topic: card.topic || 'General',
+          isDue: new Date(card.nextReviewAt) <= now
+        })).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      };
+      
+      console.log(`Returning detailed data for user ${userId}: ${userCards.length} words, ${accuracy}% accuracy`);
+      
+      return new Response(JSON.stringify({ user: userDetails }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+      
+    } catch (error) {
+      console.error('Get user error:', error);
+      return new Response(JSON.stringify({ 
+        error: 'Failed to load user details',
+        details: error instanceof Error ? error.message : String(error)
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
   }
 
   private async handleUpdateUser(request: Request, corsHeaders: any): Promise<Response> {
