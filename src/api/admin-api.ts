@@ -2165,8 +2165,8 @@ export class AdminAPI {
       const debugInfo = {
         timestamp: new Date().toISOString(),
         environment: {
-          nodeVersion: 'cloudflare-worker',
-          platform: 'cloudflare-worker',
+          nodeVersion: process.version || 'unknown',
+          platform: process.platform || 'unknown',
           cloudflareWorker: true,
           region: this.env?.CF_RAY || 'unknown'
         },

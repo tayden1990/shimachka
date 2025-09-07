@@ -9,12 +9,36 @@ import {
   TelegramInlineKeyboard,
   User,
   Card,
-  LanguageCode,
-  LANGUAGES
+  LanguageCode
 } from '../types';
 import { ConversationStateManager } from '../services/conversation-state-manager';
 import { AdminService } from '../services/admin-service';
 import { AddTopicStep, ConversationState, ReviewConversationState, RegistrationConversationState } from '../types/conversation-state';
+
+// 1. Add more languages including Persian (Farsi)
+export const LANGUAGES: Record<string, string> = {
+  en: 'English',
+  es: 'Spanish',
+  fr: 'French',
+  de: 'German',
+  it: 'Italian',
+  ru: 'Russian',
+  zh: 'Chinese',
+  ja: 'Japanese',
+  ko: 'Korean',
+  tr: 'Turkish',
+  ar: 'Arabic',
+  fa: 'Persian (Farsi)',
+  hi: 'Hindi',
+  pt: 'Portuguese',
+  pl: 'Polish',
+  nl: 'Dutch',
+  sv: 'Swedish',
+  uk: 'Ukrainian',
+  el: 'Greek',
+  he: 'Hebrew'
+  // Add more as needed
+};
 
 // Helper to build condensed inline keyboard (N per row)
 function buildCondensedKeyboard<T extends { text: string; callback_data: string }>(buttons: T[], perRow = 3) {
@@ -831,7 +855,7 @@ Choose what you'd like to do:
           state.addTopic.step = 'ask_target_language';
           await this.conversationStateManager.setState(userId, state);
 
-          const langButtons: { text: string; callback_data: string }[] = Object.entries(LANGUAGES).map(([code, name]) => ({
+          const langButtons = Object.entries(LANGUAGES).map(([code, name]) => ({
             text: name, callback_data: `set_target_lang:${code}`
           }));
           // Add Back button
@@ -849,7 +873,7 @@ Choose what you'd like to do:
           state.addTopic.step = 'ask_description_language';
           await this.conversationStateManager.setState(userId, state);
 
-          const langButtons: { text: string; callback_data: string }[] = Object.entries(LANGUAGES).map(([code, name]) => ({
+          const langButtons = Object.entries(LANGUAGES).map(([code, name]) => ({
             text: name, callback_data: `set_desc_lang:${code}`
           }));
           langButtons.push({ text: '⬅️ Back', callback_data: 'back:ask_source_language' });
@@ -936,7 +960,7 @@ Choose what you'd like to do:
               await this.sendMessage(chatId, '📝 What topic do you want to add vocabulary for?');
               break;
             case 'ask_source_language': {
-              const langButtons: { text: string; callback_data: string }[] = Object.entries(LANGUAGES).map(([code, name]) => ({
+              const langButtons = Object.entries(LANGUAGES).map(([code, name]) => ({
                 text: name, callback_data: `set_source_lang:${code}`
               }));
               langButtons.push({ text: '⬅️ Back', callback_data: 'back:ask_topic' });
@@ -946,7 +970,7 @@ Choose what you'd like to do:
               break;
             }
             case 'ask_target_language': {
-              const langButtons: { text: string; callback_data: string }[] = Object.entries(LANGUAGES).map(([code, name]) => ({
+              const langButtons = Object.entries(LANGUAGES).map(([code, name]) => ({
                 text: name, callback_data: `set_target_lang:${code}`
               }));
               langButtons.push({ text: '⬅️ Back', callback_data: 'back:ask_source_language' });
@@ -956,7 +980,7 @@ Choose what you'd like to do:
               break;
             }
             case 'ask_description_language': {
-              const langButtons: { text: string; callback_data: string }[] = Object.entries(LANGUAGES).map(([code, name]) => ({
+              const langButtons = Object.entries(LANGUAGES).map(([code, name]) => ({
                 text: name, callback_data: `set_desc_lang:${code}`
               }));
               langButtons.push({ text: '⬅️ Back', callback_data: 'back:ask_target_language' });
@@ -1940,7 +1964,7 @@ Thank you for contacting us! 🎯`, keyboard);
         addTopic.step = 'ask_source_language';
         await this.conversationStateManager.setState(userId, state);
         // Show language options as buttons
-        const langButtons: { text: string; callback_data: string }[][] = Object.entries(LANGUAGES).map(([code, name]) => [{ text: name, callback_data: `set_source_lang:${code}` }]);
+        const langButtons = Object.entries(LANGUAGES).map(([code, name]) => [{ text: name, callback_data: `set_source_lang:${code}` }]);
         const keyboard: TelegramInlineKeyboard = { inline_keyboard: langButtons };
         await this.sendMessage(chatId, '🌍 What is the language of the words?', keyboard);
         break;
@@ -1949,7 +1973,7 @@ Thank you for contacting us! 🎯`, keyboard);
         addTopic.sourceLanguage = text;
         addTopic.step = 'ask_target_language';
         await this.conversationStateManager.setState(userId, state);
-        const langButtons: { text: string; callback_data: string }[][] = Object.entries(LANGUAGES).map(([code, name]) => [{ text: name, callback_data: `set_target_lang:${code}` }]);
+        const langButtons = Object.entries(LANGUAGES).map(([code, name]) => [{ text: name, callback_data: `set_target_lang:${code}` }]);
         const keyboard: TelegramInlineKeyboard = { inline_keyboard: langButtons };
         await this.sendMessage(chatId, '🌐 What is the language for the meaning/translation?', keyboard);
         break;
@@ -1958,7 +1982,7 @@ Thank you for contacting us! 🎯`, keyboard);
         addTopic.targetLanguage = text;
         addTopic.step = 'ask_description_language';
         await this.conversationStateManager.setState(userId, state);
-        const langButtons: { text: string; callback_data: string }[][] = Object.entries(LANGUAGES).map(([code, name]) => [{ text: name, callback_data: `set_desc_lang:${code}` }]);
+        const langButtons = Object.entries(LANGUAGES).map(([code, name]) => [{ text: name, callback_data: `set_desc_lang:${code}` }]);
         const keyboard: TelegramInlineKeyboard = { inline_keyboard: langButtons };
         await this.sendMessage(chatId, '📝 What is the language for the description/definition? (should match the word language)', keyboard);
         break;

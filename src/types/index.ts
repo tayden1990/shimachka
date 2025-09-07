@@ -140,7 +140,6 @@ export const LANGUAGES = {
   'ja': 'Japanese',
   'ko': 'Korean',
   'ar': 'Arabic',
-  'fa': 'Persian (Farsi)',
   'hi': 'Hindi',
   'tr': 'Turkish',
   'pl': 'Polish',
@@ -148,12 +147,7 @@ export const LANGUAGES = {
   'sv': 'Swedish',
   'da': 'Danish',
   'no': 'Norwegian',
-  'fi': 'Finnish',
-  'th': 'Thai',
-  'vi': 'Vietnamese',
-  'uk': 'Ukrainian',
-  'el': 'Greek',
-  'he': 'Hebrew'
+  'fi': 'Finnish'
 } as const;
 
 export type LanguageCode = keyof typeof LANGUAGES;
