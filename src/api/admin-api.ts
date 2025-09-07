@@ -159,6 +159,9 @@ export class AdminAPI {
         case path.startsWith('/admin/users/') && method === 'GET':
           return await this.handleGetUser(request, corsHeaders);
           
+        case path.startsWith('/admin/users/') && path.includes('/activity') && method === 'GET':
+          return await this.handleGetUserActivity(request, corsHeaders);
+          
         case path.startsWith('/admin/users/') && method === 'PUT':
           return await this.handleUpdateUser(request, corsHeaders);
           
@@ -632,7 +635,7 @@ export class AdminAPI {
   private async handleBulkWordsAI(request: Request, corsHeaders: any): Promise<Response> {
     try {
       const body: any = await request.json();
-      const { words, sourceLanguage, targetLanguage, targetUsers } = body;
+      const { words, sourceLanguage, targetLanguage, targetUsers, selectionType } = body;
       
       if (!this.wordExtractor) {
         return new Response(JSON.stringify({ error: 'AI service not available' }), {
@@ -692,14 +695,66 @@ export class AdminAPI {
         }
       }
       
+      // Determine actual users to assign to based on selection type
+      let actualTargetUsers: number[] = [];
+      
+      if (typeof targetUsers === 'string') {
+        // Get users based on selection type
+        const allUsers = await this.userManager.getAllUsers();
+        
+        if (targetUsers === 'all') {
+          actualTargetUsers = allUsers.map(u => u.id);
+        } else if (targetUsers === 'active') {
+          actualTargetUsers = allUsers.filter(u => u.isActive !== false && u.isRegistrationComplete).map(u => u.id);
+        }
+      } else if (Array.isArray(targetUsers)) {
+        actualTargetUsers = targetUsers;
+      }
+      
       // Create bulk assignment record
       const assignmentId = await this.adminService.createBulkAssignment({
         words: processedWords,
-        targetUsers,
+        targetUsers: actualTargetUsers,
         sourceLanguage,
         targetLanguage,
         status: 'completed',
         createdAt: new Date().toISOString()
+      });
+      
+      // Actually assign words to users
+      let assignedCount = 0;
+      for (const userId of actualTargetUsers) {
+        try {
+          for (const wordData of processedWords) {
+            const cardData = {
+              userId: userId,
+              word: wordData.word,
+              translation: wordData.translation,
+              definition: wordData.definition,
+              sourceLanguage: wordData.sourceLanguage,
+              targetLanguage: wordData.targetLanguage,
+              box: 1,
+              nextReviewAt: new Date().toISOString(),
+              reviewCount: 0,
+              correctCount: 0,
+              lastReviewedAt: new Date().toISOString()
+            };
+            
+            await this.userManager.createCard(cardData);
+          }
+          assignedCount++;
+        } catch (error) {
+          console.error(`Failed to assign words to user ${userId}:`, error);
+        }
+      }
+      
+      this.logger.info(`Bulk AI word assignment completed`, {
+        assignmentId,
+        totalWords: processedWords.length,
+        successCount,
+        failureCount,
+        targetUsers: actualTargetUsers.length,
+        assignedUsers: assignedCount
       });
       
       return new Response(JSON.stringify({
@@ -708,7 +763,9 @@ export class AdminAPI {
         totalWords: processedWords.length,
         successCount,
         failureCount,
-        message: `Words processed: ${successCount} successful, ${failureCount} with fallback data`
+        assignedUsers: assignedCount,
+        totalTargetUsers: actualTargetUsers.length,
+        message: `Words processed and assigned: ${successCount} successful, ${failureCount} with fallback data to ${assignedCount} users`
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -1266,9 +1323,310 @@ export class AdminAPI {
 
   // Add other placeholder methods...
   private async handleGetUser(request: Request, corsHeaders: any): Promise<Response> {
-    return new Response(JSON.stringify({ user: {} }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    try {
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      const userId = parseInt(pathParts[pathParts.length - 1]);
+      
+      if (isNaN(userId)) {
+        return new Response(JSON.stringify({ error: 'Invalid user ID' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      console.log(`Loading detailed user data for user ID: ${userId}`);
+      
+      // Get user details
+      const users = await this.userManager.getAllUsers();
+      const user = users.find(u => u.id === userId);
+      
+      if (!user) {
+        return new Response(JSON.stringify({ error: 'User not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Get user's cards/words
+      const userCards = await this.userManager.getUserCards(userId);
+      
+      // Calculate detailed statistics
+      const totalReviews = userCards.reduce((sum, card) => sum + card.reviewCount, 0);
+      const correctReviews = userCards.reduce((sum, card) => sum + card.correctCount, 0);
+      const accuracy = totalReviews > 0 ? Math.round((correctReviews / totalReviews) * 100) : 0;
+      
+      // Count cards in each box
+      const boxCounts = [1, 2, 3, 4, 5].map(boxNum => 
+        userCards.filter(card => card.box === boxNum).length
+      );
+      
+      // Get cards due for review
+      const now = new Date();
+      const dueCards = userCards.filter(card => new Date(card.nextReviewAt) <= now);
+      
+      // Calculate study streak and activity
+      const reviewDates = userCards
+        .filter(card => card.reviewCount > 0)
+        .map(card => card.updatedAt)
+        .map(date => new Date(date).toDateString())
+        .filter((date, index, arr) => arr.indexOf(date) === index)
+        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+      
+      // Group cards by language
+      const cardsByLanguage = userCards.reduce((acc, card) => {
+        const key = `${card.sourceLanguage}-${card.targetLanguage}`;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(card);
+        return acc;
+      }, {} as Record<string, any[]>);
+      
+      // Get recent activity (last 7 days)
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const recentCards = userCards.filter(card => 
+        new Date(card.updatedAt) > sevenDaysAgo && card.reviewCount > 0
+      );
+      
+      const userDetails = {
+        ...user,
+        fullName: user.firstName || `User ${user.id}`,
+        
+        // Card statistics
+        totalCards: userCards.length,
+        totalReviews,
+        correctReviews,
+        accuracy,
+        
+        // Box distribution
+        boxCounts: {
+          box1: boxCounts[0],
+          box2: boxCounts[1], 
+          box3: boxCounts[2],
+          box4: boxCounts[3],
+          box5: boxCounts[4]
+        },
+        
+        // Due cards
+        dueForReview: dueCards.length,
+        
+        // Study activity
+        studyDays: reviewDates.length,
+        recentActivity: recentCards.length,
+        
+        // Language breakdown
+        languages: Object.keys(cardsByLanguage).map(key => {
+          const [source, target] = key.split('-');
+          const cards = cardsByLanguage[key];
+          return {
+            sourceLanguage: source,
+            targetLanguage: target,
+            cardCount: cards.length,
+            avgBox: cards.length > 0 ? Math.round(cards.reduce((sum, c) => sum + c.box, 0) / cards.length) : 0
+          };
+        }),
+        
+        // All words with details
+        words: userCards.map(card => ({
+          id: card.id,
+          word: card.word,
+          translation: card.translation,
+          definition: card.definition,
+          sourceLanguage: card.sourceLanguage,
+          targetLanguage: card.targetLanguage,
+          box: card.box,
+          reviewCount: card.reviewCount,
+          correctCount: card.correctCount,
+          accuracy: card.reviewCount > 0 ? Math.round((card.correctCount / card.reviewCount) * 100) : 0,
+          nextReviewAt: card.nextReviewAt,
+          createdAt: card.createdAt,
+          updatedAt: card.updatedAt,
+          topic: card.topic || 'General',
+          isDue: new Date(card.nextReviewAt) <= now
+        })).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      };
+      
+      console.log(`Returning detailed data for user ${userId}: ${userCards.length} words, ${accuracy}% accuracy`);
+      
+      return new Response(JSON.stringify({ user: userDetails }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+      
+    } catch (error) {
+      console.error('Get user error:', error);
+      return new Response(JSON.stringify({ 
+        error: 'Failed to load user details',
+        details: error instanceof Error ? error.message : String(error)
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  private async handleGetUserActivity(request: Request, corsHeaders: any): Promise<Response> {
+    try {
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      const userId = parseInt(pathParts[pathParts.indexOf('users') + 1]);
+      
+      if (isNaN(userId)) {
+        return new Response(JSON.stringify({ error: 'Invalid user ID' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      console.log(`Loading activity timeline for user ID: ${userId}`);
+      
+      // Get user details
+      const users = await this.userManager.getAllUsers();
+      const user = users.find(u => u.id === userId);
+      
+      if (!user) {
+        return new Response(JSON.stringify({ error: 'User not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Get user's cards for activity analysis
+      const userCards = await this.userManager.getUserCards(userId);
+      
+      // Build activity timeline
+      const activities: any[] = [];
+      
+      // Registration activity
+      activities.push({
+        id: `reg_${userId}`,
+        type: 'registration',
+        title: 'User Registration',
+        description: 'Joined the Leitner learning system',
+        timestamp: user.createdAt,
+        icon: 'fas fa-user-plus',
+        color: '#3b82f6'
+      });
+      
+      // Card creation activities
+      const cardsByDate = userCards.reduce((acc, card) => {
+        const date = new Date(card.createdAt).toDateString();
+        if (!acc[date]) acc[date] = [];
+        acc[date].push(card);
+        return acc;
+      }, {} as Record<string, any[]>);
+      
+      Object.entries(cardsByDate).forEach(([date, cards]) => {
+        activities.push({
+          id: `cards_${date}`,
+          type: 'words_added',
+          title: 'Words Added',
+          description: `Added ${cards.length} new words to study collection`,
+          timestamp: new Date(date).toISOString(),
+          icon: 'fas fa-plus-circle',
+          color: '#10b981',
+          metadata: {
+            wordCount: cards.length,
+            words: cards.slice(0, 3).map(c => c.word).join(', ') + (cards.length > 3 ? '...' : '')
+          }
+        });
+      });
+      
+      // Study activities (based on review counts)
+      const studyDates = userCards
+        .filter(card => card.reviewCount > 0)
+        .reduce((acc, card) => {
+          const date = new Date(card.updatedAt).toDateString();
+          if (!acc[date]) acc[date] = { reviews: 0, cards: 0, correct: 0 };
+          acc[date].reviews += card.reviewCount;
+          acc[date].cards++;
+          acc[date].correct += card.correctCount;
+          return acc;
+        }, {} as Record<string, any>);
+      
+      Object.entries(studyDates).forEach(([date, stats]) => {
+        const accuracy = stats.reviews > 0 ? Math.round((stats.correct / stats.reviews) * 100) : 0;
+        activities.push({
+          id: `study_${date}`,
+          type: 'study_session',
+          title: 'Study Session',
+          description: `Reviewed ${stats.cards} cards with ${accuracy}% accuracy`,
+          timestamp: new Date(date).toISOString(),
+          icon: 'fas fa-brain',
+          color: '#8b5cf6',
+          metadata: {
+            cardsReviewed: stats.cards,
+            totalReviews: stats.reviews,
+            accuracy: accuracy
+          }
+        });
+      });
+      
+      // Box progression activities
+      const boxProgression = userCards
+        .filter(card => card.box > 1)
+        .reduce((acc, card) => {
+          const date = new Date(card.updatedAt).toDateString();
+          if (!acc[date]) acc[date] = [];
+          acc[date].push(card);
+          return acc;
+        }, {} as Record<string, any[]>);
+      
+      Object.entries(boxProgression).forEach(([date, cards]) => {
+        const avgBox = Math.round(cards.reduce((sum, c) => sum + c.box, 0) / cards.length);
+        activities.push({
+          id: `progress_${date}`,
+          type: 'progress',
+          title: 'Learning Progress',
+          description: `${cards.length} words progressed to higher boxes (avg: Box ${avgBox})`,
+          timestamp: new Date(date).toISOString(),
+          icon: 'fas fa-arrow-up',
+          color: '#f59e0b',
+          metadata: {
+            progressedWords: cards.length,
+            averageBox: avgBox
+          }
+        });
+      });
+      
+      // Sort activities by timestamp (newest first)
+      activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      
+      // Get activity statistics
+      const stats = {
+        totalActivities: activities.length,
+        studySessions: activities.filter(a => a.type === 'study_session').length,
+        wordsAdded: userCards.length,
+        totalReviews: userCards.reduce((sum, card) => sum + card.reviewCount, 0),
+        averageAccuracy: userCards.length > 0 ? 
+          Math.round(userCards.reduce((sum, card) => sum + (card.reviewCount > 0 ? (card.correctCount / card.reviewCount) : 0), 0) / userCards.length * 100) : 0,
+        studyStreak: activities.filter(a => a.type === 'study_session').length,
+        joinedDate: user.createdAt,
+        lastActivity: activities.length > 0 ? activities[0].timestamp : user.createdAt
+      };
+      
+      console.log(`Returning ${activities.length} activities for user ${userId}`);
+      
+      return new Response(JSON.stringify({ 
+        activities: activities.slice(0, 50), // Limit to last 50 activities
+        stats,
+        user: {
+          id: user.id,
+          fullName: user.firstName || `User ${user.id}`,
+          isActive: user.isActive
+        }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+      
+    } catch (error) {
+      console.error('Get user activity error:', error);
+      return new Response(JSON.stringify({ 
+        error: 'Failed to load user activity',
+        details: error instanceof Error ? error.message : String(error)
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
   }
 
   private async handleUpdateUser(request: Request, corsHeaders: any): Promise<Response> {

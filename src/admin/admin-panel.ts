@@ -512,36 +512,58 @@ export function getAdminPanelHTML(): string {
                         <div class="bg-white rounded-xl shadow-sm p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-6">AI-Powered Bulk Word Processing</h3>
                             
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <!-- Input Section -->
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <!-- Configuration Section -->
                                 <div class="space-y-4">
-                                    <div class="grid grid-cols-2 gap-4">
+                                    <h4 class="text-md font-semibold text-gray-900">Configuration</h4>
+                                    
+                                    <div class="grid grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-2">Source Language</label>
                                             <select x-model="bulkWords.sourceLanguage"
-                                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
                                                 <option value="en">English</option>
                                                 <option value="es">Spanish</option>
                                                 <option value="fr">French</option>
                                                 <option value="de">German</option>
+                                                <option value="it">Italian</option>
+                                                <option value="ru">Russian</option>
+                                                <option value="zh">Chinese</option>
+                                                <option value="ja">Japanese</option>
+                                                <option value="ko">Korean</option>
+                                                <option value="ar">Arabic</option>
+                                                <option value="fa">Persian</option>
+                                                <option value="hi">Hindi</option>
+                                                <option value="pt">Portuguese</option>
+                                                <option value="tr">Turkish</option>
                                             </select>
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-2">Target Language</label>
                                             <select x-model="bulkWords.targetLanguage"
-                                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
-                                                <option value="es">Spanish</option>
+                                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
                                                 <option value="en">English</option>
+                                                <option value="es">Spanish</option>
                                                 <option value="fr">French</option>
                                                 <option value="de">German</option>
+                                                <option value="it">Italian</option>
+                                                <option value="ru">Russian</option>
+                                                <option value="zh">Chinese</option>
+                                                <option value="ja">Japanese</option>
+                                                <option value="ko">Korean</option>
+                                                <option value="ar">Arabic</option>
+                                                <option value="fa">Persian</option>
+                                                <option value="hi">Hindi</option>
+                                                <option value="pt">Portuguese</option>
+                                                <option value="tr">Turkish</option>
                                             </select>
                                         </div>
                                     </div>
 
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-2">Words to Process</label>
-                                        <textarea x-model="bulkWords.wordsInput" rows="8"
-                                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                        <textarea x-model="bulkWords.wordsInput" rows="6"
+                                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                                                   placeholder="Enter words separated by commas or new lines..."></textarea>
                                         <p class="text-xs text-gray-500 mt-1">
                                             Words detected: <span x-text="getWordCount()"></span>
@@ -561,13 +583,61 @@ export function getAdminPanelHTML(): string {
                                     </button>
                                 </div>
 
+                                <!-- User Selection Section -->
+                                <div class="space-y-4">
+                                    <h4 class="text-md font-semibold text-gray-900">Target Users</h4>
+                                    
+                                    <!-- User Selection Options -->
+                                    <div class="space-y-2">
+                                        <label class="flex items-center">
+                                            <input type="radio" name="userSelectionType" value="all" x-model="bulkWords.selectionType"
+                                                   class="text-blue-600 focus:ring-blue-500">
+                                            <span class="ml-2 text-sm text-gray-700">All Users</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="userSelectionType" value="active" x-model="bulkWords.selectionType"
+                                                   class="text-blue-600 focus:ring-blue-500">
+                                            <span class="ml-2 text-sm text-gray-700">Active Users Only</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="userSelectionType" value="specific" x-model="bulkWords.selectionType"
+                                                   class="text-blue-600 focus:ring-blue-500">
+                                            <span class="ml-2 text-sm text-gray-700">Specific Users</span>
+                                        </label>
+                                    </div>
+
+                                    <!-- Specific User Selection -->
+                                    <div x-show="bulkWords.selectionType === 'specific'" class="border rounded-lg p-3 max-h-40 overflow-y-auto">
+                                        <template x-for="user in users.slice(0, 20)" :key="user.id">
+                                            <label class="flex items-center py-1">
+                                                <input type="checkbox" name="targetUsers" :value="user.id"
+                                                       class="text-blue-600 focus:ring-blue-500">
+                                                <span class="ml-2 text-sm text-gray-700" x-text="user.fullName || user.firstName || 'User ' + user.id"></span>
+                                                <span class="ml-auto text-xs text-gray-500" x-text="user.isActive ? 'Active' : 'Inactive'"></span>
+                                            </label>
+                                        </template>
+                                        <div x-show="users.length === 0" class="text-sm text-gray-500 py-2">
+                                            No users available. Load users first.
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Results Section -->
                                 <div class="space-y-4">
-                                    <h4 class="text-md font-semibold text-gray-900">Results</h4>
+                                    <h4 class="text-md font-semibold text-gray-900">Processing Results</h4>
                                     
                                     <div x-show="bulkWords.processing" class="text-center py-8">
                                         <div class="inline-flex items-center px-4 py-2 bg-blue-50 rounded-lg">
                                             <i class="fas fa-brain text-blue-600 mr-2"></i>
+                                            <span class="text-blue-800 font-medium">AI is processing...</span>
+                                        </div>
+                                        <div class="mt-4">
+                                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                                <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                                     x-bind:style="'width: ' + bulkWords.progress + '%'"></div>
+                                            </div>
+                                        </div>
+                                    </div>
                                             <span class="text-blue-800 font-medium">AI is processing...</span>
                                         </div>
                                         <div class="mt-4">
@@ -1069,6 +1139,437 @@ export function getAdminPanelHTML(): string {
         </div>
     </div>
 
+    <!-- User Details Modal -->
+    <div x-show="userDetails.show" class="fixed inset-0 z-50 overflow-y-auto" style="display: none;">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="closeUserDetails()"></div>
+            
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
+                <!-- Modal Header -->
+                <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-user text-white text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="text-lg font-medium text-white" x-text="userDetails.user ? userDetails.user.fullName : 'Loading...'"></h3>
+                                <p class="text-blue-100" x-text="userDetails.user ? 'User ID: ' + userDetails.user.id : ''"></p>
+                            </div>
+                        </div>
+                        <button @click="closeUserDetails()" class="text-white hover:text-gray-200 transition">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal Content -->
+                <div x-show="userDetails.loading" class="p-8 text-center">
+                    <i class="fas fa-spinner fa-spin text-blue-500 text-3xl mb-4"></i>
+                    <p class="text-gray-600">Loading user details...</p>
+                </div>
+
+                <div x-show="!userDetails.loading && userDetails.user" class="p-6">
+                    <!-- User Overview -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <!-- Basic Info -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-3">Basic Information</h4>
+                            <div class="space-y-2 text-sm">
+                                <div><span class="font-medium">Username:</span> <span x-text="userDetails.user?.username || 'N/A'"></span></div>
+                                <div><span class="font-medium">Language:</span> <span x-text="userDetails.user?.language || 'N/A'"></span></div>
+                                <div><span class="font-medium">Status:</span> 
+                                    <span :class="userDetails.user?.isActive ? 'text-green-600' : 'text-red-600'" x-text="userDetails.user?.isActive ? 'Active' : 'Inactive'"></span>
+                                </div>
+                                <div><span class="font-medium">Joined:</span> <span x-text="formatDate(userDetails.user?.createdAt)"></span></div>
+                                <div><span class="font-medium">Last Active:</span> <span x-text="formatDate(userDetails.user?.lastActiveAt)"></span></div>
+                            </div>
+                        </div>
+
+                        <!-- Study Statistics -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-3">Study Statistics</h4>
+                            <div class="space-y-2 text-sm">
+                                <div><span class="font-medium">Total Words:</span> <span x-text="userDetails.user?.totalCards || 0"></span></div>
+                                <div><span class="font-medium">Total Reviews:</span> <span x-text="userDetails.user?.totalReviews || 0"></span></div>
+                                <div><span class="font-medium">Accuracy:</span> <span x-text="(userDetails.user?.accuracy || 0) + '%'"></span></div>
+                                <div><span class="font-medium">Due for Review:</span> <span x-text="userDetails.user?.dueForReview || 0"></span></div>
+                                <div><span class="font-medium">Study Days:</span> <span x-text="userDetails.user?.studyDays || 0"></span></div>
+                            </div>
+                        </div>
+
+                        <!-- Box Distribution -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-3">Leitner Boxes</h4>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span>Box 1:</span> 
+                                    <span class="font-medium" x-text="userDetails.user?.boxCounts?.box1 || 0"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Box 2:</span> 
+                                    <span class="font-medium" x-text="userDetails.user?.boxCounts?.box2 || 0"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Box 3:</span> 
+                                    <span class="font-medium" x-text="userDetails.user?.boxCounts?.box3 || 0"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Box 4:</span> 
+                                    <span class="font-medium" x-text="userDetails.user?.boxCounts?.box4 || 0"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Box 5:</span> 
+                                    <span class="font-medium" x-text="userDetails.user?.boxCounts?.box5 || 0"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Tabs -->
+                    <div class="border-b border-gray-200 mb-6">
+                        <nav class="-mb-px flex space-x-8">
+                            <button @click="userDetails.activeTab = 'overview'" 
+                                    :class="userDetails.activeTab === 'overview' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                <i class="fas fa-user mr-2"></i>Overview
+                            </button>
+                            <button @click="userDetails.activeTab = 'words'" 
+                                    :class="userDetails.activeTab === 'words' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                <i class="fas fa-book mr-2"></i>Words (<span x-text="userDetails.user?.totalCards || 0"></span>)
+                            </button>
+                            <button @click="userDetails.activeTab = 'activity'; if (userDetails.activity.data.length === 0) loadUserActivity()" 
+                                    :class="userDetails.activeTab === 'activity' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                <i class="fas fa-chart-line mr-2"></i>Activity
+                            </button>
+                        </nav>
+                    </div>
+
+                    <!-- Overview Tab -->
+                    <div x-show="userDetails.activeTab === 'overview'">
+                        <!-- Language Breakdown -->
+                        <div x-show="userDetails.user?.languages?.length > 0" class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-4">Languages</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <template x-for="lang in userDetails.user?.languages || []" :key="lang.sourceLanguage + '-' + lang.targetLanguage">
+                                    <div class="bg-white border rounded-lg p-4">
+                                        <div class="font-medium text-gray-900" x-text="lang.sourceLanguage.toUpperCase() + ' → ' + lang.targetLanguage.toUpperCase()"></div>
+                                        <div class="text-sm text-gray-600 mt-1">
+                                            <div><span x-text="lang.cardCount"></span> words</div>
+                                            <div>Avg box: <span x-text="lang.avgBox"></span></div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Words Tab -->
+                    <div x-show="userDetails.activeTab === 'words'">
+                        <!-- Words Sub-tabs -->
+                        <div class="border-b border-gray-200 mb-4">
+                            <nav class="-mb-px flex space-x-8">
+                                <button @click="userDetails.activeWordsTab = 'all'" 
+                                        :class="userDetails.activeWordsTab === 'all' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                    All Words (<span x-text="userDetails.user?.words?.length || 0"></span>)
+                                </button>
+                                <button @click="userDetails.activeWordsTab = 'due'" 
+                                        :class="userDetails.activeWordsTab === 'due' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                    Due for Review (<span x-text="userDetails.user?.words?.filter(w => w.isDue).length || 0"></span>)
+                                </button>
+                                <button @click="userDetails.activeWordsTab = 'byBox'" 
+                                        :class="userDetails.activeWordsTab === 'byBox' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                    By Box
+                                </button>
+                            </nav>
+                        </div>
+
+                    <!-- Words Content -->
+                    <div class="space-y-4">
+                        <!-- Search and Filters -->
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <input x-model="userDetails.wordSearch" type="text" placeholder="Search words..."
+                                       class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <div x-show="userDetails.activeWordsTab === 'byBox'" class="flex items-center space-x-2">
+                                    <label class="text-sm font-medium">Box:</label>
+                                    <select x-model="userDetails.selectedBox" class="border border-gray-300 rounded px-2 py-1 text-sm">
+                                        <option value="1">Box 1</option>
+                                        <option value="2">Box 2</option>
+                                        <option value="3">Box 3</option>
+                                        <option value="4">Box 4</option>
+                                        <option value="5">Box 5</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Words Table -->
+                        <div class="border border-gray-200 rounded-lg overflow-hidden">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Word</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Translation</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Definition</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Box</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Next Review</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <template x-for="word in getFilteredWords()" :key="word.id">
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-4 py-3 text-sm">
+                                                <div class="font-medium text-gray-900" x-text="word.word"></div>
+                                                <div class="text-xs text-gray-500" x-text="word.sourceLanguage + ' → ' + word.targetLanguage"></div>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-gray-900" x-text="word.translation"></td>
+                                            <td class="px-4 py-3 text-sm text-gray-600 max-w-xs truncate" x-text="word.definition"></td>
+                                            <td class="px-4 py-3 text-sm">
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                                      :class="{
+                                                          'bg-red-100 text-red-800': word.box === 1,
+                                                          'bg-yellow-100 text-yellow-800': word.box === 2,
+                                                          'bg-blue-100 text-blue-800': word.box === 3,
+                                                          'bg-green-100 text-green-800': word.box === 4,
+                                                          'bg-purple-100 text-purple-800': word.box === 5
+                                                      }">
+                                                    Box <span x-text="word.box"></span>
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm">
+                                                <div class="text-gray-900" x-text="word.accuracy + '%'"></div>
+                                                <div class="text-xs text-gray-500" x-text="word.correctCount + '/' + word.reviewCount + ' correct'"></div>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm">
+                                                <div class="text-gray-900" x-text="formatDate(word.nextReviewAt)"></div>
+                                                <div class="text-xs" :class="word.isDue ? 'text-red-600' : 'text-gray-500'" 
+                                                     x-text="word.isDue ? 'Due now' : 'Not due'"></div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- No words message -->
+                        <div x-show="getFilteredWords().length === 0" class="text-center py-8 text-gray-500">
+                            <i class="fas fa-search text-4xl mb-4"></i>
+                            <p>No words found</p>
+                        </div>
+                    </div>
+
+                    <!-- Activity Tab -->
+                    <div x-show="userDetails.activeTab === 'activity'">
+                        <div x-show="userDetails.activity.loading" class="text-center py-8">
+                            <i class="fas fa-spinner fa-spin text-blue-500 text-3xl mb-4"></i>
+                            <p class="text-gray-600">Loading activity timeline...</p>
+                        </div>
+
+                        <div x-show="!userDetails.activity.loading && userDetails.activity.stats" class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-4">Activity Statistics</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="bg-blue-50 rounded-lg p-4 text-center">
+                                    <div class="text-2xl font-bold text-blue-600" x-text="userDetails.activity.stats?.studySessions || 0"></div>
+                                    <div class="text-sm text-blue-800">Study Sessions</div>
+                                </div>
+                                <div class="bg-green-50 rounded-lg p-4 text-center">
+                                    <div class="text-2xl font-bold text-green-600" x-text="userDetails.activity.stats?.wordsAdded || 0"></div>
+                                    <div class="text-sm text-green-800">Words Added</div>
+                                </div>
+                                <div class="bg-purple-50 rounded-lg p-4 text-center">
+                                    <div class="text-2xl font-bold text-purple-600" x-text="userDetails.activity.stats?.totalReviews || 0"></div>
+                                    <div class="text-sm text-purple-800">Total Reviews</div>
+                                </div>
+                                <div class="bg-yellow-50 rounded-lg p-4 text-center">
+                                    <div class="text-2xl font-bold text-yellow-600" x-text="(userDetails.activity.stats?.averageAccuracy || 0) + '%'"></div>
+                                    <div class="text-sm text-yellow-800">Accuracy</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div x-show="!userDetails.activity.loading">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-4">Activity Timeline</h4>
+                            
+                            <div x-show="userDetails.activity.data.length === 0" class="text-center py-8 text-gray-500">
+                                <i class="fas fa-history text-4xl mb-4"></i>
+                                <p>No activity recorded yet</p>
+                            </div>
+
+                            <div class="space-y-4 max-h-96 overflow-y-auto">
+                                <template x-for="activity in userDetails.activity.data" :key="activity.id">
+                                    <div class="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                                        <div class="flex-shrink-0">
+                                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white"
+                                                 :style="'background-color: ' + activity.color">
+                                                <i :class="activity.icon + ' text-sm'"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center justify-between">
+                                                <p class="text-sm font-medium text-gray-900" x-text="activity.title"></p>
+                                                <p class="text-xs text-gray-500" x-text="formatDate(activity.timestamp)"></p>
+                                            </div>
+                                            <p class="text-sm text-gray-600" x-text="activity.description"></p>
+                                            <div x-show="activity.metadata" class="mt-2 text-xs text-gray-500">
+                                                <template x-if="activity.type === 'words_added'">
+                                                    <span x-text="'Words: ' + (activity.metadata?.words || '')"></span>
+                                                </template>
+                                                <template x-if="activity.type === 'study_session'">
+                                                    <span x-text="'Reviews: ' + (activity.metadata?.totalReviews || 0) + ', Accuracy: ' + (activity.metadata?.accuracy || 0) + '%'"></span>
+                                                </template>
+                                                <template x-if="activity.type === 'progress'">
+                                                    <span x-text="'Words progressed: ' + (activity.metadata?.progressedWords || 0) + ', Avg Box: ' + (activity.metadata?.averageBox || 0)"></span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="bg-gray-50 px-6 py-4 flex justify-between">
+                    <div class="flex space-x-3">
+                        <button @click="showAddWordForm()" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            <i class="fas fa-plus mr-2"></i>
+                            Add Words
+                        </button>
+                        <button @click="messageUser(userDetails.user)" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            <i class="fas fa-envelope mr-2"></i>
+                            Send Message
+                        </button>
+                    </div>
+                    <button @click="closeUserDetails()" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Word Form Modal -->
+    <div x-show="userDetails.showAddWordForm" class="fixed inset-0 z-50 overflow-y-auto" style="display: none;">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="hideAddWordForm()"></div>
+            
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <!-- Form Header -->
+                <div class="bg-gradient-to-r from-green-500 to-blue-600 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-plus text-white text-lg"></i>
+                                </div>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-lg font-medium text-white">Add Word to User</h3>
+                                <p class="text-green-100" x-text="userDetails.user ? userDetails.user.fullName : ''"></p>
+                            </div>
+                        </div>
+                        <button @click="hideAddWordForm()" class="text-white hover:text-gray-200 transition">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Form Content -->
+                <form @submit.prevent="addWordToUser()" class="p-6 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Source Language</label>
+                            <select x-model="userDetails.addWordForm.sourceLanguage" 
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="it">Italian</option>
+                                <option value="ru">Russian</option>
+                                <option value="zh">Chinese</option>
+                                <option value="ja">Japanese</option>
+                                <option value="ko">Korean</option>
+                                <option value="ar">Arabic</option>
+                                <option value="fa">Persian</option>
+                                <option value="hi">Hindi</option>
+                                <option value="pt">Portuguese</option>
+                                <option value="tr">Turkish</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Target Language</label>
+                            <select x-model="userDetails.addWordForm.targetLanguage"
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="it">Italian</option>
+                                <option value="ru">Russian</option>
+                                <option value="zh">Chinese</option>
+                                <option value="ja">Japanese</option>
+                                <option value="ko">Korean</option>
+                                <option value="ar">Arabic</option>
+                                <option value="fa">Persian</option>
+                                <option value="hi">Hindi</option>
+                                <option value="pt">Portuguese</option>
+                                <option value="tr">Turkish</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Word <span class="text-red-500">*</span></label>
+                        <input x-model="userDetails.addWordForm.word" type="text" required
+                               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Enter the word to learn">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Translation <span class="text-red-500">*</span></label>
+                        <input x-model="userDetails.addWordForm.translation" type="text" required
+                               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Enter the translation">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Definition (Optional)</label>
+                        <textarea x-model="userDetails.addWordForm.definition" rows="3"
+                                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  placeholder="Enter a definition or context for the word"></textarea>
+                    </div>
+
+                    <!-- Form Footer -->
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" @click="hideAddWordForm()" 
+                                class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit" :disabled="userDetails.addWordForm.submitting"
+                                class="px-4 py-2 bg-gradient-to-r from-green-500 to-blue-600 text-white text-sm font-medium rounded-md hover:from-green-600 hover:to-blue-700 disabled:opacity-50 flex items-center">
+                            <span x-show="!userDetails.addWordForm.submitting">Add Word</span>
+                            <span x-show="userDetails.addWordForm.submitting" class="flex items-center">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>
+                                Adding...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         function adminApp() {
             return {
@@ -1100,6 +1601,33 @@ export function getAdminPanelHTML(): string {
                 systemHealth: [],
                 userSearch: '',
                 
+                // User Details Modal
+                userDetails: {
+                    show: false,
+                    loading: false,
+                    user: null,
+                    activeWordsTab: 'all', // all, due, byBox, byLanguage
+                    activeTab: 'overview', // overview, words, activity
+                    wordsPage: 1,
+                    wordsPerPage: 20,
+                    wordSearch: '',
+                    selectedBox: 1,
+                    showAddWordForm: false,
+                    addWordForm: {
+                        word: '',
+                        translation: '',
+                        definition: '',
+                        sourceLanguage: 'en',
+                        targetLanguage: 'es',
+                        submitting: false
+                    },
+                    activity: {
+                        loading: false,
+                        data: [],
+                        stats: null
+                    }
+                },
+                
                 // Navigation
                 navigationItems: [
                     { id: 'dashboard', label: 'Dashboard', icon: 'fas fa-tachometer-alt' },
@@ -1122,7 +1650,8 @@ export function getAdminPanelHTML(): string {
                     processing: false,
                     progress: 0,
                     results: [],
-                    lastAssignmentId: null
+                    lastAssignmentId: null,
+                    selectionType: 'active' // all, active, specific
                 },
 
                 // Analytics
@@ -1378,67 +1907,38 @@ export function getAdminPanelHTML(): string {
                         {
                             id: 'users',
                             label: 'Total Users',
-                            value: data.totalUsers || 156,
-                            change: data.userGrowth || 8.2,
+                            value: data.totalUsers || 0,
+                            change: data.userGrowth || 0,
                             color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                             icon: 'fas fa-users'
                         },
                         {
                             id: 'active',
                             label: 'Active Users',
-                            value: data.activeUsers || 89,
-                            change: data.activeGrowth || 15.4,
+                            value: data.activeUsers || 0,
+                            change: data.activeGrowth || 0,
                             color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
                             icon: 'fas fa-user-check'
                         },
                         {
                             id: 'cards',
                             label: 'Total Cards',
-                            value: data.totalCards || 3420,
-                            change: data.cardGrowth || 12.1,
+                            value: data.totalCards || 0,
+                            change: data.cardGrowth || 0,
                             color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
                             icon: 'fas fa-clone'
                         },
                         {
                             id: 'reviews',
                             label: 'Reviews Today',
-                            value: data.reviewsToday || 1180,
-                            change: data.reviewGrowth || 18.7,
+                            value: data.reviewsToday || 0,
+                            change: data.reviewGrowth || 0,
                             color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
                             icon: 'fas fa-chart-line'
                         }
                     ];
                     
-                    this.recentActivity = data.recentActivity || this.generateMockActivity();
-                },
-                
-                generateMockActivity() {
-                    return [
-                        {
-                            id: 1,
-                            title: 'New user registered',
-                            description: 'User @john_doe joined the system',
-                            timestamp: '2 minutes ago',
-                            color: '#3b82f6',
-                            icon: 'fas fa-user-plus'
-                        },
-                        {
-                            id: 2,
-                            title: 'Bulk words processed',
-                            description: '25 words added to Spanish learning set',
-                            timestamp: '15 minutes ago',
-                            color: '#8b5cf6',
-                            icon: 'fas fa-magic'
-                        },
-                        {
-                            id: 3,
-                            title: 'System health check',
-                            description: 'All systems running normally',
-                            timestamp: '1 hour ago',
-                            color: '#10b981',
-                            icon: 'fas fa-check-circle'
-                        }
-                    ];
+                    this.recentActivity = data.recentActivity || [];
                 },
                 
                 updateSystemStatus(data) {
@@ -1497,30 +1997,24 @@ export function getAdminPanelHTML(): string {
                         const response = await this.apiCall('/admin/users');
                         if (response.ok) {
                             const data = await response.json();
-                            this.users = data.users || this.generateMockUsers();
+                            this.users = data.users || [];
+                            this.filterUsers();
+                            
+                            if (this.users.length === 0) {
+                                this.showToast('info', 'No Users Found', 'No users are currently registered with the bot');
+                            }
+                        } else {
+                            console.error('Failed to load users - API response not ok:', response.status);
+                            this.users = [];
+                            this.showToast('error', 'Load Failed', 'Failed to load users from the bot database');
                             this.filterUsers();
                         }
                     } catch (error) {
                         console.error('Failed to load users:', error);
-                        this.users = this.generateMockUsers();
+                        this.users = [];
+                        this.showToast('error', 'Connection Error', 'Could not connect to the bot database');
                         this.filterUsers();
                     }
-                },
-                
-                generateMockUsers() {
-                    const users = [];
-                    for (let i = 1; i <= 10; i++) {
-                        users.push({
-                            id: i,
-                            username: 'user' + i,
-                            firstName: 'User' + i,
-                            fullName: 'User ' + i + ' Name',
-                            language: ['en', 'es', 'fr', 'de'][Math.floor(Math.random() * 4)],
-                            isActive: Math.random() > 0.2,
-                            createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
-                        });
-                    }
-                    return users;
                 },
                 
                 filterUsers() {
@@ -1546,8 +2040,154 @@ export function getAdminPanelHTML(): string {
                 },
                 
                 // User actions
-                viewUser(user) {
-                    this.showToast('info', 'View User', 'Viewing user: ' + (user.fullName || user.username));
+                async viewUser(user) {
+                    this.userDetails.show = true;
+                    this.userDetails.loading = true;
+                    this.userDetails.user = null;
+                    
+                    try {
+                        const response = await this.apiCall('/admin/users/' + user.id);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.userDetails.user = data.user;
+                            this.showToast('success', 'User Loaded', 'Loaded details for ' + data.user.fullName);
+                        } else {
+                            this.showToast('error', 'Load Failed', 'Failed to load user details');
+                        }
+                    } catch (error) {
+                        console.error('Failed to load user details:', error);
+                        this.showToast('error', 'Error', 'Could not load user details');
+                    } finally {
+                        this.userDetails.loading = false;
+                    }
+                },
+                
+                closeUserDetails() {
+                    this.userDetails.show = false;
+                    this.userDetails.user = null;
+                    this.userDetails.activeWordsTab = 'all';
+                    this.userDetails.activeTab = 'overview';
+                    this.userDetails.wordsPage = 1;
+                    this.userDetails.wordSearch = '';
+                    this.userDetails.showAddWordForm = false;
+                    this.userDetails.activity.data = [];
+                    this.userDetails.activity.stats = null;
+                    this.resetAddWordForm();
+                },
+                
+                async loadUserActivity() {
+                    if (!this.userDetails.user) return;
+                    
+                    this.userDetails.activity.loading = true;
+                    
+                    try {
+                        const response = await this.apiCall('/admin/users/' + this.userDetails.user.id + '/activity');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.userDetails.activity.data = data.activities || [];
+                            this.userDetails.activity.stats = data.stats || null;
+                        } else {
+                            this.showToast('error', 'Load Failed', 'Failed to load user activity');
+                        }
+                    } catch (error) {
+                        console.error('Failed to load user activity:', error);
+                        this.showToast('error', 'Error', 'Could not load user activity');
+                    } finally {
+                        this.userDetails.activity.loading = false;
+                    }
+                },
+                
+                showAddWordForm() {
+                    this.userDetails.showAddWordForm = true;
+                    // Set default languages from user's most common language pair
+                    if (this.userDetails.user?.languages?.length > 0) {
+                        const mostCommon = this.userDetails.user.languages[0];
+                        this.userDetails.addWordForm.sourceLanguage = mostCommon.sourceLanguage;
+                        this.userDetails.addWordForm.targetLanguage = mostCommon.targetLanguage;
+                    }
+                },
+                
+                hideAddWordForm() {
+                    this.userDetails.showAddWordForm = false;
+                    this.resetAddWordForm();
+                },
+                
+                resetAddWordForm() {
+                    this.userDetails.addWordForm = {
+                        word: '',
+                        translation: '',
+                        definition: '',
+                        sourceLanguage: 'en',
+                        targetLanguage: 'es',
+                        submitting: false
+                    };
+                },
+                
+                async addWordToUser() {
+                    if (!this.userDetails.user) return;
+                    
+                    const form = this.userDetails.addWordForm;
+                    if (!form.word.trim() || !form.translation.trim()) {
+                        this.showToast('error', 'Validation Error', 'Word and translation are required');
+                        return;
+                    }
+                    
+                    form.submitting = true;
+                    
+                    try {
+                        const response = await this.apiCall('/admin/words/add', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                userId: this.userDetails.user.id,
+                                word: form.word.trim(),
+                                translation: form.translation.trim(),
+                                definition: form.definition.trim() || '',
+                                sourceLanguage: form.sourceLanguage,
+                                targetLanguage: form.targetLanguage
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            this.showToast('success', 'Word Added', 'Word added successfully to user\'s collection');
+                            this.hideAddWordForm();
+                            // Refresh user details to show the new word
+                            await this.viewUser(this.userDetails.user);
+                        } else {
+                            const error = await response.json();
+                            this.showToast('error', 'Add Failed', error.message || 'Failed to add word');
+                        }
+                    } catch (error) {
+                        console.error('Failed to add word:', error);
+                        this.showToast('error', 'Error', 'Could not add word to user');
+                    } finally {
+                        form.submitting = false;
+                    }
+                },
+                
+                getFilteredWords() {
+                    if (!this.userDetails.user?.words) return [];
+                    
+                    let words = [...this.userDetails.user.words];
+                    
+                    // Filter by tab
+                    if (this.userDetails.activeWordsTab === 'due') {
+                        words = words.filter(w => w.isDue);
+                    } else if (this.userDetails.activeWordsTab === 'byBox') {
+                        words = words.filter(w => w.box === parseInt(this.userDetails.selectedBox));
+                    }
+                    
+                    // Filter by search
+                    if (this.userDetails.wordSearch.trim()) {
+                        const search = this.userDetails.wordSearch.toLowerCase();
+                        words = words.filter(w => 
+                            w.word.toLowerCase().includes(search) ||
+                            w.translation.toLowerCase().includes(search) ||
+                            w.definition.toLowerCase().includes(search)
+                        );
+                    }
+                    
+                    return words;
                 },
                 
                 editUser(user) {
@@ -1582,13 +2222,29 @@ export function getAdminPanelHTML(): string {
                             return;
                         }
                         
-                        // Get selected target users
-                        const targetUsers = Array.from(document.querySelectorAll('input[name="targetUsers"]:checked'))
-                            .map(checkbox => parseInt(checkbox.value))
-                            .filter(id => !isNaN(id));
+                        // Determine target users based on selection type
+                        let targetUsers = [];
                         
-                        if (targetUsers.length === 0) {
-                            this.showToast('error', 'No Users Selected', 'Please select at least one user to assign words to');
+                        if (this.bulkWords.selectionType === 'all') {
+                            // Use all users
+                            targetUsers = 'all';
+                        } else if (this.bulkWords.selectionType === 'active') {
+                            // Use only active users
+                            targetUsers = 'active';
+                        } else if (this.bulkWords.selectionType === 'specific') {
+                            // Get selected users from checkboxes
+                            targetUsers = Array.from(document.querySelectorAll('input[name="targetUsers"]:checked'))
+                                .map(checkbox => parseInt(checkbox.value))
+                                .filter(id => !isNaN(id));
+                            
+                            if (targetUsers.length === 0) {
+                                this.showToast('error', 'No Users Selected', 'Please select at least one user to assign words to');
+                                return;
+                            }
+                        }
+                        
+                        if (targetUsers.length === 0 && typeof targetUsers !== 'string') {
+                            this.showToast('error', 'No Users Available', 'No users available for word assignment');
                             return;
                         }
                         
@@ -1604,7 +2260,8 @@ export function getAdminPanelHTML(): string {
                                 words: words,
                                 sourceLanguage: this.bulkWords.sourceLanguage,
                                 targetLanguage: this.bulkWords.targetLanguage,
-                                targetUsers: targetUsers
+                                targetUsers: targetUsers,
+                                selectionType: this.bulkWords.selectionType
                             })
                         });
                         
@@ -1615,8 +2272,14 @@ export function getAdminPanelHTML(): string {
                         if (response.ok) {
                             this.bulkWords.results = result.processedWords || [];
                             this.bulkWords.lastAssignmentId = result.assignmentId;
+                            
+                            const userCount = typeof targetUsers === 'string' ? 
+                                (this.bulkWords.selectionType === 'active' ? 'active users' : 'all users') : 
+                                targetUsers.length + ' users';
+                            
                             this.showToast('success', 'AI Processing Complete', 
-                                result.totalWords + ' words processed: ' + result.successCount + ' successful, ' + result.failureCount + ' with fallback data');
+                                result.totalWords + ' words processed and assigned to ' + userCount + ': ' + 
+                                result.successCount + ' successful, ' + result.failureCount + ' with fallback data');
                         } else {
                             this.showToast('error', 'Processing Failed', result.error || 'AI processing encountered an error');
                         }
