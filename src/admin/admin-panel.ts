@@ -1378,67 +1378,38 @@ export function getAdminPanelHTML(): string {
                         {
                             id: 'users',
                             label: 'Total Users',
-                            value: data.totalUsers || 156,
-                            change: data.userGrowth || 8.2,
+                            value: data.totalUsers || 0,
+                            change: data.userGrowth || 0,
                             color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                             icon: 'fas fa-users'
                         },
                         {
                             id: 'active',
                             label: 'Active Users',
-                            value: data.activeUsers || 89,
-                            change: data.activeGrowth || 15.4,
+                            value: data.activeUsers || 0,
+                            change: data.activeGrowth || 0,
                             color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
                             icon: 'fas fa-user-check'
                         },
                         {
                             id: 'cards',
                             label: 'Total Cards',
-                            value: data.totalCards || 3420,
-                            change: data.cardGrowth || 12.1,
+                            value: data.totalCards || 0,
+                            change: data.cardGrowth || 0,
                             color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
                             icon: 'fas fa-clone'
                         },
                         {
                             id: 'reviews',
                             label: 'Reviews Today',
-                            value: data.reviewsToday || 1180,
-                            change: data.reviewGrowth || 18.7,
+                            value: data.reviewsToday || 0,
+                            change: data.reviewGrowth || 0,
                             color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
                             icon: 'fas fa-chart-line'
                         }
                     ];
                     
-                    this.recentActivity = data.recentActivity || this.generateMockActivity();
-                },
-                
-                generateMockActivity() {
-                    return [
-                        {
-                            id: 1,
-                            title: 'New user registered',
-                            description: 'User @john_doe joined the system',
-                            timestamp: '2 minutes ago',
-                            color: '#3b82f6',
-                            icon: 'fas fa-user-plus'
-                        },
-                        {
-                            id: 2,
-                            title: 'Bulk words processed',
-                            description: '25 words added to Spanish learning set',
-                            timestamp: '15 minutes ago',
-                            color: '#8b5cf6',
-                            icon: 'fas fa-magic'
-                        },
-                        {
-                            id: 3,
-                            title: 'System health check',
-                            description: 'All systems running normally',
-                            timestamp: '1 hour ago',
-                            color: '#10b981',
-                            icon: 'fas fa-check-circle'
-                        }
-                    ];
+                    this.recentActivity = data.recentActivity || [];
                 },
                 
                 updateSystemStatus(data) {
@@ -1497,30 +1468,24 @@ export function getAdminPanelHTML(): string {
                         const response = await this.apiCall('/admin/users');
                         if (response.ok) {
                             const data = await response.json();
-                            this.users = data.users || this.generateMockUsers();
+                            this.users = data.users || [];
+                            this.filterUsers();
+                            
+                            if (this.users.length === 0) {
+                                this.showToast('info', 'No Users Found', 'No users are currently registered with the bot');
+                            }
+                        } else {
+                            console.error('Failed to load users - API response not ok:', response.status);
+                            this.users = [];
+                            this.showToast('error', 'Load Failed', 'Failed to load users from the bot database');
                             this.filterUsers();
                         }
                     } catch (error) {
                         console.error('Failed to load users:', error);
-                        this.users = this.generateMockUsers();
+                        this.users = [];
+                        this.showToast('error', 'Connection Error', 'Could not connect to the bot database');
                         this.filterUsers();
                     }
-                },
-                
-                generateMockUsers() {
-                    const users = [];
-                    for (let i = 1; i <= 10; i++) {
-                        users.push({
-                            id: i,
-                            username: 'user' + i,
-                            firstName: 'User' + i,
-                            fullName: 'User ' + i + ' Name',
-                            language: ['en', 'es', 'fr', 'de'][Math.floor(Math.random() * 4)],
-                            isActive: Math.random() > 0.2,
-                            createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
-                        });
-                    }
-                    return users;
                 },
                 
                 filterUsers() {
