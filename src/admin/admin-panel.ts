@@ -1228,42 +1228,68 @@ export function getAdminPanelHTML(): string {
                         </div>
                     </div>
 
-                    <!-- Language Breakdown -->
-                    <div x-show="userDetails.user?.languages?.length > 0" class="mb-8">
-                        <h4 class="text-lg font-semibold text-gray-900 mb-4">Languages</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <template x-for="lang in userDetails.user?.languages || []" :key="lang.sourceLanguage + '-' + lang.targetLanguage">
-                                <div class="bg-white border rounded-lg p-4">
-                                    <div class="font-medium text-gray-900" x-text="lang.sourceLanguage.toUpperCase() + ' → ' + lang.targetLanguage.toUpperCase()"></div>
-                                    <div class="text-sm text-gray-600 mt-1">
-                                        <div><span x-text="lang.cardCount"></span> words</div>
-                                        <div>Avg box: <span x-text="lang.avgBox"></span></div>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-
-                    <!-- Words Tabs -->
+                    <!-- Main Tabs -->
                     <div class="border-b border-gray-200 mb-6">
                         <nav class="-mb-px flex space-x-8">
-                            <button @click="userDetails.activeWordsTab = 'all'" 
-                                    :class="userDetails.activeWordsTab === 'all' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            <button @click="userDetails.activeTab = 'overview'" 
+                                    :class="userDetails.activeTab === 'overview' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                                     class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
-                                All Words (<span x-text="userDetails.user?.words?.length || 0"></span>)
+                                <i class="fas fa-user mr-2"></i>Overview
                             </button>
-                            <button @click="userDetails.activeWordsTab = 'due'" 
-                                    :class="userDetails.activeWordsTab === 'due' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            <button @click="userDetails.activeTab = 'words'" 
+                                    :class="userDetails.activeTab === 'words' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                                     class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
-                                Due for Review (<span x-text="userDetails.user?.words?.filter(w => w.isDue).length || 0"></span>)
+                                <i class="fas fa-book mr-2"></i>Words (<span x-text="userDetails.user?.totalCards || 0"></span>)
                             </button>
-                            <button @click="userDetails.activeWordsTab = 'byBox'" 
-                                    :class="userDetails.activeWordsTab === 'byBox' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            <button @click="userDetails.activeTab = 'activity'; if (userDetails.activity.data.length === 0) loadUserActivity()" 
+                                    :class="userDetails.activeTab === 'activity' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                                     class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
-                                By Box
+                                <i class="fas fa-chart-line mr-2"></i>Activity
                             </button>
                         </nav>
                     </div>
+
+                    <!-- Overview Tab -->
+                    <div x-show="userDetails.activeTab === 'overview'">
+                        <!-- Language Breakdown -->
+                        <div x-show="userDetails.user?.languages?.length > 0" class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-4">Languages</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <template x-for="lang in userDetails.user?.languages || []" :key="lang.sourceLanguage + '-' + lang.targetLanguage">
+                                    <div class="bg-white border rounded-lg p-4">
+                                        <div class="font-medium text-gray-900" x-text="lang.sourceLanguage.toUpperCase() + ' → ' + lang.targetLanguage.toUpperCase()"></div>
+                                        <div class="text-sm text-gray-600 mt-1">
+                                            <div><span x-text="lang.cardCount"></span> words</div>
+                                            <div>Avg box: <span x-text="lang.avgBox"></span></div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Words Tab -->
+                    <div x-show="userDetails.activeTab === 'words'">
+                        <!-- Words Sub-tabs -->
+                        <div class="border-b border-gray-200 mb-4">
+                            <nav class="-mb-px flex space-x-8">
+                                <button @click="userDetails.activeWordsTab = 'all'" 
+                                        :class="userDetails.activeWordsTab === 'all' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                    All Words (<span x-text="userDetails.user?.words?.length || 0"></span>)
+                                </button>
+                                <button @click="userDetails.activeWordsTab = 'due'" 
+                                        :class="userDetails.activeWordsTab === 'due' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                    Due for Review (<span x-text="userDetails.user?.words?.filter(w => w.isDue).length || 0"></span>)
+                                </button>
+                                <button @click="userDetails.activeWordsTab = 'byBox'" 
+                                        :class="userDetails.activeWordsTab === 'byBox' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                                        class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                    By Box
+                                </button>
+                            </nav>
+                        </div>
 
                     <!-- Words Content -->
                     <div class="space-y-4">
@@ -1338,6 +1364,76 @@ export function getAdminPanelHTML(): string {
                         <div x-show="getFilteredWords().length === 0" class="text-center py-8 text-gray-500">
                             <i class="fas fa-search text-4xl mb-4"></i>
                             <p>No words found</p>
+                        </div>
+                    </div>
+
+                    <!-- Activity Tab -->
+                    <div x-show="userDetails.activeTab === 'activity'">
+                        <div x-show="userDetails.activity.loading" class="text-center py-8">
+                            <i class="fas fa-spinner fa-spin text-blue-500 text-3xl mb-4"></i>
+                            <p class="text-gray-600">Loading activity timeline...</p>
+                        </div>
+
+                        <div x-show="!userDetails.activity.loading && userDetails.activity.stats" class="mb-6">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-4">Activity Statistics</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="bg-blue-50 rounded-lg p-4 text-center">
+                                    <div class="text-2xl font-bold text-blue-600" x-text="userDetails.activity.stats?.studySessions || 0"></div>
+                                    <div class="text-sm text-blue-800">Study Sessions</div>
+                                </div>
+                                <div class="bg-green-50 rounded-lg p-4 text-center">
+                                    <div class="text-2xl font-bold text-green-600" x-text="userDetails.activity.stats?.wordsAdded || 0"></div>
+                                    <div class="text-sm text-green-800">Words Added</div>
+                                </div>
+                                <div class="bg-purple-50 rounded-lg p-4 text-center">
+                                    <div class="text-2xl font-bold text-purple-600" x-text="userDetails.activity.stats?.totalReviews || 0"></div>
+                                    <div class="text-sm text-purple-800">Total Reviews</div>
+                                </div>
+                                <div class="bg-yellow-50 rounded-lg p-4 text-center">
+                                    <div class="text-2xl font-bold text-yellow-600" x-text="(userDetails.activity.stats?.averageAccuracy || 0) + '%'"></div>
+                                    <div class="text-sm text-yellow-800">Accuracy</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div x-show="!userDetails.activity.loading">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-4">Activity Timeline</h4>
+                            
+                            <div x-show="userDetails.activity.data.length === 0" class="text-center py-8 text-gray-500">
+                                <i class="fas fa-history text-4xl mb-4"></i>
+                                <p>No activity recorded yet</p>
+                            </div>
+
+                            <div class="space-y-4 max-h-96 overflow-y-auto">
+                                <template x-for="activity in userDetails.activity.data" :key="activity.id">
+                                    <div class="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                                        <div class="flex-shrink-0">
+                                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white"
+                                                 :style="'background-color: ' + activity.color">
+                                                <i :class="activity.icon + ' text-sm'"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center justify-between">
+                                                <p class="text-sm font-medium text-gray-900" x-text="activity.title"></p>
+                                                <p class="text-xs text-gray-500" x-text="formatDate(activity.timestamp)"></p>
+                                            </div>
+                                            <p class="text-sm text-gray-600" x-text="activity.description"></p>
+                                            <div x-show="activity.metadata" class="mt-2 text-xs text-gray-500">
+                                                <template x-if="activity.type === 'words_added'">
+                                                    <span x-text="'Words: ' + (activity.metadata?.words || '')"></span>
+                                                </template>
+                                                <template x-if="activity.type === 'study_session'">
+                                                    <span x-text="'Reviews: ' + (activity.metadata?.totalReviews || 0) + ', Accuracy: ' + (activity.metadata?.accuracy || 0) + '%'"></span>
+                                                </template>
+                                                <template x-if="activity.type === 'progress'">
+                                                    <span x-text="'Words progressed: ' + (activity.metadata?.progressedWords || 0) + ', Avg Box: ' + (activity.metadata?.averageBox || 0)"></span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1511,6 +1607,7 @@ export function getAdminPanelHTML(): string {
                     loading: false,
                     user: null,
                     activeWordsTab: 'all', // all, due, byBox, byLanguage
+                    activeTab: 'overview', // overview, words, activity
                     wordsPage: 1,
                     wordsPerPage: 20,
                     wordSearch: '',
@@ -1523,6 +1620,11 @@ export function getAdminPanelHTML(): string {
                         sourceLanguage: 'en',
                         targetLanguage: 'es',
                         submitting: false
+                    },
+                    activity: {
+                        loading: false,
+                        data: [],
+                        stats: null
                     }
                 },
                 
@@ -1964,10 +2066,35 @@ export function getAdminPanelHTML(): string {
                     this.userDetails.show = false;
                     this.userDetails.user = null;
                     this.userDetails.activeWordsTab = 'all';
+                    this.userDetails.activeTab = 'overview';
                     this.userDetails.wordsPage = 1;
                     this.userDetails.wordSearch = '';
                     this.userDetails.showAddWordForm = false;
+                    this.userDetails.activity.data = [];
+                    this.userDetails.activity.stats = null;
                     this.resetAddWordForm();
+                },
+                
+                async loadUserActivity() {
+                    if (!this.userDetails.user) return;
+                    
+                    this.userDetails.activity.loading = true;
+                    
+                    try {
+                        const response = await this.apiCall('/admin/users/' + this.userDetails.user.id + '/activity');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.userDetails.activity.data = data.activities || [];
+                            this.userDetails.activity.stats = data.stats || null;
+                        } else {
+                            this.showToast('error', 'Load Failed', 'Failed to load user activity');
+                        }
+                    } catch (error) {
+                        console.error('Failed to load user activity:', error);
+                        this.showToast('error', 'Error', 'Could not load user activity');
+                    } finally {
+                        this.userDetails.activity.loading = false;
+                    }
                 },
                 
                 showAddWordForm() {
