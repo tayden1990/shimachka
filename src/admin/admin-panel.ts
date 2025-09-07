@@ -512,36 +512,58 @@ export function getAdminPanelHTML(): string {
                         <div class="bg-white rounded-xl shadow-sm p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-6">AI-Powered Bulk Word Processing</h3>
                             
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <!-- Input Section -->
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <!-- Configuration Section -->
                                 <div class="space-y-4">
-                                    <div class="grid grid-cols-2 gap-4">
+                                    <h4 class="text-md font-semibold text-gray-900">Configuration</h4>
+                                    
+                                    <div class="grid grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-2">Source Language</label>
                                             <select x-model="bulkWords.sourceLanguage"
-                                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
                                                 <option value="en">English</option>
                                                 <option value="es">Spanish</option>
                                                 <option value="fr">French</option>
                                                 <option value="de">German</option>
+                                                <option value="it">Italian</option>
+                                                <option value="ru">Russian</option>
+                                                <option value="zh">Chinese</option>
+                                                <option value="ja">Japanese</option>
+                                                <option value="ko">Korean</option>
+                                                <option value="ar">Arabic</option>
+                                                <option value="fa">Persian</option>
+                                                <option value="hi">Hindi</option>
+                                                <option value="pt">Portuguese</option>
+                                                <option value="tr">Turkish</option>
                                             </select>
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-2">Target Language</label>
                                             <select x-model="bulkWords.targetLanguage"
-                                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
-                                                <option value="es">Spanish</option>
+                                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
                                                 <option value="en">English</option>
+                                                <option value="es">Spanish</option>
                                                 <option value="fr">French</option>
                                                 <option value="de">German</option>
+                                                <option value="it">Italian</option>
+                                                <option value="ru">Russian</option>
+                                                <option value="zh">Chinese</option>
+                                                <option value="ja">Japanese</option>
+                                                <option value="ko">Korean</option>
+                                                <option value="ar">Arabic</option>
+                                                <option value="fa">Persian</option>
+                                                <option value="hi">Hindi</option>
+                                                <option value="pt">Portuguese</option>
+                                                <option value="tr">Turkish</option>
                                             </select>
                                         </div>
                                     </div>
 
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-2">Words to Process</label>
-                                        <textarea x-model="bulkWords.wordsInput" rows="8"
-                                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                        <textarea x-model="bulkWords.wordsInput" rows="6"
+                                                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                                                   placeholder="Enter words separated by commas or new lines..."></textarea>
                                         <p class="text-xs text-gray-500 mt-1">
                                             Words detected: <span x-text="getWordCount()"></span>
@@ -561,13 +583,61 @@ export function getAdminPanelHTML(): string {
                                     </button>
                                 </div>
 
+                                <!-- User Selection Section -->
+                                <div class="space-y-4">
+                                    <h4 class="text-md font-semibold text-gray-900">Target Users</h4>
+                                    
+                                    <!-- User Selection Options -->
+                                    <div class="space-y-2">
+                                        <label class="flex items-center">
+                                            <input type="radio" name="userSelectionType" value="all" x-model="bulkWords.selectionType"
+                                                   class="text-blue-600 focus:ring-blue-500">
+                                            <span class="ml-2 text-sm text-gray-700">All Users</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="userSelectionType" value="active" x-model="bulkWords.selectionType"
+                                                   class="text-blue-600 focus:ring-blue-500">
+                                            <span class="ml-2 text-sm text-gray-700">Active Users Only</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="radio" name="userSelectionType" value="specific" x-model="bulkWords.selectionType"
+                                                   class="text-blue-600 focus:ring-blue-500">
+                                            <span class="ml-2 text-sm text-gray-700">Specific Users</span>
+                                        </label>
+                                    </div>
+
+                                    <!-- Specific User Selection -->
+                                    <div x-show="bulkWords.selectionType === 'specific'" class="border rounded-lg p-3 max-h-40 overflow-y-auto">
+                                        <template x-for="user in users.slice(0, 20)" :key="user.id">
+                                            <label class="flex items-center py-1">
+                                                <input type="checkbox" name="targetUsers" :value="user.id"
+                                                       class="text-blue-600 focus:ring-blue-500">
+                                                <span class="ml-2 text-sm text-gray-700" x-text="user.fullName || user.firstName || 'User ' + user.id"></span>
+                                                <span class="ml-auto text-xs text-gray-500" x-text="user.isActive ? 'Active' : 'Inactive'"></span>
+                                            </label>
+                                        </template>
+                                        <div x-show="users.length === 0" class="text-sm text-gray-500 py-2">
+                                            No users available. Load users first.
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Results Section -->
                                 <div class="space-y-4">
-                                    <h4 class="text-md font-semibold text-gray-900">Results</h4>
+                                    <h4 class="text-md font-semibold text-gray-900">Processing Results</h4>
                                     
                                     <div x-show="bulkWords.processing" class="text-center py-8">
                                         <div class="inline-flex items-center px-4 py-2 bg-blue-50 rounded-lg">
                                             <i class="fas fa-brain text-blue-600 mr-2"></i>
+                                            <span class="text-blue-800 font-medium">AI is processing...</span>
+                                        </div>
+                                        <div class="mt-4">
+                                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                                <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                                     x-bind:style="'width: ' + bulkWords.progress + '%'"></div>
+                                            </div>
+                                        </div>
+                                    </div>
                                             <span class="text-blue-800 font-medium">AI is processing...</span>
                                         </div>
                                         <div class="mt-4">
@@ -1275,11 +1345,11 @@ export function getAdminPanelHTML(): string {
                 <!-- Modal Footer -->
                 <div class="bg-gray-50 px-6 py-4 flex justify-between">
                     <div class="flex space-x-3">
-                        <button class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <button @click="showAddWordForm()" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             <i class="fas fa-plus mr-2"></i>
                             Add Words
                         </button>
-                        <button class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <button @click="messageUser(userDetails.user)" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             <i class="fas fa-envelope mr-2"></i>
                             Send Message
                         </button>
@@ -1288,6 +1358,118 @@ export function getAdminPanelHTML(): string {
                         Close
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Word Form Modal -->
+    <div x-show="userDetails.showAddWordForm" class="fixed inset-0 z-50 overflow-y-auto" style="display: none;">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="hideAddWordForm()"></div>
+            
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <!-- Form Header -->
+                <div class="bg-gradient-to-r from-green-500 to-blue-600 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-plus text-white text-lg"></i>
+                                </div>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-lg font-medium text-white">Add Word to User</h3>
+                                <p class="text-green-100" x-text="userDetails.user ? userDetails.user.fullName : ''"></p>
+                            </div>
+                        </div>
+                        <button @click="hideAddWordForm()" class="text-white hover:text-gray-200 transition">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Form Content -->
+                <form @submit.prevent="addWordToUser()" class="p-6 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Source Language</label>
+                            <select x-model="userDetails.addWordForm.sourceLanguage" 
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="it">Italian</option>
+                                <option value="ru">Russian</option>
+                                <option value="zh">Chinese</option>
+                                <option value="ja">Japanese</option>
+                                <option value="ko">Korean</option>
+                                <option value="ar">Arabic</option>
+                                <option value="fa">Persian</option>
+                                <option value="hi">Hindi</option>
+                                <option value="pt">Portuguese</option>
+                                <option value="tr">Turkish</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Target Language</label>
+                            <select x-model="userDetails.addWordForm.targetLanguage"
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="it">Italian</option>
+                                <option value="ru">Russian</option>
+                                <option value="zh">Chinese</option>
+                                <option value="ja">Japanese</option>
+                                <option value="ko">Korean</option>
+                                <option value="ar">Arabic</option>
+                                <option value="fa">Persian</option>
+                                <option value="hi">Hindi</option>
+                                <option value="pt">Portuguese</option>
+                                <option value="tr">Turkish</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Word <span class="text-red-500">*</span></label>
+                        <input x-model="userDetails.addWordForm.word" type="text" required
+                               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Enter the word to learn">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Translation <span class="text-red-500">*</span></label>
+                        <input x-model="userDetails.addWordForm.translation" type="text" required
+                               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Enter the translation">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Definition (Optional)</label>
+                        <textarea x-model="userDetails.addWordForm.definition" rows="3"
+                                  class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  placeholder="Enter a definition or context for the word"></textarea>
+                    </div>
+
+                    <!-- Form Footer -->
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" @click="hideAddWordForm()" 
+                                class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit" :disabled="userDetails.addWordForm.submitting"
+                                class="px-4 py-2 bg-gradient-to-r from-green-500 to-blue-600 text-white text-sm font-medium rounded-md hover:from-green-600 hover:to-blue-700 disabled:opacity-50 flex items-center">
+                            <span x-show="!userDetails.addWordForm.submitting">Add Word</span>
+                            <span x-show="userDetails.addWordForm.submitting" class="flex items-center">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>
+                                Adding...
+                            </span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -1332,7 +1514,16 @@ export function getAdminPanelHTML(): string {
                     wordsPage: 1,
                     wordsPerPage: 20,
                     wordSearch: '',
-                    selectedBox: 1
+                    selectedBox: 1,
+                    showAddWordForm: false,
+                    addWordForm: {
+                        word: '',
+                        translation: '',
+                        definition: '',
+                        sourceLanguage: 'en',
+                        targetLanguage: 'es',
+                        submitting: false
+                    }
                 },
                 
                 // Navigation
@@ -1357,7 +1548,8 @@ export function getAdminPanelHTML(): string {
                     processing: false,
                     progress: 0,
                     results: [],
-                    lastAssignmentId: null
+                    lastAssignmentId: null,
+                    selectionType: 'active' // all, active, specific
                 },
 
                 // Analytics
@@ -1774,6 +1966,76 @@ export function getAdminPanelHTML(): string {
                     this.userDetails.activeWordsTab = 'all';
                     this.userDetails.wordsPage = 1;
                     this.userDetails.wordSearch = '';
+                    this.userDetails.showAddWordForm = false;
+                    this.resetAddWordForm();
+                },
+                
+                showAddWordForm() {
+                    this.userDetails.showAddWordForm = true;
+                    // Set default languages from user's most common language pair
+                    if (this.userDetails.user?.languages?.length > 0) {
+                        const mostCommon = this.userDetails.user.languages[0];
+                        this.userDetails.addWordForm.sourceLanguage = mostCommon.sourceLanguage;
+                        this.userDetails.addWordForm.targetLanguage = mostCommon.targetLanguage;
+                    }
+                },
+                
+                hideAddWordForm() {
+                    this.userDetails.showAddWordForm = false;
+                    this.resetAddWordForm();
+                },
+                
+                resetAddWordForm() {
+                    this.userDetails.addWordForm = {
+                        word: '',
+                        translation: '',
+                        definition: '',
+                        sourceLanguage: 'en',
+                        targetLanguage: 'es',
+                        submitting: false
+                    };
+                },
+                
+                async addWordToUser() {
+                    if (!this.userDetails.user) return;
+                    
+                    const form = this.userDetails.addWordForm;
+                    if (!form.word.trim() || !form.translation.trim()) {
+                        this.showToast('error', 'Validation Error', 'Word and translation are required');
+                        return;
+                    }
+                    
+                    form.submitting = true;
+                    
+                    try {
+                        const response = await this.apiCall('/admin/words/add', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                userId: this.userDetails.user.id,
+                                word: form.word.trim(),
+                                translation: form.translation.trim(),
+                                definition: form.definition.trim() || '',
+                                sourceLanguage: form.sourceLanguage,
+                                targetLanguage: form.targetLanguage
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            this.showToast('success', 'Word Added', 'Word added successfully to user\'s collection');
+                            this.hideAddWordForm();
+                            // Refresh user details to show the new word
+                            await this.viewUser(this.userDetails.user);
+                        } else {
+                            const error = await response.json();
+                            this.showToast('error', 'Add Failed', error.message || 'Failed to add word');
+                        }
+                    } catch (error) {
+                        console.error('Failed to add word:', error);
+                        this.showToast('error', 'Error', 'Could not add word to user');
+                    } finally {
+                        form.submitting = false;
+                    }
                 },
                 
                 getFilteredWords() {
@@ -1833,13 +2095,29 @@ export function getAdminPanelHTML(): string {
                             return;
                         }
                         
-                        // Get selected target users
-                        const targetUsers = Array.from(document.querySelectorAll('input[name="targetUsers"]:checked'))
-                            .map(checkbox => parseInt(checkbox.value))
-                            .filter(id => !isNaN(id));
+                        // Determine target users based on selection type
+                        let targetUsers = [];
                         
-                        if (targetUsers.length === 0) {
-                            this.showToast('error', 'No Users Selected', 'Please select at least one user to assign words to');
+                        if (this.bulkWords.selectionType === 'all') {
+                            // Use all users
+                            targetUsers = 'all';
+                        } else if (this.bulkWords.selectionType === 'active') {
+                            // Use only active users
+                            targetUsers = 'active';
+                        } else if (this.bulkWords.selectionType === 'specific') {
+                            // Get selected users from checkboxes
+                            targetUsers = Array.from(document.querySelectorAll('input[name="targetUsers"]:checked'))
+                                .map(checkbox => parseInt(checkbox.value))
+                                .filter(id => !isNaN(id));
+                            
+                            if (targetUsers.length === 0) {
+                                this.showToast('error', 'No Users Selected', 'Please select at least one user to assign words to');
+                                return;
+                            }
+                        }
+                        
+                        if (targetUsers.length === 0 && typeof targetUsers !== 'string') {
+                            this.showToast('error', 'No Users Available', 'No users available for word assignment');
                             return;
                         }
                         
@@ -1855,7 +2133,8 @@ export function getAdminPanelHTML(): string {
                                 words: words,
                                 sourceLanguage: this.bulkWords.sourceLanguage,
                                 targetLanguage: this.bulkWords.targetLanguage,
-                                targetUsers: targetUsers
+                                targetUsers: targetUsers,
+                                selectionType: this.bulkWords.selectionType
                             })
                         });
                         
@@ -1866,8 +2145,14 @@ export function getAdminPanelHTML(): string {
                         if (response.ok) {
                             this.bulkWords.results = result.processedWords || [];
                             this.bulkWords.lastAssignmentId = result.assignmentId;
+                            
+                            const userCount = typeof targetUsers === 'string' ? 
+                                (this.bulkWords.selectionType === 'active' ? 'active users' : 'all users') : 
+                                targetUsers.length + ' users';
+                            
                             this.showToast('success', 'AI Processing Complete', 
-                                result.totalWords + ' words processed: ' + result.successCount + ' successful, ' + result.failureCount + ' with fallback data');
+                                result.totalWords + ' words processed and assigned to ' + userCount + ': ' + 
+                                result.successCount + ' successful, ' + result.failureCount + ' with fallback data');
                         } else {
                             this.showToast('error', 'Processing Failed', result.error || 'AI processing encountered an error');
                         }

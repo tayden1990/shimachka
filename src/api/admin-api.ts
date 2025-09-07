@@ -632,7 +632,7 @@ export class AdminAPI {
   private async handleBulkWordsAI(request: Request, corsHeaders: any): Promise<Response> {
     try {
       const body: any = await request.json();
-      const { words, sourceLanguage, targetLanguage, targetUsers } = body;
+      const { words, sourceLanguage, targetLanguage, targetUsers, selectionType } = body;
       
       if (!this.wordExtractor) {
         return new Response(JSON.stringify({ error: 'AI service not available' }), {
@@ -692,14 +692,66 @@ export class AdminAPI {
         }
       }
       
+      // Determine actual users to assign to based on selection type
+      let actualTargetUsers: number[] = [];
+      
+      if (typeof targetUsers === 'string') {
+        // Get users based on selection type
+        const allUsers = await this.userManager.getAllUsers();
+        
+        if (targetUsers === 'all') {
+          actualTargetUsers = allUsers.map(u => u.id);
+        } else if (targetUsers === 'active') {
+          actualTargetUsers = allUsers.filter(u => u.isActive !== false && u.isRegistrationComplete).map(u => u.id);
+        }
+      } else if (Array.isArray(targetUsers)) {
+        actualTargetUsers = targetUsers;
+      }
+      
       // Create bulk assignment record
       const assignmentId = await this.adminService.createBulkAssignment({
         words: processedWords,
-        targetUsers,
+        targetUsers: actualTargetUsers,
         sourceLanguage,
         targetLanguage,
         status: 'completed',
         createdAt: new Date().toISOString()
+      });
+      
+      // Actually assign words to users
+      let assignedCount = 0;
+      for (const userId of actualTargetUsers) {
+        try {
+          for (const wordData of processedWords) {
+            const cardData = {
+              userId: userId,
+              word: wordData.word,
+              translation: wordData.translation,
+              definition: wordData.definition,
+              sourceLanguage: wordData.sourceLanguage,
+              targetLanguage: wordData.targetLanguage,
+              box: 1,
+              nextReviewAt: new Date().toISOString(),
+              reviewCount: 0,
+              correctCount: 0,
+              lastReviewedAt: new Date().toISOString()
+            };
+            
+            await this.userManager.createCard(cardData);
+          }
+          assignedCount++;
+        } catch (error) {
+          console.error(`Failed to assign words to user ${userId}:`, error);
+        }
+      }
+      
+      this.logger.info(`Bulk AI word assignment completed`, {
+        assignmentId,
+        totalWords: processedWords.length,
+        successCount,
+        failureCount,
+        targetUsers: actualTargetUsers.length,
+        assignedUsers: assignedCount
       });
       
       return new Response(JSON.stringify({
@@ -708,7 +760,9 @@ export class AdminAPI {
         totalWords: processedWords.length,
         successCount,
         failureCount,
-        message: `Words processed: ${successCount} successful, ${failureCount} with fallback data`
+        assignedUsers: assignedCount,
+        totalTargetUsers: actualTargetUsers.length,
+        message: `Words processed and assigned: ${successCount} successful, ${failureCount} with fallback data to ${assignedCount} users`
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
