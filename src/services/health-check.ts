@@ -1,5 +1,8 @@
 import { Env } from '../index';
 
+// Global variable to track service start time
+let serviceStartTime = Date.now();
+
 export class HealthCheckService {
   constructor(private env: Env) {}
 
@@ -9,7 +12,6 @@ export class HealthCheckService {
     timestamp: string;
     uptime: number;
   }> {
-    const startTime = Date.now();
     const checks: Record<string, boolean> = {};
 
     // Check KV store connectivity
@@ -39,7 +41,8 @@ export class HealthCheckService {
     }
 
     const allChecksPass = Object.values(checks).every(Boolean);
-    const uptime = Date.now() - startTime;
+    // Calculate actual service uptime since service started
+    const uptime = Date.now() - serviceStartTime;
 
     return {
       status: allChecksPass ? 'healthy' : 'unhealthy',
@@ -54,12 +57,51 @@ export class HealthCheckService {
     requestCount: number;
     errorCount: number;
     lastError?: string;
+    uptime: number;
   }> {
-    // Basic system stats - can be extended
-    return {
-      memoryUsage: 0, // Memory usage tracking would need to be implemented
-      requestCount: 0, // Request counting would need to be implemented
-      errorCount: 0, // Error counting would need to be implemented
-    };
+    try {
+      // Get system stats from KV store if available
+      const stats = await this.env.LEITNER_DB.get('system_stats', 'json') as {
+        memoryUsage?: number;
+        requestCount?: number;
+        errorCount?: number;
+        lastError?: string;
+      } || {};
+      
+      return {
+        memoryUsage: stats.memoryUsage || 0,
+        requestCount: stats.requestCount || 0,
+        errorCount: stats.errorCount || 0,
+        lastError: stats.lastError,
+        uptime: Date.now() - serviceStartTime
+      };
+    } catch (error) {
+      return {
+        memoryUsage: 0,
+        requestCount: 0,
+        errorCount: 0,
+        uptime: Date.now() - serviceStartTime
+      };
+    }
+  }
+
+  // Method to update system stats
+  async updateSystemStats(stats: {
+    requestCount?: number;
+    errorCount?: number;
+    lastError?: string;
+  }): Promise<void> {
+    try {
+      const currentStats = await this.env.LEITNER_DB.get('system_stats', 'json') || {};
+      const updatedStats = {
+        ...currentStats,
+        ...stats,
+        lastUpdated: Date.now()
+      };
+      
+      await this.env.LEITNER_DB.put('system_stats', JSON.stringify(updatedStats));
+    } catch (error) {
+      console.error('Failed to update system stats:', error);
+    }
   }
 }

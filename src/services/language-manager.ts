@@ -1,4 +1,4 @@
-import { TelegramInlineKeyboard } from '../types/index';
+import { TelegramInlineKeyboard, LANGUAGES } from '../types/index';
 
 export interface BotTexts {
   // Welcome and onboarding
@@ -159,6 +159,7 @@ export interface BotTexts {
   leitnerTip: string;
 }
 
+// Interface languages with native names for display
 export const SUPPORTED_LANGUAGES = {
   en: 'English',
   fa: 'فارسی',
