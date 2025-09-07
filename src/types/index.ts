@@ -14,6 +14,9 @@ export interface User {
   createdAt: string;
   lastActiveAt: string;
   isRegistrationComplete?: boolean;
+  // Admin panel fields
+  totalWords?: number;
+  studyProgress?: number; // Percentage of correct answers
 }
 
 export interface Card {

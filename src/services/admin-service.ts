@@ -301,41 +301,66 @@ export class AdminService {
     };
   }
 
-  // User Management
+  // User Management - Fixed to use real bot data
   async getAllUsers(options: { page?: number; limit?: number; search?: string } = {}): Promise<{ users: User[]; total: number; page: number; limit: number }> {
     const page = options.page || 1;
     const limit = options.limit || 10;
     
     try {
-      console.log('Getting users with pagination to avoid KV limits...');
+      console.log('Getting real users from bot database...');
       
-      // Try to use KV pagination if available, otherwise use cached/mock data
-      const usersList = await this.kv.list({ prefix: 'user:', limit: limit * 2 }); // Get a bit more for filtering
+      // Use caching to avoid KV limits
+      const cacheKey = `admin_users_${page}_${limit}_${options.search || 'all'}`;
+      const cached = await this.kv.get(cacheKey, 'json');
+      
+      if (cached && (Date.now() - cached.timestamp) < 300000) { // 5 minute cache
+        console.log('Returning cached user data');
+        return cached.data;
+      }
+
+      // Get real users from the bot database
+      const usersList = await this.kv.list({ prefix: 'user:', limit: 100 });
       const users: User[] = [];
       
-      for (const key of usersList.keys.slice(0, limit)) {
+      let processed = 0;
+      const maxUsers = 50; // Limit to prevent KV issues
+      
+      for (const key of usersList.keys) {
+        if (processed >= maxUsers) break;
+        
         try {
           const userData = await this.kv.get(key.name, 'json');
-          if (userData) {
-            users.push(userData as User);
+          if (userData && typeof userData.id === 'number') {
+            const user = userData as User;
+            
+            // Enrich user data with calculated stats
+            try {
+              const userCards = await this.kv.get(`cards:${user.id}`, 'json') || [];
+              user.totalWords = Array.isArray(userCards) ? userCards.length : 0;
+              
+              // Calculate study progress
+              if (Array.isArray(userCards) && userCards.length > 0) {
+                const totalReviews = userCards.reduce((sum: number, card: any) => sum + (card.reviewCount || 0), 0);
+                const correctReviews = userCards.reduce((sum: number, card: any) => sum + (card.correctCount || 0), 0);
+                user.studyProgress = userCards.length > 0 ? Math.round((correctReviews / Math.max(totalReviews, 1)) * 100) : 0;
+              } else {
+                user.studyProgress = 0;
+              }
+            } catch {
+              user.totalWords = 0;
+              user.studyProgress = 0;
+            }
+            
+            users.push(user);
+            processed++;
           }
         } catch (error) {
-          console.error(`Error getting user ${key.name}:`, error);
+          console.error(`Error processing user ${key.name}:`, error);
         }
       }
 
-      // If we got no real users or KV failed, return mock data
-      if (users.length === 0) {
-        console.log('No real users found, generating mock data');
-        const mockUsers = this.generateMockUsers(limit);
-        return {
-          users: mockUsers,
-          total: 50, // Mock total
-          page,
-          limit
-        };
-      }
-
+      console.log(`Loaded ${users.length} real users from bot`);
+      
       // Apply search filter if provided
       let filteredUsers = users;
       if (options.search) {
@@ -348,53 +373,52 @@ export class AdminService {
         );
       }
 
-      return {
-        users: filteredUsers,
-        total: users.length + 20, // Estimated total (current page + some more)
+      const result = {
+        users: filteredUsers.slice((page - 1) * limit, page * limit),
+        total: filteredUsers.length,
         page,
         limit
       };
+
+      // Cache the result
+      await this.kv.put(cacheKey, JSON.stringify({
+        data: result,
+        timestamp: Date.now()
+      }), { expirationTtl: 300 }); // 5 minute cache
+
+      return result;
       
     } catch (error) {
-      console.error('Error getting users (likely KV limit exceeded):', error);
+      console.error('Error getting users (KV limit issue):', error);
       
-      // Fallback to mock data when KV operations fail
-      const mockUsers = this.generateMockUsers(limit);
+      // Return minimal fallback data indicating real users exist but can't be loaded
       return {
-        users: mockUsers,
-        total: 50,
-        page,
-        limit
+        users: [{
+          id: 0,
+          username: 'system_notice',
+          firstName: 'KV Limit',
+          fullName: 'KV Daily Limit Exceeded',
+          email: 'system@bot.com',
+          language: 'en',
+          interfaceLanguage: 'en',
+          timezone: 'UTC',
+          reminderTimes: [],
+          isActive: false,
+          createdAt: new Date().toISOString(),
+          lastActiveAt: new Date().toISOString(),
+          isRegistrationComplete: true,
+          totalWords: 0,
+          studyProgress: 0
+        }],
+        total: 1,
+        page: 1,
+        limit: 1
       };
     }
   }
 
-  private generateMockUsers(count: number): User[] {
-    const users: User[] = [];
-    const languages = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh'];
-    const timezones = ['UTC', 'America/New_York', 'Europe/London', 'Asia/Tokyo'];
-    
-    for (let i = 1; i <= count; i++) {
-      users.push({
-        id: i,
-        username: `user${i}`,
-        firstName: `User${i}`,
-        fullName: `User ${i} Name`,
-        email: `user${i}@example.com`,
-        language: languages[Math.floor(Math.random() * languages.length)],
-        interfaceLanguage: 'en',
-        timezone: timezones[Math.floor(Math.random() * timezones.length)],
-        reminderTimes: ['09:00', '18:00'],
-        isActive: Math.random() > 0.2,
-        createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-        lastActiveAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-        isRegistrationComplete: true
-      });
-    }
-    
-    return users;
-  }
-
+  // Remove mock data methods - use real bot data only
+  
   async getUserById(userId: number): Promise<User | null> {
     try {
       const userKey = `user:${userId}`;
@@ -822,6 +846,212 @@ export class AdminService {
   private async checkAIHealth(): Promise<any> {
     // In production, test AI service
     return { status: 'healthy', lastCheck: new Date().toISOString() };
+  }
+
+  // Direct message storage for admin messaging history
+  async storeDirectMessage(message: {
+    type: 'broadcast' | 'individual';
+    content: string;
+    targetUser: string;
+    sentAt: string;
+    recipientCount: number;
+  }): Promise<void> {
+    try {
+      const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const messageRecord = {
+        id: messageId,
+        ...message,
+        adminId: 'admin', // In a real system, get from auth context
+        status: 'sent'
+      };
+      
+      await this.kv.put(`admin_message:${messageId}`, JSON.stringify(messageRecord));
+      
+      // Also add to message history list
+      const historyKey = 'admin_message_history';
+      let history = await this.kv.get(historyKey, 'json') || [];
+      history.unshift(messageRecord);
+      
+      // Keep only last 100 messages
+      if (history.length > 100) {
+        history = history.slice(0, 100);
+      }
+      
+      await this.kv.put(historyKey, JSON.stringify(history));
+      
+      console.log(`Stored admin message ${messageId} to ${message.recipientCount} recipients`);
+    } catch (error) {
+      console.error('Error storing direct message:', error);
+    }
+  }
+
+  async getMessageHistory(limit: number = 50): Promise<any[]> {
+    try {
+      const history = await this.kv.get('admin_message_history', 'json') || [];
+      return Array.isArray(history) ? history.slice(0, limit) : [];
+    } catch (error) {
+      console.error('Error getting message history:', error);
+      return [];
+    }
+  }
+
+  // Real vocabulary and study analytics for admin panel
+  async getVocabularyAnalytics(): Promise<{
+    totalWords: number;
+    totalTopics: number;
+    averageWordsPerUser: number;
+    languagePairs: { source: string; target: string; count: number }[];
+    boxDistribution: { box: number; count: number }[];
+    recentlyAdded: number;
+  }> {
+    try {
+      const users = await this.getAllUsers();
+      let totalWords = 0;
+      let totalTopics = 0;
+      const languagePairs = new Map<string, number>();
+      const boxDistribution = [0, 0, 0, 0, 0, 0]; // Index 0 unused, 1-5 for boxes
+      let recentlyAdded = 0;
+      
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      
+      // Process up to 20 users to avoid KV limits
+      const processUsers = users.users.slice(0, 20);
+      
+      for (const user of processUsers) {
+        try {
+          // Get user's cards
+          const userCards = await this.kv.get(`cards:${user.id}`, 'json') || [];
+          if (Array.isArray(userCards)) {
+            totalWords += userCards.length;
+            
+            userCards.forEach((card: any) => {
+              // Count language pairs
+              const pair = `${card.sourceLanguage}-${card.targetLanguage}`;
+              languagePairs.set(pair, (languagePairs.get(pair) || 0) + 1);
+              
+              // Count box distribution
+              if (card.box >= 1 && card.box <= 5) {
+                boxDistribution[card.box]++;
+              }
+              
+              // Count recently added
+              if (new Date(card.createdAt).getTime() > oneDayAgo) {
+                recentlyAdded++;
+              }
+            });
+          }
+          
+          // Get user's topics
+          const userTopics = await this.kv.get(`topics:${user.id}`, 'json') || [];
+          if (Array.isArray(userTopics)) {
+            totalTopics += userTopics.length;
+          }
+        } catch (error) {
+          console.error(`Error processing analytics for user ${user.id}:`, error);
+        }
+      }
+      
+      return {
+        totalWords,
+        totalTopics,
+        averageWordsPerUser: processUsers.length > 0 ? Math.round(totalWords / processUsers.length) : 0,
+        languagePairs: Array.from(languagePairs.entries()).map(([pair, count]) => {
+          const [source, target] = pair.split('-');
+          return { source, target, count };
+        }),
+        boxDistribution: boxDistribution.slice(1).map((count, index) => ({ box: index + 1, count })),
+        recentlyAdded
+      };
+    } catch (error) {
+      console.error('Error getting vocabulary analytics:', error);
+      return {
+        totalWords: 0,
+        totalTopics: 0,
+        averageWordsPerUser: 0,
+        languagePairs: [],
+        boxDistribution: [],
+        recentlyAdded: 0
+      };
+    }
+  }
+
+  async getStudyAnalytics(): Promise<{
+    totalReviews: number;
+    reviewsToday: number;
+    averageAccuracy: number;
+    activeStudiers: number;
+    studyStreaks: { userId: number; streak: number }[];
+  }> {
+    try {
+      const users = await this.getAllUsers();
+      let totalReviews = 0;
+      let reviewsToday = 0;
+      let totalCorrect = 0;
+      let activeStudiers = 0;
+      const studyStreaks: { userId: number; streak: number }[] = [];
+      
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      
+      // Process up to 20 users
+      const processUsers = users.users.slice(0, 20);
+      
+      for (const user of processUsers) {
+        try {
+          const userCards = await this.kv.get(`cards:${user.id}`, 'json') || [];
+          if (Array.isArray(userCards) && userCards.length > 0) {
+            let userReviews = 0;
+            let userCorrect = 0;
+            let hasStudiedToday = false;
+            
+            userCards.forEach((card: any) => {
+              const reviews = card.reviewCount || 0;
+              const correct = card.correctCount || 0;
+              
+              totalReviews += reviews;
+              totalCorrect += correct;
+              userReviews += reviews;
+              userCorrect += correct;
+              
+              // Check if reviewed today (simplified check)
+              if (card.updatedAt && new Date(card.updatedAt) > todayStart) {
+                hasStudiedToday = true;
+                reviewsToday++;
+              }
+            });
+            
+            if (hasStudiedToday) {
+              activeStudiers++;
+            }
+            
+            // Calculate study streak (simplified - just based on recent activity)
+            if (userReviews > 0) {
+              const streak = Math.min(userReviews, 30); // Cap at 30 for display
+              studyStreaks.push({ userId: user.id, streak });
+            }
+          }
+        } catch (error) {
+          console.error(`Error processing study analytics for user ${user.id}:`, error);
+        }
+      }
+      
+      return {
+        totalReviews,
+        reviewsToday,
+        averageAccuracy: totalReviews > 0 ? Math.round((totalCorrect / totalReviews) * 100) : 0,
+        activeStudiers,
+        studyStreaks: studyStreaks.sort((a, b) => b.streak - a.streak).slice(0, 10)
+      };
+    } catch (error) {
+      console.error('Error getting study analytics:', error);
+      return {
+        totalReviews: 0,
+        reviewsToday: 0,
+        averageAccuracy: 0,
+        activeStudiers: 0,
+        studyStreaks: []
+      };
+    }
   }
 
   private async checkWorkerHealth(): Promise<any> {

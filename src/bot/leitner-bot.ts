@@ -120,8 +120,8 @@ export class LeitnerBot {
     }
   }
 
-  // --- Telegram sendMessage wrapper ---
-  private async sendMessage(chatId: number, text: string, keyboard?: TelegramInlineKeyboard | any): Promise<void> {
+  // --- Telegram sendMessage wrapper (public for admin use) ---
+  async sendMessage(chatId: number, text: string, keyboard?: TelegramInlineKeyboard | any): Promise<void> {
     const url = `${this.baseUrl}/sendMessage`;
     const payload: any = {
       chat_id: chatId,
